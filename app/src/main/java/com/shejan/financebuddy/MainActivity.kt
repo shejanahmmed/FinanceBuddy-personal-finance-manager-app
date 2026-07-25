@@ -110,6 +110,7 @@ import com.shejan.financebuddy.ui.theme.TextMuted
 import com.shejan.financebuddy.ui.theme.TextPrimary
 import com.shejan.financebuddy.ui.theme.TextSecondary
 import com.shejan.financebuddy.ui.settings.SettingsScreen
+import com.shejan.financebuddy.ui.about.AboutScreen
 import com.shejan.financebuddy.ui.accounts.BankAccountsScreen
 import com.shejan.financebuddy.ui.payees.PayeesScreen
 import com.shejan.financebuddy.ui.payees.PayeeDetailScreen
@@ -279,7 +280,14 @@ fun AppNavigation(
                     onNavigateToHistory = { navController.navigate("transaction_history") },
                     onNavigateToReports = { navController.navigate("reports") },
                     onNavigateToStatistics = { navController.navigate("statistics") },
-                    onNavigateToInvestments = { navController.navigate("investments") }
+                    onNavigateToInvestments = { navController.navigate("investments") },
+                    onNavigateToAbout = { navController.navigate("about") }
+                )
+            }
+
+            composable("about") {
+                AboutScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
 
@@ -556,7 +564,8 @@ fun MainDashboardContainer(
     onNavigateToHistory: () -> Unit = {},
     onNavigateToReports: () -> Unit = {},
     onNavigateToStatistics: () -> Unit = {},
-    onNavigateToInvestments: () -> Unit = {}
+    onNavigateToInvestments: () -> Unit = {},
+    onNavigateToAbout: () -> Unit = {}
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope       = rememberCoroutineScope()
@@ -853,6 +862,16 @@ fun MainDashboardContainer(
                             scope.launch {
                                 drawerState.close()
                                 onNavigateToSettings()
+                            }
+                        }
+                    )
+                    DrawerMenuItem(
+                        icon = Icons.Default.Info,
+                        label = "About App",
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                onNavigateToAbout()
                             }
                         }
                     )
