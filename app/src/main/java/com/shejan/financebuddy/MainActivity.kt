@@ -571,6 +571,7 @@ fun MainDashboardContainer(
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope       = rememberCoroutineScope()
+    val context     = androidx.compose.ui.platform.LocalContext.current
     var currentTab by remember { mutableStateOf("home") } // "home", "budget", "goals"
 
     val profileName by preferencesManager.profileName.collectAsState(initial = "User")
@@ -888,7 +889,18 @@ fun MainDashboardContainer(
                         icon = Icons.Default.Gavel,
                         label = "License",
                         onClick = {
-                            scope.launch { drawerState.close() }
+                            scope.launch {
+                                drawerState.close()
+                                try {
+                                    val intent = android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse("https://github.com/shejanahmmed/personal-finance-manager-app?tab=GPL-3.0-1-ov-file")
+                                    )
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }
                         }
                     )
 
