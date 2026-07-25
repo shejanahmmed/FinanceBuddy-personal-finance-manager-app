@@ -39,6 +39,8 @@ import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Summarize
+import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DrawerValue
@@ -873,6 +875,20 @@ fun MainDashboardContainer(
                                 drawerState.close()
                                 onNavigateToAbout()
                             }
+                        }
+                    )
+                    DrawerMenuItem(
+                        icon = Icons.Default.PrivacyTip,
+                        label = "Privacy Policy",
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                        }
+                    )
+                    DrawerMenuItem(
+                        icon = Icons.Default.Gavel,
+                        label = "License",
+                        onClick = {
+                            scope.launch { drawerState.close() }
                         }
                     )
 
