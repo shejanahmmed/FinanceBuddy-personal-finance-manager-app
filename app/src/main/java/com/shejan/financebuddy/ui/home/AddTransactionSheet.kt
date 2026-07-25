@@ -322,6 +322,18 @@ fun AddTransactionSheet(
                 }
             }
 
+            val isFromAccountCash = remember(selectedFromAccount, fromAccountSearchText.text) {
+                val name = selectedFromAccount?.name ?: fromAccountSearchText.text
+                selectedFromAccount?.type == "CASH" || name.contains("Cash", ignoreCase = true)
+            }
+
+            androidx.compose.runtime.LaunchedEffect(isFromAccountCash) {
+                if (isFromAccountCash && (selectedToAccount?.type == "CASH" || selectedToAccount?.name?.contains("Cash", ignoreCase = true) == true)) {
+                    selectedToAccount = null
+                    toAccountSearchText = TextFieldValue("")
+                }
+            }
+
             // Source / From Account
             ExposedDropdownMenuBox(
                 expanded = fromAccountExpanded,
@@ -365,6 +377,8 @@ fun AddTransactionSheet(
                         searchText = fromAccountSearchText.text,
                         accountsList = accounts,
                         allowPresetLinking = selectedType != "EXPENSE",
+                        allowCashOption = true,
+                        cashTagText = if (selectedType == "TRANSFER" && isOwnAccount) "Deposit" else "In Hand",
                         onSelectExisting = { account ->
                             selectedFromAccount = account
                             fromAccountSearchText = TextFieldValue(
@@ -388,10 +402,11 @@ fun AddTransactionSheet(
             // Destination / To Account (Visible only for TRANSFER and isOwnAccount)
             if (selectedType == "TRANSFER" && isOwnAccount) {
                 Spacer(modifier = Modifier.height(12.dp))
-                val destAccounts = if (isOwnAccount) {
-                    accounts.filter { it.id != (selectedFromAccount?.id ?: -1) }
-                } else {
-                    accounts
+                val destAccounts = remember(accounts, selectedFromAccount, isFromAccountCash) {
+                    accounts.filter { account ->
+                        account.id != (selectedFromAccount?.id ?: -1) &&
+                        (!isFromAccountCash || (account.type != "CASH" && !account.name.contains("Cash", ignoreCase = true)))
+                    }
                 }
 
                 ExposedDropdownMenuBox(
@@ -435,6 +450,9 @@ fun AddTransactionSheet(
                         AccountDropdownItems(
                             searchText = toAccountSearchText.text,
                             accountsList = destAccounts,
+                            allowPresetLinking = true,
+                            allowCashOption = !isFromAccountCash,
+                            cashTagText = "Withdrawal",
                             onSelectExisting = { account ->
                                 selectedToAccount = account
                                 toAccountSearchText = TextFieldValue(
@@ -973,9 +991,14 @@ private val PRESET_MFS = listOf(
 )
 
 private fun createNewAccountEntity(name: String): AccountEntity {
+    val cleanName = name
+        .replace(" (Deposit)", "")
+        .replace(" (Withdrawal)", "")
+        .replace(" (In Hand)", "")
+        .trim()
     val presetMfs = listOf("bKash", "Nagad", "Rocket", "Upay", "CellFin (IBBL)", "Ok Wallet", "MyCash")
-    val isCash = name.contains("cash", ignoreCase = true)
-    val isMfs = presetMfs.any { name.contains(it, ignoreCase = true) }
+    val isCash = cleanName.contains("cash", ignoreCase = true)
+    val isMfs = presetMfs.any { cleanName.contains(it, ignoreCase = true) }
     val type = when {
         isCash -> "CASH"
         isMfs  -> "MFS"
@@ -988,25 +1011,25 @@ private fun createNewAccountEntity(name: String): AccountEntity {
     }
     val colorHex = when {
         isCash -> "#10B981"
-        name.contains("BRAC", ignoreCase = true) -> "#0096FF"
-        name.contains("City", ignoreCase = true) -> "#1A365D"
-        name.contains("Eastern", ignoreCase = true) -> "#004B87"
-        name.contains("Dutch-Bangla", ignoreCase = true) || name.contains("DBBL", ignoreCase = true) -> "#00875A"
-        name.contains("Prime", ignoreCase = true) -> "#1E3A8A"
-        name.contains("Mutual Trust", ignoreCase = true) || name.contains("MTB", ignoreCase = true) -> "#A21CAF"
-        name.contains("Islami", ignoreCase = true) || name.contains("IBBL", ignoreCase = true) -> "#15803D"
-        name.contains("Al-Arafah", ignoreCase = true) -> "#0F766E"
-        name.contains("Shahjalal", ignoreCase = true) -> "#0369A1"
-        name.contains("bKash", ignoreCase = true) -> "#E2136E"
-        name.contains("Nagad", ignoreCase = true) -> "#F04A24"
-        name.contains("Rocket", ignoreCase = true) -> "#8C2D19"
-        name.contains("Upay", ignoreCase = true) -> "#0052CC"
-        name.contains("CellFin", ignoreCase = true) -> "#15803D"
+        cleanName.contains("BRAC", ignoreCase = true) -> "#0096FF"
+        cleanName.contains("City", ignoreCase = true) -> "#1A365D"
+        cleanName.contains("Eastern", ignoreCase = true) -> "#004B87"
+        cleanName.contains("Dutch-Bangla", ignoreCase = true) || cleanName.contains("DBBL", ignoreCase = true) -> "#00875A"
+        cleanName.contains("Prime", ignoreCase = true) -> "#1E3A8A"
+        cleanName.contains("Mutual Trust", ignoreCase = true) || cleanName.contains("MTB", ignoreCase = true) -> "#A21CAF"
+        cleanName.contains("Islami", ignoreCase = true) || cleanName.contains("IBBL", ignoreCase = true) -> "#15803D"
+        cleanName.contains("Al-Arafah", ignoreCase = true) -> "#0F766E"
+        cleanName.contains("Shahjalal", ignoreCase = true) -> "#0369A1"
+        cleanName.contains("bKash", ignoreCase = true) -> "#E2136E"
+        cleanName.contains("Nagad", ignoreCase = true) -> "#F04A24"
+        cleanName.contains("Rocket", ignoreCase = true) -> "#8C2D19"
+        cleanName.contains("Upay", ignoreCase = true) -> "#0052CC"
+        cleanName.contains("CellFin", ignoreCase = true) -> "#15803D"
         isMfs -> "#FF5C7C"
         else -> "#0096FF"
     }
     return AccountEntity(
-        name = name,
+        name = if (isCash) "Cash in Hand" else cleanName,
         type = type,
         balance = 0.0,
         colorHex = colorHex,
@@ -1019,15 +1042,20 @@ private fun androidx.compose.foundation.layout.ColumnScope.AccountDropdownItems(
     searchText: String,
     accountsList: List<AccountEntity>,
     allowPresetLinking: Boolean = true,
+    allowCashOption: Boolean = true,
+    cashTagText: String = "Deposit",
     onSelectExisting: (AccountEntity) -> Unit,
     onSelectNew: (String) -> Unit
 ) {
-    val matchingExistingCash = accountsList.filter { (it.type == "CASH" || it.name.contains("Cash", ignoreCase = true)) && it.name.contains(searchText, ignoreCase = true) }
+    val matchingExistingCash = if (allowCashOption) {
+        accountsList.filter { (it.type == "CASH" || it.name.contains("Cash", ignoreCase = true)) && it.name.contains(searchText, ignoreCase = true) }
+    } else emptyList()
+
     val matchingExistingBanks = accountsList.filter { it.type == "BANK" && !it.name.contains("Cash", ignoreCase = true) && it.name.contains(searchText, ignoreCase = true) }
     val matchingExistingMfs = accountsList.filter { it.type == "MFS" && !it.name.contains("Cash", ignoreCase = true) && it.name.contains(searchText, ignoreCase = true) }
     val existingNames = accountsList.map { it.name.lowercase() }
 
-    val matchingPresetCash = if (allowPresetLinking) {
+    val matchingPresetCash = if (allowPresetLinking && allowCashOption) {
         PRESET_CASH.filter {
             !existingNames.contains(it.lowercase()) && it.contains(searchText, ignoreCase = true)
         }
@@ -1053,8 +1081,13 @@ private fun androidx.compose.foundation.layout.ColumnScope.AccountDropdownItems(
 
     // 1. Cash Section
     if (matchingExistingCash.isNotEmpty() || matchingPresetCash.isNotEmpty()) {
+        val headerTitle = when (cashTagText) {
+            "Deposit" -> "Cash in Hand (Deposit)"
+            "Withdrawal" -> "Cash in Hand (Withdrawal)"
+            else -> "Cash in Hand"
+        }
         DropdownMenuItem(
-            text = { Text("Cash in Hand", color = IncomeGreen, fontWeight = FontWeight.Bold, fontSize = 11.sp) },
+            text = { Text(headerTitle, color = IncomeGreen, fontWeight = FontWeight.Bold, fontSize = 11.sp) },
             onClick = {},
             enabled = false
         )
@@ -1066,19 +1099,21 @@ private fun androidx.compose.foundation.layout.ColumnScope.AccountDropdownItems(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(account.name, color = TextPrimary, fontWeight = FontWeight.Medium)
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(IncomeGreen.copy(alpha = 0.12f))
-                                .border(1.dp, IncomeGreen.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "In Hand",
-                                color = IncomeGreen,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                        if (cashTagText == "Deposit" || cashTagText == "Withdrawal") {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(IncomeGreen.copy(alpha = 0.12f))
+                                    .border(1.dp, IncomeGreen.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = cashTagText,
+                                    color = IncomeGreen,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 },
@@ -1086,9 +1121,21 @@ private fun androidx.compose.foundation.layout.ColumnScope.AccountDropdownItems(
             )
         }
         matchingPresetCash.forEach { preset ->
+            val linkText = when (cashTagText) {
+                "Deposit" -> "+ Link $preset (Deposit)"
+                "Withdrawal" -> "+ Link $preset (Withdrawal)"
+                else -> "+ Link $preset"
+            }
             DropdownMenuItem(
-                text = { Text("+ Link $preset", color = TextPrimary) },
-                onClick = { onSelectNew(preset) }
+                text = { Text(linkText, color = TextPrimary) },
+                onClick = {
+                    val newName = when (cashTagText) {
+                        "Deposit" -> "$preset (Deposit)"
+                        "Withdrawal" -> "$preset (Withdrawal)"
+                        else -> preset
+                    }
+                    onSelectNew(newName)
+                }
             )
         }
     }
