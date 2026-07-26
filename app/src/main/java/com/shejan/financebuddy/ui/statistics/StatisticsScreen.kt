@@ -561,8 +561,14 @@ private fun BalanceTrendChart(
         animProgress.animateTo(1f, animationSpec = tween(1100, easing = FastOutSlowInEasing))
     }
     val textMeasurer = rememberTextMeasurer()
-    val minVal = balances.minOrNull() ?: 0.0
-    val maxVal = (balances.maxOrNull() ?: 1.0).coerceAtLeast(minVal + 1.0)
+    val rawMin = remember(balances) { balances.minOrNull() ?: 0.0 }
+    val rawMax = remember(balances) { balances.maxOrNull() ?: 0.0 }
+    val minVal = remember(rawMin) {
+        if (rawMin >= 0.0) 0.0 else rawMin * 1.15
+    }
+    val maxVal = remember(rawMax, minVal) {
+        (rawMax * 1.12).coerceAtLeast(minVal + 1000.0)
+    }
     val range = maxVal - minVal
 
     Canvas(modifier = modifier) {
@@ -578,18 +584,24 @@ private fun BalanceTrendChart(
         if (n < 2) return@Canvas
 
         // Grid
-        for (i in 0..3) {
-            val y = topPad + chartH * (i / 3f)
-            val v = maxVal - range * (i / 3f)
+        for (i in 0..4) {
+            val y = topPad + chartH * (i / 4f)
+            val v = maxVal - range * (i / 4f)
             drawLine(
                 color = DividerColor.copy(alpha = 0.4f),
                 start = Offset(leftPad, y), end = Offset(w - rightPad, y),
                 strokeWidth = 1.dp.toPx()
             )
             val lbl = when {
-                v >= 100_000 -> String.format(Locale.US, "%.0fL", v / 100_000)
-                v >= 1_000 -> String.format(Locale.US, "%.0fK", v / 1000)
-                else -> v.toInt().toString()
+                v >= 100_000 -> {
+                    val lakhs = v / 100_000.0
+                    if (lakhs % 1.0 == 0.0) "${lakhs.toInt()}L" else String.format(Locale.US, "%.1fL", lakhs)
+                }
+                v >= 1_000 -> {
+                    val k = v / 1000.0
+                    if (k % 1.0 == 0.0) "${k.toInt()}K" else String.format(Locale.US, "%.1fK", k)
+                }
+                else -> String.format(Locale.US, "%.0f", v)
             }
             drawText(
                 textMeasurer, lbl,

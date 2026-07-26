@@ -306,15 +306,23 @@ fun BalanceTrendLineChart(
     }
 
     val textMeasurer = rememberTextMeasurer()
-    val minVal = remember(balances) { balances.minOrNull() ?: 0.0 }
-    val maxVal = remember(balances) { (balances.maxOrNull() ?: 1.0).coerceAtLeast(minVal + 1.0) }
+    val rawMin = remember(balances) { balances.minOrNull() ?: 0.0 }
+    val rawMax = remember(balances) { balances.maxOrNull() ?: 0.0 }
+    
+    // Baseline zero for positive balances gives accurate visual magnitude (5% spend won't look like 90% loss)
+    val minVal = remember(rawMin) {
+        if (rawMin >= 0.0) 0.0 else rawMin * 1.15
+    }
+    val maxVal = remember(rawMax, minVal) {
+        (rawMax * 1.12).coerceAtLeast(minVal + 1000.0)
+    }
     val valRange = maxVal - minVal
 
     Box(
         modifier = modifier.pointerInput(balances) {
             detectTapGestures { offset ->
                 val w = size.width
-                val leftPadding = 44.dp.toPx()
+                val leftPadding = 48.dp.toPx()
                 val rightPadding = 16.dp.toPx()
                 val chartW = w - leftPadding - rightPadding
                 val pointsCount = balances.size
@@ -329,7 +337,7 @@ fun BalanceTrendLineChart(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-            val leftPadding = 44.dp.toPx()
+            val leftPadding = 48.dp.toPx()
             val rightPadding = 16.dp.toPx()
             val topPadding = 24.dp.toPx()
             val bottomPadding = 16.dp.toPx()
@@ -340,7 +348,7 @@ fun BalanceTrendLineChart(
             if (pointsCount < 2) return@Canvas
 
             // ── Grid Lines and Y-Axis Labels ────────────────────
-            val gridLines = 3
+            val gridLines = 4
             for (i in 0..gridLines) {
                 val y = topPadding + chartH * (i / gridLines.toFloat())
                 val valAtLine = maxVal - (valRange * (i / gridLines.toFloat()))
@@ -354,12 +362,13 @@ fun BalanceTrendLineChart(
                 )
 
                 val labelText = if (valAtLine >= 100_000) {
-                    String.format(java.util.Locale.US, "%.0fL", valAtLine / 100_000)
+                    val lakhs = valAtLine / 100_000.0
+                    if (lakhs % 1.0 == 0.0) "${lakhs.toInt()}L" else String.format(java.util.Locale.US, "%.1fL", lakhs)
                 } else if (valAtLine >= 1000) {
                     val k = valAtLine / 1000.0
                     if (k % 1.0 == 0.0) "${k.toInt()}K" else String.format(java.util.Locale.US, "%.1fK", k)
                 } else {
-                    valAtLine.toInt().toString()
+                    String.format(java.util.Locale.US, "%.0f", valAtLine)
                 }
 
                 drawText(
@@ -442,13 +451,7 @@ fun BalanceTrendLineChart(
 
                 // Tooltip bubble
                 val balAmt = balances[activeIdx]
-                val amtText = "৳${
-                    when {
-                        balAmt >= 100_000 -> String.format(java.util.Locale.US, "%.1fL", balAmt / 100_000)
-                        balAmt >= 1_000   -> String.format(java.util.Locale.US, "%.1fK", balAmt / 1000)
-                        else              -> String.format(java.util.Locale.US, "%.0f", balAmt)
-                    }
-                }"
+                val amtText = "৳${java.text.NumberFormat.getNumberInstance(java.util.Locale.US).format(balAmt.toLong())}"
                 val tooltipResult = textMeasurer.measure(
                     text  = amtText,
                     style = TextStyle(
