@@ -882,7 +882,18 @@ fun MainDashboardContainer(
                         icon = Icons.Default.PrivacyTip,
                         label = "Privacy Policy",
                         onClick = {
-                            scope.launch { drawerState.close() }
+                            scope.launch {
+                                drawerState.close()
+                                try {
+                                    val intent = android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse("https://www.farjan.me/FinanceBuddyPrivacyPolicy/")
+                                    )
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }
                         }
                     )
                     DrawerMenuItem(

@@ -154,31 +154,40 @@ fun AddTransactionSheet(
     val context = LocalContext.current
     val sharedPreferences = remember { context.getSharedPreferences("finance_buddy_prefs", Context.MODE_PRIVATE) }
 
-    var customIncomeCategories by remember {
-        mutableStateOf(
-            sharedPreferences.getString("custom_income_categories", "")
-                ?.split("|")
-                ?.filter { it.isNotEmpty() }
-                ?: emptyList()
-        )
-    }
-    var customExpenseCategories by remember {
-        mutableStateOf(
-            sharedPreferences.getString("custom_expense_categories", "")
-                ?.split("|")
-                ?.filter { it.isNotEmpty() }
-                ?: emptyList()
-        )
-    }
-
     val defaultIncomeCategories = listOf("Salary", "Freelance", "Investment", "Pocket Money", "Other")
     val defaultExpenseCategories = listOf("Food", "Groceries", "Rent", "Utilities", "Travel", "Shopping", "Entertainment", "Medical", "Other")
 
-    val activeCategories = remember(selectedType, customIncomeCategories, customExpenseCategories) {
+    var incomeCategories by remember {
+        val saved = sharedPreferences.getString("active_income_categories", null)
+        mutableStateOf(
+            if (saved != null) {
+                saved.split("|").filter { it.isNotEmpty() }
+            } else {
+                val custom = sharedPreferences.getString("custom_income_categories", "")
+                    ?.split("|")?.filter { it.isNotEmpty() } ?: emptyList()
+                (defaultIncomeCategories + custom).distinct()
+            }
+        )
+    }
+
+    var expenseCategories by remember {
+        val saved = sharedPreferences.getString("active_expense_categories", null)
+        mutableStateOf(
+            if (saved != null) {
+                saved.split("|").filter { it.isNotEmpty() }
+            } else {
+                val custom = sharedPreferences.getString("custom_expense_categories", "")
+                    ?.split("|")?.filter { it.isNotEmpty() } ?: emptyList()
+                (defaultExpenseCategories + custom).distinct()
+            }
+        )
+    }
+
+    val activeCategories = remember(selectedType, incomeCategories, expenseCategories) {
         if (selectedType == "INCOME") {
-            defaultIncomeCategories + customIncomeCategories
+            incomeCategories
         } else if (selectedType == "EXPENSE") {
-            defaultExpenseCategories + customExpenseCategories
+            expenseCategories
         } else {
             listOf("Transfer")
         }
@@ -656,7 +665,6 @@ fun AddTransactionSheet(
                 ) {
                     activeCategories.forEach { cat ->
                         val isSelected = selectedCategory == cat
-                        val isCustom = if (selectedType == "INCOME") cat in customIncomeCategories else cat in customExpenseCategories
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(20.dp))
@@ -664,10 +672,8 @@ fun AddTransactionSheet(
                                 .combinedClickable(
                                     onClick = { selectedCategory = cat },
                                     onLongClick = {
-                                        if (isCustom) {
-                                            categoryToDelete = cat
-                                            showDeleteDialog = true
-                                        }
+                                        categoryToDelete = cat
+                                        showDeleteDialog = true
                                     }
                                 )
                                 .padding(horizontal = 14.dp, vertical = 8.dp)
@@ -854,15 +860,19 @@ fun AddTransactionSheet(
                                     val trimmed = newCategoryName.trim()
                                     if (trimmed.isNotEmpty()) {
                                         if (selectedType == "INCOME") {
-                                            val updated = customIncomeCategories + trimmed
-                                            customIncomeCategories = updated
-                                            sharedPreferences.edit().putString("custom_income_categories", updated.joinToString("|")).apply()
-                                            selectedCategory = trimmed
+                                            if (!incomeCategories.contains(trimmed)) {
+                                                val updated = incomeCategories + trimmed
+                                                incomeCategories = updated
+                                                sharedPreferences.edit().putString("active_income_categories", updated.joinToString("|")).apply()
+                                                selectedCategory = trimmed
+                                            }
                                         } else if (selectedType == "EXPENSE") {
-                                            val updated = customExpenseCategories + trimmed
-                                            customExpenseCategories = updated
-                                            sharedPreferences.edit().putString("custom_expense_categories", updated.joinToString("|")).apply()
-                                            selectedCategory = trimmed
+                                            if (!expenseCategories.contains(trimmed)) {
+                                                val updated = expenseCategories + trimmed
+                                                expenseCategories = updated
+                                                sharedPreferences.edit().putString("active_expense_categories", updated.joinToString("|")).apply()
+                                                selectedCategory = trimmed
+                                            }
                                         }
                                     }
                                     showAddCategoryDialog = false
@@ -918,18 +928,18 @@ fun AddTransactionSheet(
                             Button(
                                 onClick = {
                                     if (selectedType == "INCOME") {
-                                        val updated = customIncomeCategories.filter { it != categoryToDelete }
-                                        customIncomeCategories = updated
-                                        sharedPreferences.edit().putString("custom_income_categories", updated.joinToString("|")).apply()
+                                        val updated = incomeCategories.filter { it != categoryToDelete }
+                                        incomeCategories = updated
+                                        sharedPreferences.edit().putString("active_income_categories", updated.joinToString("|")).apply()
                                         if (selectedCategory == categoryToDelete) {
-                                            selectedCategory = (defaultIncomeCategories + updated).first()
+                                            selectedCategory = updated.firstOrNull() ?: "Other"
                                         }
                                     } else if (selectedType == "EXPENSE") {
-                                        val updated = customExpenseCategories.filter { it != categoryToDelete }
-                                        customExpenseCategories = updated
-                                        sharedPreferences.edit().putString("custom_expense_categories", updated.joinToString("|")).apply()
+                                        val updated = expenseCategories.filter { it != categoryToDelete }
+                                        expenseCategories = updated
+                                        sharedPreferences.edit().putString("active_expense_categories", updated.joinToString("|")).apply()
                                         if (selectedCategory == categoryToDelete) {
-                                            selectedCategory = (defaultExpenseCategories + updated).first()
+                                            selectedCategory = updated.firstOrNull() ?: "Other"
                                         }
                                     }
                                     showDeleteDialog = false

@@ -619,14 +619,17 @@ fun AddBudgetSheet(
 ) {
     val context = LocalContext.current
     val sharedPreferences = remember { context.getSharedPreferences("finance_buddy_prefs", Context.MODE_PRIVATE) }
-    val customExpenseCategories = remember {
-        sharedPreferences.getString("custom_expense_categories", "")
-            ?.split("|")
-            ?.filter { it.isNotEmpty() }
-            ?: emptyList()
-    }
-    val allExpenseCategories = remember(customExpenseCategories) {
-        expenseCategories + customExpenseCategories
+    val defaultExpenseCategories = listOf("Food", "Groceries", "Rent", "Utilities", "Travel", "Shopping", "Entertainment", "Medical", "Other")
+
+    val allExpenseCategories = remember {
+        val saved = sharedPreferences.getString("active_expense_categories", null)
+        if (saved != null) {
+            saved.split("|").filter { it.isNotEmpty() }
+        } else {
+            val custom = sharedPreferences.getString("custom_expense_categories", "")
+                ?.split("|")?.filter { it.isNotEmpty() } ?: emptyList()
+            (defaultExpenseCategories + custom).distinct()
+        }
     }
 
     var selectedCategory by remember(allExpenseCategories) {

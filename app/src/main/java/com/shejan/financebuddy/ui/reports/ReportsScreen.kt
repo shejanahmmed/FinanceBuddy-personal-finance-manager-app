@@ -4,9 +4,11 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -389,77 +391,80 @@ fun ReportsScreen(
                             modifier = Modifier.padding(bottom = 6.dp, start = 4.dp)
                         )
 
-                        Row(
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                                .background(CardDarker)
-                                .padding(horizontal = 10.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(CardDark)
+                                .border(1.dp, DividerColor, RoundedCornerShape(16.dp))
+                                .horizontalScroll(rememberScrollState())
                         ) {
-                            Text("Date", color = TextMuted, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.weight(0.9f))
-                            Text("Category", color = TextMuted, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.weight(1.1f))
-                            Text("Type", color = TextMuted, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.weight(0.8f))
-                            Text("Account", color = TextMuted, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.weight(1.0f))
-                            Text("Amount", color = TextMuted, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.weight(1.7f), textAlign = TextAlign.End)
-                        }
-                    }
-
-                    if (monthTransactions.isEmpty()) {
-                        item {
-                            Card(
-                                shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp),
-                                colors = CardDefaults.cardColors(containerColor = CardDark),
-                                modifier = Modifier.fillMaxWidth()
+                            Column(
+                                modifier = Modifier.width(560.dp)
                             ) {
-                                Box(
+                                // Monthly Table Headers
+                                Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(32.dp),
-                                    contentAlignment = Alignment.Center
+                                        .background(CardDarker)
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = "No transactions found for $monthName $year",
-                                        color = TextMuted,
-                                        fontSize = 13.sp
-                                    )
+                                    Text("Date", color = TextMuted, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.width(75.dp))
+                                    Text("Category", color = TextMuted, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.width(130.dp))
+                                    Text("Type", color = TextMuted, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.width(85.dp))
+                                    Text("Account", color = TextMuted, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.width(130.dp))
+                                    Text("Amount", color = TextMuted, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, textAlign = TextAlign.End, modifier = Modifier.width(140.dp))
                                 }
-                            }
-                        }
-                    } else {
-                        itemsIndexed(monthTransactions) { index, tx ->
-                            val isLast = index == monthTransactions.size - 1
-                            val shape = if (isLast) RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp) else RoundedCornerShape(0.dp)
-                            val bgColor = if (index % 2 == 0) CardDark else CardDarker
-                            val formattedDate = remember(tx.timestamp) { SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(tx.timestamp)) }
-                            val accName = accountsMap[tx.fromAccountId]?.name ?: "Account #${tx.fromAccountId}"
 
-                            val (typeLabel, typeColor) = when (tx.type) {
-                                "INCOME" -> "Income" to IncomeGreen
-                                "EXPENSE" -> "Expense" to ExpenseRed
-                                else -> "Transfer" to TransferYellow
-                            }
+                                HorizontalDivider(color = DividerColor)
 
-                            Surface(shape = shape, color = bgColor, modifier = Modifier.fillMaxWidth()) {
-                                Column {
-                                    Row(
+                                if (monthTransactions.isEmpty()) {
+                                    Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(horizontal = 10.dp, vertical = 10.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                            .padding(32.dp),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        Text(text = formattedDate, color = TextPrimary, fontSize = 10.5.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false, modifier = Modifier.weight(0.9f))
-                                        Text(text = tx.category, color = TextPrimary, fontSize = 10.5.sp, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1.1f))
-                                        Box(modifier = Modifier.weight(0.8f)) {
-                                            Surface(shape = RoundedCornerShape(4.dp), color = typeColor.copy(alpha = 0.15f)) {
-                                                Text(text = typeLabel, color = typeColor, fontSize = 8.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.padding(horizontal = 3.dp, vertical = 2.dp))
-                                            }
-                                        }
-                                        Text(text = accName, color = TextSecondary, fontSize = 10.sp, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1.0f))
-                                        val prefix = if (tx.type == "INCOME") "+৳" else if (tx.type == "EXPENSE") "-৳" else "৳"
-                                        Text(text = "$prefix${currencyFormat.format(tx.amount)}", color = typeColor, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End, modifier = Modifier.weight(1.7f))
+                                        Text(
+                                            text = "No transactions found for $monthName $year",
+                                            color = TextMuted,
+                                            fontSize = 13.sp
+                                        )
                                     }
-                                    if (!isLast) HorizontalDivider(color = DividerColor.copy(alpha = 0.5f))
+                                } else {
+                                    monthTransactions.forEachIndexed { index, tx ->
+                                        val isLast = index == monthTransactions.size - 1
+                                        val bgColor = if (index % 2 == 0) CardDark else CardDarker.copy(alpha = 0.5f)
+                                        val formattedDate = remember(tx.timestamp) { SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(tx.timestamp)) }
+                                        val accName = accountsMap[tx.fromAccountId]?.name ?: "Account #${tx.fromAccountId}"
+
+                                        val (typeLabel, typeColor) = when (tx.type) {
+                                            "INCOME" -> "Income" to IncomeGreen
+                                            "EXPENSE" -> "Expense" to ExpenseRed
+                                            else -> "Transfer" to TransferYellow
+                                        }
+
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(bgColor)
+                                                .padding(horizontal = 14.dp, vertical = 11.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(text = formattedDate, color = TextPrimary, fontSize = 11.5.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false, modifier = Modifier.width(75.dp))
+                                            Text(text = tx.category, color = TextPrimary, fontSize = 11.5.sp, maxLines = 1, softWrap = false, modifier = Modifier.width(130.dp))
+                                            Box(modifier = Modifier.width(85.dp)) {
+                                                Surface(shape = RoundedCornerShape(4.dp), color = typeColor.copy(alpha = 0.15f)) {
+                                                    Text(text = typeLabel, color = typeColor, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp))
+                                                }
+                                            }
+                                            Text(text = accName, color = TextSecondary, fontSize = 11.5.sp, maxLines = 1, softWrap = false, modifier = Modifier.width(130.dp))
+                                            val prefix = if (tx.type == "INCOME") "+৳" else if (tx.type == "EXPENSE") "-৳" else "৳"
+                                            Text(text = "$prefix${currencyFormat.format(tx.amount)}", color = typeColor, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, textAlign = TextAlign.End, modifier = Modifier.width(140.dp))
+                                        }
+                                        if (!isLast) HorizontalDivider(color = DividerColor.copy(alpha = 0.4f))
+                                    }
                                 }
                             }
                         }
@@ -482,24 +487,33 @@ fun ReportsScreen(
 
                                 HorizontalDivider(color = DividerColor, modifier = Modifier.padding(vertical = 12.dp))
 
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text("🏦 Starting Bank / Accounts Balance", color = TextSecondary, fontSize = 12.sp)
-                                    Text("৳${currencyFormat.format(startingBalance)}", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text("📈 Total Income (+)", color = TextSecondary, fontSize = 12.sp)
-                                    Text("+৳${currencyFormat.format(totalIncome)}", color = IncomeGreen, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text("📉 Total Expense (-)", color = TextSecondary, fontSize = 12.sp)
-                                    Text("-৳${currencyFormat.format(totalExpense)}", color = ExpenseRed, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                }
-                                HorizontalDivider(color = DividerColor, modifier = Modifier.padding(vertical = 10.dp))
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text("💳 Remaining Balance (Closing)", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    Text("৳${currencyFormat.format(remainingBalance)}", color = AccentTeal, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    SummaryMetricBox(
+                                        title = "🏦 Starting Bank / Accounts Balance",
+                                        value = "৳${currencyFormat.format(startingBalance)}",
+                                        valueColor = TextPrimary
+                                    )
+
+                                    SummaryMetricBox(
+                                        title = "📈 Total Income (+)",
+                                        value = "+৳${currencyFormat.format(totalIncome)}",
+                                        valueColor = IncomeGreen
+                                    )
+
+                                    SummaryMetricBox(
+                                        title = "📉 Total Expense (-)",
+                                        value = "-৳${currencyFormat.format(totalExpense)}",
+                                        valueColor = ExpenseRed
+                                    )
+
+                                    SummaryMetricBox(
+                                        title = "💳 Remaining Balance (Closing)",
+                                        value = "৳${currencyFormat.format(remainingBalance)}",
+                                        valueColor = AccentTeal,
+                                        isHighlight = true
+                                    )
                                 }
                             }
                         }
@@ -518,43 +532,53 @@ fun ReportsScreen(
                             modifier = Modifier.padding(bottom = 6.dp, start = 4.dp)
                         )
 
-                        // Yearly Table Headers
-                        Row(
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                                .background(CardDarker)
-                                .padding(horizontal = 10.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(CardDark)
+                                .border(1.dp, DividerColor, RoundedCornerShape(16.dp))
+                                .horizontalScroll(rememberScrollState())
                         ) {
-                            Text("Month", color = TextMuted, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.weight(0.9f))
-                            Text("Starting Bal", color = TextMuted, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.weight(1.1f))
-                            Text("Income (+)", color = TextMuted, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.weight(1.1f))
-                            Text("Expense (-)", color = TextMuted, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.weight(1.1f))
-                            Text("Closing Bal", color = TextMuted, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.weight(1.2f), textAlign = TextAlign.End)
-                        }
-                    }
-
-                    itemsIndexed(yearlyMonthlySummaries) { index, mData ->
-                        val isLast = index == yearlyMonthlySummaries.size - 1
-                        val shape = if (isLast) RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp) else RoundedCornerShape(0.dp)
-                        val bgColor = if (index % 2 == 0) CardDark else CardDarker
-
-                        Surface(shape = shape, color = bgColor, modifier = Modifier.fillMaxWidth()) {
-                            Column {
+                            Column(
+                                modifier = Modifier.width(660.dp)
+                            ) {
+                                // Yearly Table Headers
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 10.dp, vertical = 10.dp),
+                                        .background(CardDarker)
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(text = mData.monthName, color = TextPrimary, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, modifier = Modifier.weight(0.9f))
-                                    Text(text = "৳${currencyFormat.format(mData.startingBalance)}", color = TextSecondary, fontSize = 10.sp, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1.1f))
-                                    Text(text = "+৳${currencyFormat.format(mData.totalIncome)}", color = IncomeGreen, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1.1f))
-                                    Text(text = "-৳${currencyFormat.format(mData.totalExpense)}", color = ExpenseRed, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1.1f))
-                                    Text(text = "৳${currencyFormat.format(mData.remainingBalance)}", color = AccentTeal, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                    Text("Month", color = TextMuted, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.width(100.dp))
+                                    Text("Starting Bal", color = TextMuted, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.width(135.dp))
+                                    Text("Income (+)", color = TextMuted, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.width(135.dp))
+                                    Text("Expense (-)", color = TextMuted, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.width(135.dp))
+                                    Text("Closing Bal", color = TextMuted, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, textAlign = TextAlign.End, modifier = Modifier.width(155.dp))
                                 }
-                                if (!isLast) HorizontalDivider(color = DividerColor.copy(alpha = 0.5f))
+
+                                HorizontalDivider(color = DividerColor)
+
+                                yearlyMonthlySummaries.forEachIndexed { index, mData ->
+                                    val isLast = index == yearlyMonthlySummaries.size - 1
+                                    val bgColor = if (index % 2 == 0) CardDark else CardDarker.copy(alpha = 0.5f)
+
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(bgColor)
+                                            .padding(horizontal = 14.dp, vertical = 11.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(text = mData.monthName, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, modifier = Modifier.width(100.dp))
+                                        Text(text = "৳${currencyFormat.format(mData.startingBalance)}", color = TextSecondary, fontSize = 11.5.sp, maxLines = 1, softWrap = false, modifier = Modifier.width(135.dp))
+                                        Text(text = "+৳${currencyFormat.format(mData.totalIncome)}", color = IncomeGreen, fontSize = 11.5.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false, modifier = Modifier.width(135.dp))
+                                        Text(text = "-৳${currencyFormat.format(mData.totalExpense)}", color = ExpenseRed, fontSize = 11.5.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false, modifier = Modifier.width(135.dp))
+                                        Text(text = "৳${currencyFormat.format(mData.remainingBalance)}", color = AccentTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, textAlign = TextAlign.End, modifier = Modifier.width(155.dp))
+                                    }
+                                    if (!isLast) HorizontalDivider(color = DividerColor.copy(alpha = 0.4f))
+                                }
                             }
                         }
                     }
@@ -576,24 +600,33 @@ fun ReportsScreen(
 
                                 HorizontalDivider(color = DividerColor, modifier = Modifier.padding(vertical = 12.dp))
 
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text("🏦 Year-Start Opening Balance", color = TextSecondary, fontSize = 12.sp)
-                                    Text("৳${currencyFormat.format(annualStartingBalance)}", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text("📈 Total Annual Income (+)", color = TextSecondary, fontSize = 12.sp)
-                                    Text("+৳${currencyFormat.format(totalAnnualIncome)}", color = IncomeGreen, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text("📉 Total Annual Expenses (-)", color = TextSecondary, fontSize = 12.sp)
-                                    Text("-৳${currencyFormat.format(totalAnnualExpense)}", color = ExpenseRed, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                }
-                                HorizontalDivider(color = DividerColor, modifier = Modifier.padding(vertical = 10.dp))
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text("💳 Year-End Closing Balance", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    Text("৳${currencyFormat.format(annualRemainingBalance)}", color = AccentTeal, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    SummaryMetricBox(
+                                        title = "🏦 Year-Start Opening Balance",
+                                        value = "৳${currencyFormat.format(annualStartingBalance)}",
+                                        valueColor = TextPrimary
+                                    )
+
+                                    SummaryMetricBox(
+                                        title = "📈 Total Annual Income (+)",
+                                        value = "+৳${currencyFormat.format(totalAnnualIncome)}",
+                                        valueColor = IncomeGreen
+                                    )
+
+                                    SummaryMetricBox(
+                                        title = "📉 Total Annual Expenses (-)",
+                                        value = "-৳${currencyFormat.format(totalAnnualExpense)}",
+                                        valueColor = ExpenseRed
+                                    )
+
+                                    SummaryMetricBox(
+                                        title = "💳 Year-End Closing Balance",
+                                        value = "৳${currencyFormat.format(annualRemainingBalance)}",
+                                        valueColor = AccentTeal,
+                                        isHighlight = true
+                                    )
                                 }
                             }
                         }
@@ -660,6 +693,48 @@ fun ReportsScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SummaryMetricBox(
+    title: String,
+    value: String,
+    valueColor: Color,
+    isHighlight: Boolean = false
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isHighlight) CardDarker else CardDarker.copy(alpha = 0.5f))
+            .border(
+                1.dp,
+                if (isHighlight) AccentTeal.copy(alpha = 0.4f) else DividerColor.copy(alpha = 0.4f),
+                RoundedCornerShape(12.dp)
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = title,
+                color = if (isHighlight) TextPrimary else TextSecondary,
+                fontSize = 12.sp,
+                fontWeight = if (isHighlight) FontWeight.SemiBold else FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                color = valueColor,
+                fontSize = if (isHighlight) 18.sp else 15.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
