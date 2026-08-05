@@ -43,6 +43,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SheetState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.material.icons.filled.Tune
 import com.shejan.financebuddy.ui.theme.*
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -130,6 +132,56 @@ fun AddTransactionSheet(
                 selection = TextRange((selectedToAccount?.name ?: "").length)
             )
         )
+    }
+
+    // Optional details state for new From Account
+    var fromNewAccType by remember { mutableStateOf("BANK") }
+    var fromNewAccSubtype by remember { mutableStateOf("Savings") }
+    var fromNewAccInitialBalance by remember { mutableStateOf("") }
+    var fromNewAccNumber by remember { mutableStateOf("") }
+    var fromNewAccNickname by remember { mutableStateOf("") }
+
+    // Optional details state for new To Account (Transfer mode)
+    var toNewAccType by remember { mutableStateOf("BANK") }
+    var toNewAccSubtype by remember { mutableStateOf("Savings") }
+    var toNewAccInitialBalance by remember { mutableStateOf("") }
+    var toNewAccNumber by remember { mutableStateOf("") }
+    var toNewAccNickname by remember { mutableStateOf("") }
+
+    LaunchedEffect(fromAccountSearchText.text) {
+        val text = fromAccountSearchText.text.trim()
+        if (text.isNotEmpty()) {
+            val isCash = text.contains("cash", ignoreCase = true)
+            val isMfs = PRESET_MFS.any { text.contains(it, ignoreCase = true) }
+            fromNewAccType = when {
+                isCash -> "CASH"
+                isMfs  -> "MFS"
+                else   -> "BANK"
+            }
+            fromNewAccSubtype = when (fromNewAccType) {
+                "CASH" -> "In Hand"
+                "MFS"  -> "Personal"
+                else   -> "Savings"
+            }
+        }
+    }
+
+    LaunchedEffect(toAccountSearchText.text) {
+        val text = toAccountSearchText.text.trim()
+        if (text.isNotEmpty()) {
+            val isCash = text.contains("cash", ignoreCase = true)
+            val isMfs = PRESET_MFS.any { text.contains(it, ignoreCase = true) }
+            toNewAccType = when {
+                isCash -> "CASH"
+                isMfs  -> "MFS"
+                else   -> "BANK"
+            }
+            toNewAccSubtype = when (toNewAccType) {
+                "CASH" -> "In Hand"
+                "MFS"  -> "Personal"
+                else   -> "Savings"
+            }
+        }
     }
 
     var isOwnAccount by remember { mutableStateOf(true) }
@@ -455,6 +507,29 @@ fun AddTransactionSheet(
                 }
             }
 
+            AnimatedVisibility(visible = isFromAccountNew) {
+                OptionalNewAccountSection(
+                    accountName = fromAccountSearchText.text,
+                    accountType = fromNewAccType,
+                    onTypeChange = { newType ->
+                        fromNewAccType = newType
+                        fromNewAccSubtype = when (newType) {
+                            "CASH" -> "In Hand"
+                            "MFS"  -> "Personal"
+                            else   -> "Savings"
+                        }
+                    },
+                    accountSubtype = fromNewAccSubtype,
+                    onSubtypeChange = { fromNewAccSubtype = it },
+                    initialBalance = fromNewAccInitialBalance,
+                    onInitialBalanceChange = { fromNewAccInitialBalance = it },
+                    accountNumber = fromNewAccNumber,
+                    onAccountNumberChange = { fromNewAccNumber = it },
+                    nickname = fromNewAccNickname,
+                    onNicknameChange = { fromNewAccNickname = it }
+                )
+            }
+
             // Destination / To Account (Visible only for TRANSFER and isOwnAccount)
             if (selectedType == "TRANSFER" && isOwnAccount) {
                 Spacer(modifier = Modifier.height(12.dp))
@@ -543,6 +618,29 @@ fun AddTransactionSheet(
                             }
                         )
                     }
+                }
+
+                AnimatedVisibility(visible = isToAccountNew) {
+                    OptionalNewAccountSection(
+                        accountName = toAccountSearchText.text,
+                        accountType = toNewAccType,
+                        onTypeChange = { newType ->
+                            toNewAccType = newType
+                            toNewAccSubtype = when (newType) {
+                                "CASH" -> "In Hand"
+                                "MFS"  -> "Personal"
+                                else   -> "Savings"
+                            }
+                        },
+                        accountSubtype = toNewAccSubtype,
+                        onSubtypeChange = { toNewAccSubtype = it },
+                        initialBalance = toNewAccInitialBalance,
+                        onInitialBalanceChange = { toNewAccInitialBalance = it },
+                        accountNumber = toNewAccNumber,
+                        onAccountNumberChange = { toNewAccNumber = it },
+                        nickname = toNewAccNickname,
+                        onNicknameChange = { toNewAccNickname = it }
+                    )
                 }
             }
 
@@ -840,9 +938,26 @@ fun AddTransactionSheet(
                             )
                         }
                         
-                        val newFromAcc = if (isFromAccountNew) createNewAccountEntity(fromAccountSearchText.text.trim()) else null
+                        val newFromAcc = if (isFromAccountNew) {
+                            createNewAccountEntity(
+                                name = fromAccountSearchText.text.trim(),
+                                customType = fromNewAccType,
+                                customSubtype = fromNewAccSubtype,
+                                initialBalance = fromNewAccInitialBalance.toDoubleOrNull() ?: 0.0,
+                                accountNumber = fromNewAccNumber,
+                                nickname = fromNewAccNickname
+                            )
+                        } else null
+
                         val newToAcc = if (selectedType == "TRANSFER" && isOwnAccount && isToAccountNew) {
-                            createNewAccountEntity(toAccountSearchText.text.trim())
+                            createNewAccountEntity(
+                                name = toAccountSearchText.text.trim(),
+                                customType = toNewAccType,
+                                customSubtype = toNewAccSubtype,
+                                initialBalance = toNewAccInitialBalance.toDoubleOrNull() ?: 0.0,
+                                accountNumber = toNewAccNumber,
+                                nickname = toNewAccNickname
+                            )
                         } else null
 
                         onSaveTransaction(
@@ -1081,7 +1196,14 @@ private val PRESET_MFS = listOf(
     "bKash", "Nagad", "Rocket", "Upay", "CellFin (IBBL)", "Ok Wallet", "MyCash"
 )
 
-private fun createNewAccountEntity(name: String): AccountEntity {
+private fun createNewAccountEntity(
+    name: String,
+    customType: String? = null,
+    customSubtype: String? = null,
+    initialBalance: Double = 0.0,
+    accountNumber: String = "",
+    nickname: String = ""
+): AccountEntity {
     val cleanName = name
         .replace(" (Deposit)", "")
         .replace(" (Withdrawal)", "")
@@ -1090,18 +1212,19 @@ private fun createNewAccountEntity(name: String): AccountEntity {
     val presetMfs = listOf("bKash", "Nagad", "Rocket", "Upay", "CellFin (IBBL)", "Ok Wallet", "MyCash")
     val isCash = cleanName.contains("cash", ignoreCase = true)
     val isMfs = presetMfs.any { cleanName.contains(it, ignoreCase = true) }
-    val type = when {
+
+    val type = customType ?: when {
         isCash -> "CASH"
         isMfs  -> "MFS"
         else   -> "BANK"
     }
-    val subtype = when {
-        isCash -> "In Hand"
-        isMfs  -> "Personal"
+    val subtype = customSubtype?.takeIf { it.isNotBlank() } ?: when (type) {
+        "CASH" -> "In Hand"
+        "MFS"  -> "Personal"
         else   -> "Savings"
     }
     val colorHex = when {
-        isCash -> "#10B981"
+        type == "CASH" -> "#10B981"
         cleanName.contains("BRAC", ignoreCase = true) -> "#0096FF"
         cleanName.contains("City", ignoreCase = true) -> "#1A365D"
         cleanName.contains("Eastern", ignoreCase = true) -> "#004B87"
@@ -1120,12 +1243,206 @@ private fun createNewAccountEntity(name: String): AccountEntity {
         else -> "#0096FF"
     }
     return AccountEntity(
-        name = if (isCash) "Cash in Hand" else cleanName,
+        name = if (type == "CASH") "Cash in Hand" else cleanName,
         type = type,
-        balance = 0.0,
+        balance = initialBalance,
         colorHex = colorHex,
-        accountSubtype = subtype
+        accountSubtype = subtype,
+        accountNumber = accountNumber.trim(),
+        showAs = nickname.trim()
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OptionalNewAccountSection(
+    accountName: String,
+    accountType: String,
+    onTypeChange: (String) -> Unit,
+    accountSubtype: String,
+    onSubtypeChange: (String) -> Unit,
+    initialBalance: String,
+    onInitialBalanceChange: (String) -> Unit,
+    accountNumber: String,
+    onAccountNumberChange: (String) -> Unit,
+    nickname: String,
+    onNicknameChange: (String) -> Unit
+) {
+    var subtypeExpanded by remember { mutableStateOf(false) }
+
+    val subtypes = when (accountType) {
+        "CASH" -> listOf("In Hand", "Wallet", "Emergency Cash")
+        "MFS"  -> listOf("Personal", "Agent", "Merchant")
+        else   -> listOf("Savings", "Current", "Salary", "Student", "Credit Card", "Fixed Deposit", "DPS")
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 10.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(CardDark)
+            .border(1.dp, DividerColor, RoundedCornerShape(16.dp))
+            .padding(14.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 10.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Tune,
+                    contentDescription = null,
+                    tint = AccentTeal,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Optional Account Details",
+                    color = TextPrimary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(AccentTeal.copy(alpha = 0.15f))
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "New Account",
+                    color = AccentTeal,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        // Account Type Toggle (Cash / Bank / MFS)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(CardDarker)
+                .border(1.dp, DividerColor, RoundedCornerShape(10.dp))
+                .padding(3.dp),
+            horizontalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            listOf("CASH" to "Cash", "BANK" to "Bank", "MFS" to "MFS").forEach { (catKey, catLabel) ->
+                val selected = accountType == catKey
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (selected) AccentTeal else Color.Transparent)
+                        .clickable { onTypeChange(catKey) }
+                        .padding(vertical = 7.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = catLabel,
+                        color = if (selected) BackgroundDark else TextPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Account Subtype Dropdown
+        ExposedDropdownMenuBox(
+            expanded = subtypeExpanded,
+            onExpandedChange = { subtypeExpanded = it },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                value = accountSubtype,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Account Type", color = TextSecondary, fontSize = 12.sp) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subtypeExpanded) },
+                shape = RoundedCornerShape(10.dp),
+                colors = TextFieldColors(),
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 13.sp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
+            )
+            ExposedDropdownMenu(
+                expanded = subtypeExpanded,
+                onDismissRequest = { subtypeExpanded = false },
+                modifier = Modifier.background(CardDarker)
+            ) {
+                subtypes.forEach { st ->
+                    DropdownMenuItem(
+                        text = { Text(st, color = TextPrimary, fontSize = 13.sp) },
+                        onClick = {
+                            onSubtypeChange(st)
+                            subtypeExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Initial Balance & Account Number Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            OutlinedTextField(
+                value = initialBalance,
+                onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) onInitialBalanceChange(it) },
+                label = { Text("Initial Balance (৳)", color = TextSecondary, fontSize = 11.sp) },
+                placeholder = { Text("0.00", color = TextMuted, fontSize = 12.sp) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                shape = RoundedCornerShape(10.dp),
+                colors = TextFieldColors(),
+                textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 13.sp),
+                modifier = Modifier.weight(1f)
+            )
+
+            if (accountType != "CASH") {
+                OutlinedTextField(
+                    value = accountNumber,
+                    onValueChange = { input -> if (input.all { it.isDigit() }) onAccountNumberChange(input) },
+                    label = { Text("Acc/Phone No.", color = TextSecondary, fontSize = 11.sp) },
+                    placeholder = { Text("Optional", color = TextMuted, fontSize = 12.sp) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = TextFieldColors(),
+                    textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 13.sp),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Nickname / Custom Alias
+        OutlinedTextField(
+            value = nickname,
+            onValueChange = onNicknameChange,
+            label = { Text("Nickname / Alias (Optional)", color = TextSecondary, fontSize = 12.sp) },
+            placeholder = { Text("e.g. Salary Acc, Main bKash", color = TextMuted, fontSize = 12.sp) },
+            singleLine = true,
+            shape = RoundedCornerShape(10.dp),
+            colors = TextFieldColors(),
+            textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 13.sp),
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 }
 
 @Composable
