@@ -482,7 +482,8 @@ fun AppNavigation(
                 SettingsScreen(
                     preferencesManager = preferencesManager,
                     database = database,
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onNavigateToAbout = { navController.navigate("about") }
                 )
             }
 
@@ -865,52 +866,6 @@ fun MainDashboardContainer(
                             scope.launch {
                                 drawerState.close()
                                 onNavigateToSettings()
-                            }
-                        }
-                    )
-                    DrawerMenuItem(
-                        icon = Icons.Default.Info,
-                        label = "About App",
-                        onClick = {
-                            scope.launch {
-                                drawerState.close()
-                                onNavigateToAbout()
-                            }
-                        }
-                    )
-                    DrawerMenuItem(
-                        icon = Icons.Default.PrivacyTip,
-                        label = "Privacy Policy",
-                        onClick = {
-                            scope.launch {
-                                drawerState.close()
-                                try {
-                                    val intent = android.content.Intent(
-                                        android.content.Intent.ACTION_VIEW,
-                                        android.net.Uri.parse("https://www.farjan.me/FinanceBuddyPrivacyPolicy/")
-                                    )
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                            }
-                        }
-                    )
-                    DrawerMenuItem(
-                        icon = Icons.Default.Gavel,
-                        label = "License",
-                        onClick = {
-                            scope.launch {
-                                drawerState.close()
-                                try {
-                                    val intent = android.content.Intent(
-                                        android.content.Intent.ACTION_VIEW,
-                                        android.net.Uri.parse("https://github.com/shejanahmmed/personal-finance-manager-app?tab=GPL-3.0-1-ov-file")
-                                    )
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
                             }
                         }
                     )
