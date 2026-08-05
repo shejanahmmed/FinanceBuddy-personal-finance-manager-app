@@ -152,10 +152,10 @@ fun AboutScreen(
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "Version 1.0.0 (Build 100)",
+                            text = "v1.0.0 (Beta)",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = TextSecondary
+                            color = AccentTeal
                         )
                     }
                 }
@@ -295,6 +295,7 @@ fun AboutScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                SpecInfoRow(label = "App Version", value = "v1.0.0 (Beta)")
                 SpecInfoRow(label = "Developer", value = "Shejan Ahmmed")
                 SpecInfoRow(label = "UI Framework", value = "Jetpack Compose (Kotlin DSL)")
                 SpecInfoRow(label = "Database Engine", value = "Room SQLite (Encrypted)")

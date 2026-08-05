@@ -129,6 +129,7 @@ fun HomeScreen(
     hideBalancesPref: Boolean = false,
     loans: List<LoanEntity> = emptyList(),
     onNavigateToLoans: () -> Unit = {},
+    onNavigateToHistory: () -> Unit = {},
     notifications: List<AppNotification> = emptyList(),
     onNotificationAction: (String) -> Unit = {},
     onMarkAllNotificationsRead: () -> Unit = {},
@@ -381,7 +382,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // ── 3. Expense Graph (Weekly Chart) ───────────────────
-                SectionHeader(title = "Weekly Spending")
+                SectionHeader(title = "Weekly Spending", onViewAllClick = onNavigateToHistory)
                 Card(
                     colors = CardDefaults.cardColors(containerColor = CardDark),
                     modifier = Modifier
@@ -416,7 +417,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 // ── 4. Last Recorded Overview ──────────────────────────
-                SectionHeader(title = "Recent Transactions")
+                SectionHeader(title = "Recent Transactions", onViewAllClick = onNavigateToHistory)
                 if (recentTransactions.isEmpty()) {
                     Box(
                         modifier = Modifier
@@ -1179,16 +1180,43 @@ fun PlannedPaymentItem(
 }
 
 @Composable
-fun SectionHeader(title: String) {
-    Text(
-        text       = title,
-        fontSize   = 15.sp,
-        fontWeight = FontWeight.Bold,
-        color      = TextPrimary,
-        modifier   = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 6.dp)
-    )
+fun SectionHeader(
+    title: String,
+    onViewAllClick: (() -> Unit)? = null
+) {
+    if (onViewAllClick != null) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Text(
+                text = "View All →",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = AccentTeal,
+                modifier = Modifier.clickable { onViewAllClick() }
+            )
+        }
+    } else {
+        Text(
+            text       = title,
+            fontSize   = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color      = TextPrimary,
+            modifier   = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 6.dp)
+        )
+    }
 }
 
 // ── Actual Data Math Helpers ───────────────────────────────

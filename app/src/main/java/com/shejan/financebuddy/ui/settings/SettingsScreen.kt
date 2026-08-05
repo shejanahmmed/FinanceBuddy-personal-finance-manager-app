@@ -876,7 +876,7 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "FinanceBuddy",
+                        text = "FinanceBuddy v1.0.0 (Beta)",
                         color = TextPrimary,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold

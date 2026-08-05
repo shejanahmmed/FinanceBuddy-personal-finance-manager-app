@@ -55,7 +55,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -199,8 +205,33 @@ fun AddTransactionSheet(
     var newCategoryName by remember { mutableStateOf("") }
 
     // Reset default category if type changes
-    LaunchedEffectForType(selectedType) {
+    androidx.compose.runtime.LaunchedEffect(selectedType) {
         selectedCategory = if (selectedType == "TRANSFER") "Transfer" else activeCategories.first()
+    }
+
+    val scrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
+
+    var fromAccountY by remember { mutableStateOf(0) }
+    var toAccountY by remember { mutableStateOf(0) }
+    var payeeY by remember { mutableStateOf(0) }
+
+    LaunchedEffect(fromAccountExpanded) {
+        if (fromAccountExpanded && fromAccountY > 0) {
+            scrollState.animateScrollTo((fromAccountY - 30).coerceAtLeast(0))
+        }
+    }
+
+    LaunchedEffect(toAccountExpanded) {
+        if (toAccountExpanded && toAccountY > 0) {
+            scrollState.animateScrollTo((toAccountY - 30).coerceAtLeast(0))
+        }
+    }
+
+    LaunchedEffect(payeeExpanded) {
+        if (payeeExpanded && payeeY > 0) {
+            scrollState.animateScrollTo((payeeY - 30).coerceAtLeast(0))
+        }
     }
 
     ModalBottomSheet(
@@ -212,7 +243,7 @@ fun AddTransactionSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 40.dp)
         ) {
@@ -346,13 +377,22 @@ fun AddTransactionSheet(
             // Source / From Account
             ExposedDropdownMenuBox(
                 expanded = fromAccountExpanded,
-                onExpandedChange = {
-                    fromAccountExpanded = it
-                    if (it) {
+                onExpandedChange = { isExpanded ->
+                    fromAccountExpanded = isExpanded
+                    if (isExpanded) {
                         fromAccountSearchText = TextFieldValue("")
+                        if (fromAccountY > 0) {
+                            coroutineScope.launch {
+                                scrollState.animateScrollTo((fromAccountY - 30).coerceAtLeast(0))
+                            }
+                        }
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onGloballyPositioned { coordinates ->
+                        fromAccountY = coordinates.positionInParent().y.toInt()
+                    }
             ) {
                 OutlinedTextField(
                     value = fromAccountSearchText,
@@ -369,6 +409,13 @@ fun AddTransactionSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
+                        .onFocusChanged { focusState ->
+                            if (focusState.isFocused && fromAccountY > 0) {
+                                coroutineScope.launch {
+                                    scrollState.animateScrollTo((fromAccountY - 30).coerceAtLeast(0))
+                                }
+                            }
+                        }
                 )
 
                 ExposedDropdownMenu(
@@ -420,13 +467,22 @@ fun AddTransactionSheet(
 
                 ExposedDropdownMenuBox(
                     expanded = toAccountExpanded,
-                    onExpandedChange = {
-                        toAccountExpanded = it
-                        if (it) {
+                    onExpandedChange = { isExpanded ->
+                        toAccountExpanded = isExpanded
+                        if (isExpanded) {
                             toAccountSearchText = TextFieldValue("")
+                            if (toAccountY > 0) {
+                                coroutineScope.launch {
+                                    scrollState.animateScrollTo((toAccountY - 30).coerceAtLeast(0))
+                                }
+                            }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onGloballyPositioned { coordinates ->
+                            toAccountY = coordinates.positionInParent().y.toInt()
+                        }
                 ) {
                     OutlinedTextField(
                         value = toAccountSearchText,
@@ -443,6 +499,13 @@ fun AddTransactionSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused && toAccountY > 0) {
+                                    coroutineScope.launch {
+                                        scrollState.animateScrollTo((toAccountY - 30).coerceAtLeast(0))
+                                    }
+                                }
+                            }
                     )
 
                     ExposedDropdownMenu(
@@ -507,8 +570,19 @@ fun AddTransactionSheet(
                 // ExposedDropdownMenuBox for Recipient Name Autocomplete
                 ExposedDropdownMenuBox(
                     expanded = payeeExpanded,
-                    onExpandedChange = { payeeExpanded = it },
-                    modifier = Modifier.fillMaxWidth()
+                    onExpandedChange = { isExpanded ->
+                        payeeExpanded = isExpanded
+                        if (isExpanded && payeeY > 0) {
+                            coroutineScope.launch {
+                                scrollState.animateScrollTo((payeeY - 30).coerceAtLeast(0))
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onGloballyPositioned { coordinates ->
+                            payeeY = coordinates.positionInParent().y.toInt()
+                        }
                 ) {
                     OutlinedTextField(
                         value = recipientName,
@@ -525,6 +599,13 @@ fun AddTransactionSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused && payeeY > 0) {
+                                    coroutineScope.launch {
+                                        scrollState.animateScrollTo((payeeY - 30).coerceAtLeast(0))
+                                    }
+                                }
+                            }
                     )
 
                     if (filteredPayeeAccounts.isNotEmpty()) {

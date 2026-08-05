@@ -932,7 +932,7 @@ fun MainDashboardContainer(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "v1.0.0 (AES-256 Encrypted)",
+                            text = "v1.0.0 (Beta) • Local AES-256",
                             color = TextMuted,
                             fontSize = 10.sp
                         )
@@ -1059,6 +1059,7 @@ fun MainDashboardContainer(
                         hideBalancesPref = hideBalancesPref,
                         loans = loans,
                         onNavigateToLoans = onNavigateToLoans,
+                        onNavigateToHistory = onNavigateToHistory,
                         notifications = notifications,
                         onNotificationAction = { route ->
                             when (route) {
