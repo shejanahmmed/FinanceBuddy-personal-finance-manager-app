@@ -104,15 +104,31 @@ fun AddTransactionSheet(
     onSaveTransaction: (TransactionEntity, AccountEntity?, AccountEntity?) -> Unit,
     payees: List<PayeeEntity> = emptyList(),
     payeeAccounts: List<PayeeAccountEntity> = emptyList(),
-    onSavePayee: (String, String, String, String) -> Unit = { _, _, _, _ -> }
+    onSavePayee: (String, String, String, String) -> Unit = { _, _, _, _ -> },
+    initialType: String? = null,
+    initialAmount: Double? = null,
+    initialFromAccountId: Int? = null,
+    initialToAccountId: Int? = null,
+    initialCategory: String? = null,
+    initialNote: String? = null
 ) {
 
-    var amount by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf("EXPENSE") } // "INCOME", "EXPENSE", "TRANSFER"
-    var selectedCategory by remember { mutableStateOf("") }
-    var selectedFromAccount by remember { mutableStateOf<AccountEntity?>(null) }
-    var selectedToAccount by remember { mutableStateOf<AccountEntity?>(null) }
-    var note by remember { mutableStateOf("") }
+    var amount by remember(initialAmount) {
+        mutableStateOf(
+            if (initialAmount != null && initialAmount > 0.0) {
+                if (initialAmount % 1.0 == 0.0) initialAmount.toLong().toString() else initialAmount.toString()
+            } else ""
+        )
+    }
+    var selectedType by remember(initialType) { mutableStateOf(initialType ?: "EXPENSE") } // "INCOME", "EXPENSE", "TRANSFER"
+    var selectedCategory by remember(initialCategory) { mutableStateOf(initialCategory ?: "") }
+    var selectedFromAccount by remember(initialFromAccountId, accounts) {
+        mutableStateOf(accounts.firstOrNull { it.id == initialFromAccountId })
+    }
+    var selectedToAccount by remember(initialToAccountId, accounts) {
+        mutableStateOf(accounts.firstOrNull { it.id == initialToAccountId })
+    }
+    var note by remember(initialNote) { mutableStateOf(initialNote ?: "") }
 
     var fromAccountExpanded by remember { mutableStateOf(false) }
     var toAccountExpanded by remember { mutableStateOf(false) }
@@ -256,9 +272,13 @@ fun AddTransactionSheet(
     var categoryToDelete by remember { mutableStateOf("") }
     var newCategoryName by remember { mutableStateOf("") }
 
-    // Reset default category if type changes
+    // Reset default category if type changes and current category is invalid
     androidx.compose.runtime.LaunchedEffect(selectedType) {
-        selectedCategory = if (selectedType == "TRANSFER") "Transfer" else activeCategories.first()
+        if (selectedType == "TRANSFER") {
+            selectedCategory = "Transfer"
+        } else if (selectedCategory.isEmpty() || !activeCategories.contains(selectedCategory)) {
+            selectedCategory = activeCategories.first()
+        }
     }
 
     val scrollState = rememberScrollState()
