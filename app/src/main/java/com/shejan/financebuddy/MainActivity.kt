@@ -10,22 +10,31 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
@@ -56,6 +65,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -91,6 +102,7 @@ import com.shejan.financebuddy.data.db.TransactionEntity
 import com.shejan.financebuddy.ui.budget.BudgetScreen
 import com.shejan.financebuddy.ui.goals.GoalsScreen
 import com.shejan.financebuddy.ui.home.HomeScreen
+import com.shejan.financebuddy.ui.home.AddTransactionSheet
 import com.shejan.financebuddy.ui.home.TransactionListScreen
 import com.shejan.financebuddy.ui.history.HistoryScreen
 import com.shejan.financebuddy.ui.reports.ReportsScreen
@@ -549,6 +561,7 @@ fun AppNavigation(
 
 // ─── Main Scaffold Container (Side Drawer + Bottom Nav) ────────
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainDashboardContainer(
     preferencesManager: PreferencesManager,
@@ -632,6 +645,7 @@ fun MainDashboardContainer(
 
     val readNotificationIds by preferencesManager.readNotificationIds.collectAsState(initial = emptySet())
     val dismissedNotificationIds by preferencesManager.dismissedNotificationIds.collectAsState(initial = emptySet())
+    var showAddTransactionSheet by remember { mutableStateOf(false) }
 
     val rawNotifications = remember(pendingSmsList, loans, budgets, goals, allTransactions) {
         NotificationHelper.generateNotifications(
@@ -896,70 +910,13 @@ fun MainDashboardContainer(
             }
         }
     ) {
-        Scaffold(
-            containerColor = Color.Transparent,
-            modifier = Modifier.blur(blurRadius),
-            bottomBar = {
-                NavigationBar(
-                    containerColor = CardDarker,
-                    tonalElevation = 0.dp
-                ) {
-                    NavigationBarItem(
-                        selected = currentTab == "home",
-                        onClick  = { currentTab = "home" },
-                        icon     = { Icon(imageVector = Icons.Default.Home, contentDescription = "Home") },
-                        label    = { Text("Home") },
-                        colors   = navigationBarItemColors()
-                    )
-                    NavigationBarItem(
-                        selected = currentTab == "budget",
-                        onClick  = { currentTab = "budget" },
-                        icon     = { Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = "Budget") },
-                        label    = { Text("Budget") },
-                        colors   = navigationBarItemColors()
-                    )
-                    NavigationBarItem(
-                        selected = currentTab == "goals",
-                        onClick  = { currentTab = "goals" },
-                        icon     = { Icon(imageVector = Icons.Default.Star, contentDescription = "Goals") },
-                        label    = { Text("Goals") },
-                        colors   = navigationBarItemColors()
-                    )
-                    // Pending SMS/Inbox tab with live badge
-                    NavigationBarItem(
-                        selected = false,
-                        onClick  = onNavigateToPending,
-                        icon = {
-                            BadgedBox(
-                                badge = {
-                                    if (pendingCount > 0) {
-                                        Badge(containerColor = ExpenseRed) {
-                                            Text(
-                                                text = if (pendingCount > 99) "99+" else pendingCount.toString(),
-                                                color = Color.White,
-                                                fontSize = 9.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Inbox,
-                                    contentDescription = "Transaction Inbox",
-                                )
-                            }
-                        },
-                        label    = { Text("Inbox") },
-                        colors   = navigationBarItemColors()
-                    )
-                }
-            }
-        ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(blurRadius)
+        ) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = innerPadding.calculateBottomPadding())
+                modifier = Modifier.fillMaxSize()
             ) {
                 when (currentTab) {
                     "home" -> HomeScreen(
@@ -992,7 +949,7 @@ fun MainDashboardContainer(
                                 val payee = existingPayees.firstOrNull { it.name.equals(name, ignoreCase = true) }
                                 val payeeId = if (payee == null) {
                                     val uniqueId = "PAY-" + java.util.UUID.randomUUID().toString().take(4).uppercase(java.util.Locale.ROOT)
-                                    payeeDao.insertPayee(PayeeEntity(name = name, uniqueId = uniqueId)).toInt()
+                                    payeeDao.insertPayee(com.shejan.financebuddy.data.db.PayeeEntity(name = name, uniqueId = uniqueId)).toInt()
                                 } else {
                                     payee.id
                                 }
@@ -1000,7 +957,7 @@ fun MainDashboardContainer(
                                 val hasAccount = existingAccounts.any { it.accountNumber == accountNumber && it.bankName == bankName }
                                 if (!hasAccount) {
                                     payeeDao.insertPayeeAccount(
-                                        PayeeAccountEntity(
+                                        com.shejan.financebuddy.data.db.PayeeAccountEntity(
                                             payeeId = payeeId,
                                             bankName = bankName,
                                             accountNumber = accountNumber,
@@ -1058,6 +1015,150 @@ fun MainDashboardContainer(
                     )
                 }
             }
+
+            // ── Floating Navigation Bar ─────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    // Extra top padding to give the FAB room to protrude upward
+                    .padding(start = 20.dp, end = 20.dp, bottom = 10.dp, top = 28.dp)
+            ) {
+                // ── The pill surface ─────────────────────────────────
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter),
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color.White,
+                    tonalElevation = 0.dp,
+                    shadowElevation = 16.dp,
+                    border = BorderStroke(1.dp, Color(0xFFF1F5F9))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(64.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceAround
+                    ) {
+                        // ── 1. Home ──────────────────────────
+                        val isHome = currentTab == "home"
+                        NavBarItem(
+                            icon = Icons.Default.Home,
+                            label = "Home",
+                            isSelected = isHome,
+                            onClick = { currentTab = "home" },
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        // ── 2. Budget ─────────────────────────
+                        val isBudget = currentTab == "budget"
+                        NavBarItem(
+                            icon = Icons.AutoMirrored.Filled.List,
+                            label = "Budget",
+                            isSelected = isBudget,
+                            onClick = { currentTab = "budget" },
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        // ── 3. Center gap for FAB ──────────
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        // ── 4. Goals ──────────────────────────
+                        val isGoals = currentTab == "goals"
+                        NavBarItem(
+                            icon = Icons.Default.Star,
+                            label = "Goals",
+                            isSelected = isGoals,
+                            onClick = { currentTab = "goals" },
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        // ── 5. Inbox ──────────────────────────
+                        NavBarInboxItem(
+                            pendingCount = pendingCount,
+                            onClick = onNavigateToPending,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                // ── Central FAB — sibling of Surface, floats above pill ──
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .align(Alignment.TopCenter)
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(colors = listOf(AccentTeal, AccentBlue)))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { showAddTransactionSheet = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Transaction",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+
+
+            // Global Add Transaction Sheet triggered from Central Nav (+) Button
+            if (showAddTransactionSheet) {
+                val addSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+                AddTransactionSheet(
+                    accounts = accounts,
+                    sheetState = addSheetState,
+                    onDismiss = { showAddTransactionSheet = false },
+                    onSaveTransaction = { tx, newFrom, newTo ->
+                        scope.launch(Dispatchers.IO) {
+                            var fromId = tx.fromAccountId
+                            var toId = tx.toAccountId
+                            if (newFrom != null) {
+                                fromId = database.accountDao().insertAccount(newFrom).toInt()
+                            }
+                            if (newTo != null) {
+                                toId = database.accountDao().insertAccount(newTo).toInt()
+                            }
+                            transactionDao.insertTransaction(tx.copy(fromAccountId = fromId, toAccountId = toId))
+                        }
+                        showAddTransactionSheet = false
+                    },
+                    payees = payees,
+                    payeeAccounts = payeeAccounts,
+                    onSavePayee = { name, bankName, accountNumber, type ->
+                        scope.launch(Dispatchers.IO) {
+                            val payeeDao = database.payeeDao()
+                            val existingPayees = payeeDao.getAllPayeesOnce()
+                            val payee = existingPayees.firstOrNull { it.name.equals(name, ignoreCase = true) }
+                            val payeeId = if (payee == null) {
+                                val uniqueId = "PAY-" + java.util.UUID.randomUUID().toString().take(4).uppercase(java.util.Locale.ROOT)
+                                payeeDao.insertPayee(com.shejan.financebuddy.data.db.PayeeEntity(name = name, uniqueId = uniqueId)).toInt()
+                            } else {
+                                payee.id
+                            }
+                            val existingAccounts = payeeDao.getAccountsForPayeeOnce(payeeId)
+                            val hasAccount = existingAccounts.any { it.accountNumber == accountNumber && it.bankName == bankName }
+                            if (!hasAccount) {
+                                payeeDao.insertPayeeAccount(
+                                    com.shejan.financebuddy.data.db.PayeeAccountEntity(
+                                        payeeId = payeeId,
+                                        bankName = bankName,
+                                        accountNumber = accountNumber,
+                                        recipientName = name,
+                                        type = type
+                                    )
+                                )
+                            }
+                        }
+                    }
+                )
+            }
         }
     }
 }
@@ -1068,9 +1169,9 @@ fun MainDashboardContainer(
 private fun navigationBarItemColors() = NavigationBarItemDefaults.colors(
     selectedIconColor = AccentTeal,
     selectedTextColor = AccentTeal,
-    unselectedIconColor = TextSecondary,
-    unselectedTextColor = TextSecondary,
-    indicatorColor = CardDark
+    unselectedIconColor = Color(0xFF64748B),
+    unselectedTextColor = Color(0xFF64748B),
+    indicatorColor = AccentTeal.copy(alpha = 0.12f)
 )
 
 // ─── Timestamp Helper ────────────────────────────────────────
@@ -1132,5 +1233,89 @@ fun DrawerMenuItem(
                 )
             }
         }
+    }
+}
+
+// ── Nav Bar Helper Composables ─────────────────────────────────────────────
+
+@Composable
+private fun NavBarItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() },
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = if (isSelected) AccentTeal else Color(0xFFA0AEC0),
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        // Active dot indicator
+        Box(
+            modifier = Modifier
+                .size(4.dp)
+                .clip(CircleShape)
+                .background(if (isSelected) AccentTeal else Color.Transparent)
+        )
+    }
+}
+
+@Composable
+private fun NavBarInboxItem(
+    pendingCount: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() },
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        BadgedBox(
+            badge = {
+                if (pendingCount > 0) {
+                    Badge(containerColor = ExpenseRed) {
+                        Text(
+                            text = if (pendingCount > 99) "99+" else pendingCount.toString(),
+                            color = Color.White,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        ) {
+            Icon(
+                imageVector = Icons.Default.Inbox,
+                contentDescription = "Transaction Inbox",
+                tint = Color(0xFFA0AEC0),
+                modifier = Modifier.size(22.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .size(4.dp)
+                .clip(CircleShape)
+                .background(Color.Transparent)
+        )
     }
 }

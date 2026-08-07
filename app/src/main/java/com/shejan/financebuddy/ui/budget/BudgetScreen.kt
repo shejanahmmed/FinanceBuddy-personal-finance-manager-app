@@ -279,6 +279,9 @@ fun BudgetScreen(
                         onDelete       = { onDeleteBudget(budget) }
                     )
                 }
+                item {
+                    Spacer(modifier = Modifier.height(120.dp))
+                }
             }
         }
 

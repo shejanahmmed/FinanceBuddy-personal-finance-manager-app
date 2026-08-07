@@ -250,6 +250,9 @@ fun GoalsScreen(
                         )
                     }
                 }
+                item {
+                    Spacer(modifier = Modifier.height(120.dp))
+                }
             }
         }
 

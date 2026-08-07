@@ -57,7 +57,7 @@ import com.shejan.financebuddy.ui.theme.*
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 
-private val PRESET_CASH = listOf("Cash in Hand", "Petty Cash", "Wallet Cash")
+private val PRESET_CASH = listOf("Hand Cash", "Petty Cash", "Wallet Cash")
 private val PRESET_BANKS = listOf(
     "BRAC Bank PLC", "The City Bank PLC", "Eastern Bank PLC (EBL)",
     "Dutch-Bangla Bank PLC (DBBL)", "Prime Bank PLC", "Mutual Trust Bank PLC",
@@ -72,7 +72,7 @@ private val PRESET_MFS = listOf(
 private val ACCOUNT_SUBTYPES = listOf("Savings", "Current", "Salary", "Student", "Business", "Islamic", "Personal", "Merchant", "Agent", "In Hand", "Wallet", "Petty Cash", "Other")
 
 private val BANK_COLOR_MAP = mapOf(
-    "Cash in Hand" to "#10B981",
+    "Hand Cash" to "#10B981",
     "Petty Cash" to "#059669",
     "Wallet Cash" to "#34D399",
     "BRAC Bank PLC" to "#0096FF",
@@ -253,7 +253,7 @@ fun BankAccountsScreen(
                     }
 
                     if (cash.isNotEmpty()) {
-                        item { SectionGroupHeader(title = "Cash in Hand", count = cash.size) }
+                        item { SectionGroupHeader(title = "Hand Cash", count = cash.size) }
                         items(cash, key = { it.id }) { account ->
                             AccountManageCard(
                                 account = account,
@@ -838,8 +838,8 @@ private fun AccountFormSheet(
     var accountName    by remember(existingAccount) {
         mutableStateOf(
             TextFieldValue(
-                text = existingAccount?.name ?: (if (accountType == "CASH") "Cash in Hand" else ""),
-                selection = TextRange((existingAccount?.name ?: (if (accountType == "CASH") "Cash in Hand" else "")).length)
+                text = existingAccount?.name ?: (if (accountType == "CASH") "Hand Cash" else ""),
+                selection = TextRange((existingAccount?.name ?: (if (accountType == "CASH") "Hand Cash" else "")).length)
             )
         )
     }
@@ -897,7 +897,7 @@ private fun AccountFormSheet(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = if (isEditing) (if (accountType == "CASH") "Edit Cash Record" else "Edit Account") else (if (accountType == "CASH") "Add Cash in Hand" else "Add New Account"),
+                        text = if (isEditing) (if (accountType == "CASH") "Edit Cash Record" else "Edit Account") else (if (accountType == "CASH") "Add Hand Cash" else "Add New Account"),
                         color = TextPrimary,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
@@ -943,7 +943,7 @@ private fun AccountFormSheet(
                             .background(if (selected) AccentTeal else Color.Transparent)
                             .clickable {
                                 accountType = t
-                                accountName = TextFieldValue(if (t == "CASH") "Cash in Hand" else "")
+                                accountName = TextFieldValue(if (t == "CASH") "Hand Cash" else "")
                                 nameExpanded = false
                             }
                             .padding(vertical = 11.dp),
@@ -973,7 +973,7 @@ private fun AccountFormSheet(
 
             Spacer(Modifier.height(16.dp))
 
-            // Account name autocomplete (Banks and MFS only - hidden for Cash in Hand)
+            // Account name autocomplete (Banks and MFS only - hidden for Hand Cash)
             if (accountType != "CASH") {
                 ExposedDropdownMenuBox(
                     expanded = nameExpanded,
@@ -1104,7 +1104,7 @@ private fun AccountFormSheet(
                 Spacer(Modifier.height(14.dp))
             }
 
-            // Account Number (Banks and MFS only - hidden for Cash in Hand)
+            // Account Number (Banks and MFS only - hidden for Hand Cash)
             if (accountType != "CASH") {
                 OutlinedTextField(
                     value = accountNumber,

@@ -7,6 +7,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -42,6 +43,8 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PushPin
@@ -50,6 +53,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
@@ -187,33 +191,11 @@ fun HomeScreen(
         Scaffold(
             containerColor = Color.Transparent,
             // Empty topBar so we can overlay the floating top bar smoothly
-            topBar = {},
-            floatingActionButton = {
-                // ── Floating Action Button (FAB) ─────────────────────
-                FloatingActionButton(
-                    onClick         = { showAddSheet = true },
-                    containerColor  = Color.Transparent,
-                    contentColor    = BackgroundDark,
-                    shape           = CircleShape,
-                    modifier        = Modifier.size(56.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.linearGradient(colors = listOf(AccentTeal, AccentBlue))
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = "Add Transaction", tint = BackgroundDark)
-                    }
-                }
-            }
-        ) { innerPadding ->
+            topBar = {}
+        ) { _ ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = innerPadding.calculateBottomPadding())
                     .verticalScroll(rememberScrollState())
             ) {
                 // Spacer matching top bar height (64.dp) + status bar padding
@@ -231,44 +213,207 @@ fun HomeScreen(
                     }
                 }
 
-                // ── 1. Balance Overview Card ──────────────────────────
-                Column(
+                // ── 1. Hero Total Balance Card (Merged with Income & Expenses) ───────
+                val currentDateText = remember {
+                    SimpleDateFormat("MMM d", Locale.getDefault()).format(Date())
+                }
+
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp)
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF373B46))
                 ) {
-                    Text(text = "Total Balance", style = MaterialTheme.typography.labelMedium, color = TextSecondary)
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp)
                     ) {
-                        val balanceStr = "৳${currencyFormat.format(totalBalance)}"
-                        val displayText = if (hideTotalBalance && !showTemporarily) {
-                            "৳" + balanceStr.substring(1).filter { it != ',' && it != '.' }.map { '*' }.joinToString("")
-                        } else {
-                            balanceStr
+                        // Header Row: "Total Balance" + Date Chip
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Total Balance",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .border(
+                                        width = 1.dp,
+                                        color = Color.White.copy(alpha = 0.35f),
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                                    .background(Color.White.copy(alpha = 0.06f), shape = RoundedCornerShape(20.dp))
+                                    .padding(horizontal = 14.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = currentDateText,
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
 
-                        Text(
-                            text       = displayText,
-                            style      = MaterialTheme.typography.displayMedium,
-                            fontWeight = FontWeight.Bold,
-                            color      = TextPrimary
-                        )
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                        if (hideTotalBalance) {
-                            IconButton(
-                                onClick = { showTemporarily = true },
-                                modifier = Modifier.size(32.dp)
+                        // Amount Display Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            val balanceStr = "৳${currencyFormat.format(totalBalance)}"
+                            val displayText = if (hideTotalBalance && !showTemporarily) {
+                                "৳" + balanceStr.substring(1).filter { it != ',' && it != '.' }.map { '*' }.joinToString("")
+                            } else {
+                                balanceStr
+                            }
+
+                            Text(
+                                text = displayText,
+                                fontSize = 30.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+
+                            if (hideTotalBalance) {
+                                IconButton(
+                                    onClick = { showTemporarily = true },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (showTemporarily) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = "Show/Hide Balance",
+                                        tint = Color.White.copy(alpha = 0.8f),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Merged Income & Expense Sub-Cards
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // Income Sub-Card
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(62.dp)
+                                    .clickable(
+                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                        indication = null
+                                    ) { onIncomeClick() },
+                                shape = RoundedCornerShape(16.dp),
+                                color = Color.White
                             ) {
-                                Icon(
-                                    imageVector = if (showTemporarily) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = "Show/Hide Balance",
-                                    tint = AccentTeal,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(Color(0xFFB3ECFF)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDownward,
+                                            contentDescription = "Income",
+                                            tint = Color(0xFF1E293B),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = "Income",
+                                            color = Color(0xFF1E293B),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(modifier = Modifier.height(1.dp))
+                                        Text(
+                                            text = "৳${currencyFormat.format(monthlyIncome)}",
+                                            color = Color(0xFF0F172A),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Expenses Sub-Card
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(62.dp)
+                                    .clickable(
+                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                        indication = null
+                                    ) { onExpenseClick() },
+                                shape = RoundedCornerShape(16.dp),
+                                color = Color.White
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(Color(0xFFFFD1D1)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowUpward,
+                                            contentDescription = "Expenses",
+                                            tint = Color(0xFF1E293B),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = "Expenses",
+                                            color = Color(0xFF1E293B),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(modifier = Modifier.height(1.dp))
+                                        Text(
+                                            text = "৳${currencyFormat.format(monthlyExpenses)}",
+                                            color = Color(0xFF0F172A),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -287,26 +432,41 @@ fun HomeScreen(
                 }
 
                 if (activeAccounts.isNotEmpty()) {
-                    LazyRow(
-                        contentPadding        = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    BoxWithConstraints(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        items(activeAccounts, key = { it.id }) { account ->
-                            AccountCardChip(
-                                account = account,
-                                currencyFormat = currencyFormat,
-                                hideBalancesPref = hideBalancesPref,
-                                isPinned = account.id == pinnedAccountId,
-                                onPinToggle = {
-                                    scope.launch {
-                                        if (account.id == pinnedAccountId) {
-                                            preferencesManager.setPinnedAccountId(null)
-                                        } else {
-                                            preferencesManager.setPinnedAccountId(account.id)
+                        val containerWidth = maxWidth
+                        val horizontalMargin = 14.dp
+                        val spacing = 12.dp
+
+                        val cardWidth = if (activeAccounts.size == 1) {
+                            containerWidth - (horizontalMargin * 2)
+                        } else {
+                            (containerWidth - (horizontalMargin * 2) - spacing) / 2
+                        }
+
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = horizontalMargin, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(spacing)
+                        ) {
+                            items(activeAccounts, key = { it.id }) { account ->
+                                AccountCardChip(
+                                    account = account,
+                                    currencyFormat = currencyFormat,
+                                    hideBalancesPref = hideBalancesPref,
+                                    isPinned = account.id == pinnedAccountId,
+                                    onPinToggle = {
+                                        scope.launch {
+                                            if (account.id == pinnedAccountId) {
+                                                preferencesManager.setPinnedAccountId(null)
+                                            } else {
+                                                preferencesManager.setPinnedAccountId(account.id)
+                                            }
                                         }
-                                    }
-                                }
-                            )
+                                    },
+                                    modifier = Modifier.width(cardWidth)
+                                )
+                            }
                         }
                     }
                 } else {
@@ -325,58 +485,6 @@ fun HomeScreen(
                             fontSize = 12.sp
                         )
                     }
-                }
-
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // ── 2. Income vs Expense Summary ──────────────────────
-                val currentMonthYearText = remember {
-                    java.text.SimpleDateFormat("MMMM | yyyy", java.util.Locale.getDefault()).format(java.util.Date())
-                }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .padding(bottom = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Overview",
-                        color = TextPrimary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = currentMonthYearText,
-                        color = AccentTeal,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    SummaryCard(
-                        title      = "Income",
-                        amount     = monthlyIncome,
-                        color      = IncomeGreen,
-                        modifier   = Modifier.weight(1f),
-                        formatter  = currencyFormat,
-                        onClick    = onIncomeClick
-                    )
-                    SummaryCard(
-                        title      = "Expenses",
-                        amount     = monthlyExpenses,
-                        color      = ExpenseRed,
-                        modifier   = Modifier.weight(1f),
-                        formatter  = currencyFormat,
-                        onClick    = onExpenseClick
-                    )
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -650,7 +758,7 @@ fun HomeScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(48.dp))
+                Spacer(modifier = Modifier.height(120.dp))
             }
         }
 
@@ -773,7 +881,8 @@ fun AccountCardChip(
     currencyFormat: DecimalFormat,
     hideBalancesPref: Boolean = false,
     isPinned: Boolean = false,
-    onPinToggle: () -> Unit = {}
+    onPinToggle: () -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
     val cardColor = remember { Color(android.graphics.Color.parseColor(account.colorHex)) }
     var isBalanceVisible by remember(hideBalancesPref) { mutableStateOf(!hideBalancesPref) }
@@ -799,8 +908,7 @@ fun AccountCardChip(
             shape   = RoundedCornerShape(16.dp),
             colors  = CardDefaults.cardColors(containerColor = cardColor.copy(alpha = 0.12f)),
             border  = androidx.compose.foundation.BorderStroke(1.dp, cardColor.copy(alpha = 0.4f)),
-            modifier = Modifier
-                .width(165.dp)
+            modifier = modifier
                 .height(95.dp)
                 .graphicsLayer {
                     rotationY = rotation

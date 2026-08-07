@@ -1206,7 +1206,7 @@ fun LaunchedEffectForType(type: String, block: suspend () -> Unit) {
     }
 }
 
-private val PRESET_CASH = listOf("Cash in Hand")
+private val PRESET_CASH = listOf("Hand Cash")
 private val PRESET_BANKS = listOf(
     "BRAC Bank PLC", "The City Bank PLC", "Eastern Bank PLC (EBL)",
     "Dutch-Bangla Bank PLC (DBBL)", "Prime Bank PLC", "Mutual Trust Bank PLC",
@@ -1263,7 +1263,7 @@ private fun createNewAccountEntity(
         else -> "#0096FF"
     }
     return AccountEntity(
-        name = if (type == "CASH") "Cash in Hand" else cleanName,
+        name = if (type == "CASH") "Hand Cash" else cleanName,
         type = type,
         balance = initialBalance,
         colorHex = colorHex,
@@ -1510,9 +1510,9 @@ private fun androidx.compose.foundation.layout.ColumnScope.AccountDropdownItems(
     // 1. Cash Section
     if (matchingExistingCash.isNotEmpty() || matchingPresetCash.isNotEmpty()) {
         val headerTitle = when (cashTagText) {
-            "Deposit" -> "Cash in Hand (Deposit)"
-            "Withdrawal" -> "Cash in Hand (Withdrawal)"
-            else -> "Cash in Hand"
+            "Deposit" -> "Hand Cash (Deposit)"
+            "Withdrawal" -> "Hand Cash (Withdrawal)"
+            else -> "Hand Cash"
         }
         DropdownMenuItem(
             text = { Text(headerTitle, color = IncomeGreen, fontWeight = FontWeight.Bold, fontSize = 11.sp) },
