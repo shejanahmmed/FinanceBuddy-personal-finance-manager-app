@@ -17,19 +17,35 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import android.content.Context
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -63,6 +79,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -99,7 +116,7 @@ import com.shejan.financebuddy.ui.theme.TransferYellow
 @Composable
 fun AddTransactionSheet(
     accounts: List<AccountEntity>,
-    sheetState: SheetState,
+    sheetState: SheetState? = null,
     onDismiss: () -> Unit,
     onSaveTransaction: (TransactionEntity, AccountEntity?, AccountEntity?) -> Unit,
     payees: List<PayeeEntity> = emptyList(),
@@ -290,82 +307,143 @@ fun AddTransactionSheet(
 
     LaunchedEffect(fromAccountExpanded) {
         if (fromAccountExpanded && fromAccountY > 0) {
-            scrollState.animateScrollTo((fromAccountY - 30).coerceAtLeast(0))
+            delay(120)
+            scrollState.animateScrollTo((fromAccountY - 20).coerceAtLeast(0))
         }
     }
 
     LaunchedEffect(toAccountExpanded) {
         if (toAccountExpanded && toAccountY > 0) {
-            scrollState.animateScrollTo((toAccountY - 30).coerceAtLeast(0))
+            delay(120)
+            scrollState.animateScrollTo((toAccountY - 20).coerceAtLeast(0))
         }
     }
 
     LaunchedEffect(payeeExpanded) {
         if (payeeExpanded && payeeY > 0) {
-            scrollState.animateScrollTo((payeeY - 30).coerceAtLeast(0))
+            delay(120)
+            scrollState.animateScrollTo((payeeY - 20).coerceAtLeast(0))
         }
     }
 
-    ModalBottomSheet(
+    Dialog(
         onDismissRequest = onDismiss,
-        sheetState       = sheetState,
-        containerColor   = CardDarker,
-        shape            = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(scrollState)
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 40.dp)
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = BackgroundDark
         ) {
-            // Title
-            Text(
-                text      = "Add Transaction",
-                style     = androidx.compose.material3.MaterialTheme.typography.titleLarge,
-                color     = TextPrimary,
-                modifier  = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .imePadding()
+            ) {
+                // ── Full Screen Top Header Bar ──────────────────────────────
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = TextPrimary
+                        )
+                    }
 
-            Spacer(modifier = Modifier.height(20.dp))
+                    Text(
+                        text = "Add Transaction",
+                        style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+
+                    Spacer(modifier = Modifier.size(48.dp))
+                }
+
+                HorizontalDivider(color = DividerColor, thickness = 1.dp)
+
+                // ── Scrollable Body ────────────────────────────────────
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(scrollState)
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                        .padding(bottom = 24.dp)
+                ) {
 
             // ── Tab Selector ────────────────────────────────────
-            val types = listOf("EXPENSE", "INCOME", "TRANSFER")
-            val selectedTabIndex = types.indexOf(selectedType)
+            // ── Minimal Dark Segmented Control (Expense / Income / Transfer) ───────
+            val types = remember { listOf("EXPENSE" to "Expense", "INCOME" to "Income", "TRANSFER" to "Transfer") }
+            val selectedTabIndex = remember(selectedType) {
+                types.indexOfFirst { it.first == selectedType }.coerceAtLeast(0)
+            }
             val indicatorColor = when (selectedType) {
                 "INCOME" -> IncomeGreen
                 "EXPENSE" -> ExpenseRed
                 else -> TransferYellow
             }
 
-            TabRow(
-                selectedTabIndex = selectedTabIndex,
-                containerColor   = CardDark,
-                modifier         = Modifier
+            BoxWithConstraints(
+                modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp)),
-                indicator        = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                        color    = indicatorColor
-                    )
-                },
-                divider = {}
+                    .height(48.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black)
+                    .padding(4.dp)
             ) {
-                types.forEachIndexed { index, type ->
-                    Tab(
-                        selected = selectedType == type,
-                        onClick  = { selectedType = type },
-                        text     = {
+                val segmentWidth = maxWidth / 3
+                val indicatorOffset by animateDpAsState(
+                    targetValue = segmentWidth * selectedTabIndex,
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                    label = "SegmentSlideAnimation"
+                )
+
+                // White sliding pill for selected segment
+                Box(
+                    modifier = Modifier
+                        .offset(x = indicatorOffset)
+                        .width(segmentWidth)
+                        .fillMaxHeight()
+                        .clip(CircleShape)
+                        .background(Color.White)
+                )
+
+                // Segment Labels Row
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    types.forEach { (typeKey, label) ->
+                        val isSelected = selectedType == typeKey
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clip(CircleShape)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { selectedType = typeKey },
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
-                                text       = type.lowercase().replaceFirstChar { it.uppercase() },
-                                color      = if (selectedType == type) TextPrimary else TextSecondary,
-                                fontWeight = if (selectedType == type) FontWeight.SemiBold else FontWeight.Normal,
-                                fontSize   = 14.sp
+                                text = label,
+                                color = if (isSelected) Color.Black else Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
                             )
                         }
-                    )
+                    }
                 }
             }
 
@@ -396,6 +474,71 @@ fun AddTransactionSheet(
             }
 
             Spacer(modifier = Modifier.height(18.dp))
+
+            // ── Category Selector (Category Chips Grid) ─────────
+            if (selectedType != "TRANSFER") {
+                Text(text = "Category", style = androidx.compose.material3.MaterialTheme.typography.labelMedium, color = TextSecondary)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    activeCategories.forEach { cat ->
+                        val isSelected = selectedCategory == cat
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(if (isSelected) indicatorColor else CardDark)
+                                .combinedClickable(
+                                    onClick = { selectedCategory = cat },
+                                    onLongClick = {
+                                        categoryToDelete = cat
+                                        showDeleteDialog = true
+                                    }
+                                )
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text       = cat,
+                                color      = if (isSelected) BackgroundDark else TextPrimary,
+                                fontSize   = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                            )
+                        }
+                    }
+
+                    // Add Custom Category Chip
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(CardDark.copy(alpha = 0.6f))
+                            .border(1.dp, AccentTeal.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                            .clickable { showAddCategoryDialog = true }
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add Category",
+                                tint = AccentTeal,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "New",
+                                color = AccentTeal,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+            }
 
             // ── Account Selector(s) ──────────────────────────────
             if (selectedType == "TRANSFER") {
@@ -850,72 +993,7 @@ fun AddTransactionSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // ── Category Selector (Category Chips Grid) ─────────
-            if (selectedType != "TRANSFER") {
-                Text(text = "Category", style = androidx.compose.material3.MaterialTheme.typography.labelMedium, color = TextSecondary)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    activeCategories.forEach { cat ->
-                        val isSelected = selectedCategory == cat
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(if (isSelected) indicatorColor else CardDark)
-                                .combinedClickable(
-                                    onClick = { selectedCategory = cat },
-                                    onLongClick = {
-                                        categoryToDelete = cat
-                                        showDeleteDialog = true
-                                    }
-                                )
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text       = cat,
-                                color      = if (isSelected) BackgroundDark else TextPrimary,
-                                fontSize   = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                            )
-                        }
-                    }
-
-                    // Add Custom Category Chip
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(CardDark.copy(alpha = 0.6f))
-                            .border(1.dp, AccentTeal.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                            .clickable { showAddCategoryDialog = true }
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Add Category",
-                                tint = AccentTeal,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "New",
-                                color = AccentTeal,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(18.dp))
-            }
+            var noteY by remember { mutableStateOf(0) }
 
             // ── Notes ──────────────────────────────────────────
             OutlinedTextField(
@@ -924,7 +1002,19 @@ fun AddTransactionSheet(
                 textStyle     = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                 label         = { Text("Add Note (Optional)", color = TextSecondary) },
                 singleLine    = true,
-                modifier      = Modifier.fillMaxWidth(),
+                modifier      = Modifier
+                    .fillMaxWidth()
+                    .onGloballyPositioned { coordinates ->
+                        noteY = coordinates.positionInParent().y.toInt()
+                    }
+                    .onFocusChanged { focusState ->
+                        if (focusState.isFocused && noteY > 0) {
+                            coroutineScope.launch {
+                                delay(150)
+                                scrollState.animateScrollTo((noteY - 40).coerceAtLeast(0))
+                            }
+                        }
+                    },
                 colors        = TextFieldColors()
             )
 
@@ -1026,6 +1116,8 @@ fun AddTransactionSheet(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(180.dp))
         }
 
         // ── Custom Category Dialogs ──────────────────────────────
@@ -1170,6 +1262,8 @@ fun AddTransactionSheet(
             }
         }
     }
+}
+}
 }
 
 // ─────────────────────────────────────────────────────────────

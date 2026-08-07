@@ -859,7 +859,6 @@ fun HomeScreen(
         if (showAddSheet) {
             AddTransactionSheet(
                 accounts          = accounts,
-                sheetState        = sheetState,
                 onDismiss         = { showAddSheet = false },
                 onSaveTransaction = onSaveTransaction,
                 payees            = payees,

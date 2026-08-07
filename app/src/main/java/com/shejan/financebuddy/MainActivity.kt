@@ -1110,10 +1110,8 @@ fun MainDashboardContainer(
 
             // Global Add Transaction Sheet triggered from Central Nav (+) Button
             if (showAddTransactionSheet) {
-                val addSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
                 AddTransactionSheet(
                     accounts = accounts,
-                    sheetState = addSheetState,
                     onDismiss = { showAddTransactionSheet = false },
                     onSaveTransaction = { tx, newFrom, newTo ->
                         scope.launch(Dispatchers.IO) {

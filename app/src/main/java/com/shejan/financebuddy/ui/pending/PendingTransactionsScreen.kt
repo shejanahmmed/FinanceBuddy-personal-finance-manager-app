@@ -446,7 +446,6 @@ fun PendingTransactionsScreen(
         editTarget?.let { target ->
             AddTransactionSheet(
                 accounts                  = accounts,
-                sheetState                = sheetState,
                 onDismiss                 = { editTarget = null },
                 initialType               = target.type,
                 initialAmount             = target.amount,
