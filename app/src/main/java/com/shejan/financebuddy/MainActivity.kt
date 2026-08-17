@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -34,11 +33,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.History
@@ -46,26 +45,17 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.MonetizationOn
-import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Summarize
-import androidx.compose.material.icons.filled.PrivacyTip
-import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -79,7 +69,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
@@ -87,9 +76,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.res.painterResource
@@ -98,6 +84,8 @@ import androidx.compose.ui.graphics.Brush
 import com.shejan.financebuddy.data.PreferencesManager
 import com.shejan.financebuddy.data.db.FinanceDatabase
 import com.shejan.financebuddy.data.db.AccountEntity
+import com.shejan.financebuddy.data.db.PayeeEntity
+import com.shejan.financebuddy.data.db.PayeeAccountEntity
 import com.shejan.financebuddy.data.db.TransactionEntity
 import com.shejan.financebuddy.ui.budget.BudgetScreen
 import com.shejan.financebuddy.ui.goals.GoalsScreen
@@ -128,8 +116,6 @@ import com.shejan.financebuddy.ui.about.AboutScreen
 import com.shejan.financebuddy.ui.accounts.BankAccountsScreen
 import com.shejan.financebuddy.ui.payees.PayeesScreen
 import com.shejan.financebuddy.ui.payees.PayeeDetailScreen
-import com.shejan.financebuddy.data.db.PayeeEntity
-import com.shejan.financebuddy.data.db.PayeeAccountEntity
 import com.shejan.financebuddy.sms.SmsPermissionHandler
 import com.shejan.financebuddy.ui.profile.EditProfileDialog
 import com.shejan.financebuddy.ui.loans.LoansScreen
@@ -294,8 +280,7 @@ fun AppNavigation(
                     onNavigateToHistory = { navController.navigate("transaction_history") },
                     onNavigateToReports = { navController.navigate("reports") },
                     onNavigateToStatistics = { navController.navigate("statistics") },
-                    onNavigateToInvestments = { navController.navigate("investments") },
-                    onNavigateToAbout = { navController.navigate("about") }
+                    onNavigateToInvestments = { navController.navigate("investments") }
                 )
             }
 
@@ -580,12 +565,10 @@ fun MainDashboardContainer(
     onNavigateToHistory: () -> Unit = {},
     onNavigateToReports: () -> Unit = {},
     onNavigateToStatistics: () -> Unit = {},
-    onNavigateToInvestments: () -> Unit = {},
-    onNavigateToAbout: () -> Unit = {}
+    onNavigateToInvestments: () -> Unit = {}
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope       = rememberCoroutineScope()
-    val context     = androidx.compose.ui.platform.LocalContext.current
     var currentTab by remember { mutableStateOf("home") } // "home", "budget", "goals"
 
     val profileName by preferencesManager.profileName.collectAsState(initial = "User")
@@ -839,7 +822,7 @@ fun MainDashboardContainer(
                         }
                     )
                     DrawerMenuItem(
-                        icon = Icons.Default.ShowChart,
+                        icon = Icons.AutoMirrored.Filled.ShowChart,
                         label = "Investment Tracker",
                         onClick = {
                             scope.launch {
@@ -953,7 +936,7 @@ fun MainDashboardContainer(
                                 val payee = existingPayees.firstOrNull { it.name.equals(cleanName, ignoreCase = true) }
                                 val payeeId = if (payee == null) {
                                     val uniqueId = "PAY-" + java.util.UUID.randomUUID().toString().take(4).uppercase(java.util.Locale.ROOT)
-                                    payeeDao.insertPayee(com.shejan.financebuddy.data.db.PayeeEntity(name = cleanName, uniqueId = uniqueId)).toInt()
+                                    payeeDao.insertPayee(PayeeEntity(name = cleanName, uniqueId = uniqueId)).toInt()
                                 } else {
                                     payee.id
                                 }
@@ -961,7 +944,7 @@ fun MainDashboardContainer(
                                 val hasAccount = existingAccounts.any { it.accountNumber == accountNumber && it.bankName == bankName }
                                 if (!hasAccount) {
                                     payeeDao.insertPayeeAccount(
-                                        com.shejan.financebuddy.data.db.PayeeAccountEntity(
+                                        PayeeAccountEntity(
                                             payeeId = payeeId,
                                             bankName = bankName,
                                             accountNumber = accountNumber,
@@ -1152,7 +1135,7 @@ fun MainDashboardContainer(
                             val payee = existingPayees.firstOrNull { it.name.equals(name, ignoreCase = true) }
                             val payeeId = if (payee == null) {
                                 val uniqueId = "PAY-" + java.util.UUID.randomUUID().toString().take(4).uppercase(java.util.Locale.ROOT)
-                                payeeDao.insertPayee(com.shejan.financebuddy.data.db.PayeeEntity(name = name, uniqueId = uniqueId)).toInt()
+                                payeeDao.insertPayee(PayeeEntity(name = name, uniqueId = uniqueId)).toInt()
                             } else {
                                 payee.id
                             }
@@ -1160,7 +1143,7 @@ fun MainDashboardContainer(
                             val hasAccount = existingAccounts.any { it.accountNumber == accountNumber && it.bankName == bankName }
                             if (!hasAccount) {
                                 payeeDao.insertPayeeAccount(
-                                    com.shejan.financebuddy.data.db.PayeeAccountEntity(
+                                    PayeeAccountEntity(
                                         payeeId = payeeId,
                                         bankName = bankName,
                                         accountNumber = accountNumber,
@@ -1176,17 +1159,6 @@ fun MainDashboardContainer(
         }
     }
 }
-
-// ─── Navigation Helper Custom Colors ─────────────────────────
-
-@Composable
-private fun navigationBarItemColors() = NavigationBarItemDefaults.colors(
-    selectedIconColor = AccentTeal,
-    selectedTextColor = AccentTeal,
-    unselectedIconColor = Color(0xFF64748B),
-    unselectedTextColor = Color(0xFF64748B),
-    indicatorColor = AccentTeal.copy(alpha = 0.12f)
-)
 
 // ─── Timestamp Helper ────────────────────────────────────────
 
@@ -1254,7 +1226,7 @@ fun DrawerMenuItem(
 
 @Composable
 private fun NavBarItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     label: String,
     isSelected: Boolean,
     onClick: () -> Unit,
