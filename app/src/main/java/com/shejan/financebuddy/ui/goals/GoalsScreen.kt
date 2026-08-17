@@ -115,7 +115,9 @@ fun GoalsScreen(
     goals: List<GoalEntity>,
     onAddGoal: (GoalEntity) -> Unit,
     onDeposit: (goalId: Int, amount: Double) -> Unit,
-    onDeleteGoal: (GoalEntity) -> Unit
+    onDeleteGoal: (GoalEntity) -> Unit,
+    triggerAddSheet: Boolean = false,
+    onResetTriggerAddSheet: () -> Unit = {}
 ) {
     val currencyFormat = remember { DecimalFormat("##,##,##0.00") }
 
@@ -125,6 +127,13 @@ fun GoalsScreen(
 
     var showAddSheet     by remember { mutableStateOf(false) }
     var depositGoal      by remember { mutableStateOf<GoalEntity?>(null) }
+
+    LaunchedEffect(triggerAddSheet) {
+        if (triggerAddSheet) {
+            showAddSheet = true
+            onResetTriggerAddSheet()
+        }
+    }
 
     val addSheetState     = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val depositSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -164,25 +173,7 @@ fun GoalsScreen(
 
         Scaffold(
             containerColor = Color.Transparent,
-            topBar = {},
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick        = { showAddSheet = true },
-                    containerColor = Color.Transparent,
-                    contentColor   = BackgroundDark,
-                    shape          = CircleShape,
-                    modifier       = Modifier.size(56.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Brush.linearGradient(colors = listOf(AccentPurple, AccentBlue))),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = "Add Goal", tint = OnAccent)
-                    }
-                }
-            }
+            topBar = {}
         ) { innerPadding ->
             LazyColumn(
                 modifier            = Modifier
@@ -303,19 +294,47 @@ fun GoalsScreen(
                     fontWeight = FontWeight.Bold,
                     color      = TextPrimary
                 )
-                if (completed > 0) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (completed > 0) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(IncomeGreen.copy(alpha = 0.15f))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text      = "🎉 $completed Completed",
+                                fontSize  = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color     = IncomeGreen
+                            )
+                        }
+                    }
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(IncomeGreen.copy(alpha = 0.15f))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(AccentPurple.copy(alpha = 0.15f))
+                            .clickable { showAddSheet = true }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
-                        Text(
-                            text      = "🎉 $completed Completed",
-                            fontSize  = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color     = IncomeGreen
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add Goal",
+                                tint = AccentPurple,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Goal",
+                                color = AccentPurple,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }

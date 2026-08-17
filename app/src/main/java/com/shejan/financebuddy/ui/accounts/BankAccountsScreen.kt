@@ -298,28 +298,6 @@ fun BankAccountsScreen(
                 }
             }
         }
-
-        // Modern Floating Add Button
-        FloatingActionButton(
-            onClick = { editingAccount = null; showAddSheet = true },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .navigationBarsPadding()
-                .padding(20.dp)
-                .size(56.dp),
-            containerColor = Color.Transparent,
-            contentColor = BackgroundDark,
-            shape = CircleShape
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Brush.linearGradient(listOf(AccentTeal, AccentBlue))),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Add, "Add Account", tint = BackgroundDark, modifier = Modifier.size(26.dp))
-            }
-        }
     }
 
     if (showAddSheet) {

@@ -228,25 +228,7 @@ fun LoansScreen(
 
         Scaffold(
             containerColor = Color.Transparent,
-            topBar = {},
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { showAddTypeChooser = true },
-                    containerColor = Color.Transparent,
-                    contentColor = BackgroundDark,
-                    shape = CircleShape,
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Brush.linearGradient(colors = listOf(AccentBlue, AccentTeal))),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = "Add Loan", tint = OnAccent)
-                    }
-                }
-            }
+            topBar = {}
         ) { innerPadding ->
             Column(
                 modifier = Modifier

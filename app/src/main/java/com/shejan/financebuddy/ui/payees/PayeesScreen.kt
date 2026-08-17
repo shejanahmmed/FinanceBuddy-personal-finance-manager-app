@@ -167,18 +167,6 @@ fun PayeesScreen(
                 }
             }
         }
-
-        // -- FAB --------------------------------------------------
-        FloatingActionButton(
-            onClick = { showAddSheet = true },
-            modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(20.dp).size(56.dp),
-            containerColor = Color.Transparent, contentColor = BackgroundDark, shape = CircleShape
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize().background(Brush.linearGradient(listOf(AccentBlue, AccentTeal))),
-                contentAlignment = Alignment.Center
-            ) { Icon(Icons.Default.Add, "Add Recipient", tint = BackgroundDark, modifier = Modifier.size(26.dp)) }
-        }
     }
 
     if (showAddSheet) {

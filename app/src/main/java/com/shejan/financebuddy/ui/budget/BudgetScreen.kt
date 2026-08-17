@@ -126,13 +126,22 @@ fun BudgetScreen(
     budgets: List<BudgetEntity>,
     spentByCategory: Map<String, Double>,
     onAddBudget: (BudgetEntity) -> Unit,
-    onDeleteBudget: (BudgetEntity) -> Unit
+    onDeleteBudget: (BudgetEntity) -> Unit,
+    triggerAddSheet: Boolean = false,
+    onResetTriggerAddSheet: () -> Unit = {}
 ) {
     val currencyFormat = remember { DecimalFormat("##,##,##0.00") }
     val totalBudgeted  = budgets.sumOf { it.limitAmount }
     val totalSpent     = budgets.sumOf { spentByCategory[it.category] ?: 0.0 }
 
     var showAddSheet by remember { mutableStateOf(false) }
+
+    LaunchedEffect(triggerAddSheet) {
+        if (triggerAddSheet) {
+            showAddSheet = true
+            onResetTriggerAddSheet()
+        }
+    }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var isTopBarVisible by remember { mutableStateOf(true) }
@@ -170,25 +179,7 @@ fun BudgetScreen(
 
         Scaffold(
             containerColor = Color.Transparent,
-            topBar = {},
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick        = { showAddSheet = true },
-                    containerColor = Color.Transparent,
-                    contentColor   = BackgroundDark,
-                    shape          = CircleShape,
-                    modifier       = Modifier.size(56.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Brush.linearGradient(colors = listOf(AccentBlue, AccentTeal))),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = "Add Budget", tint = BackgroundDark)
-                    }
-                }
-            }
+            topBar = {}
         ) { innerPadding ->
             LazyColumn(
                 modifier            = Modifier
@@ -258,7 +249,7 @@ fun BudgetScreen(
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text      = "Tap + to set a spending limit\nfor each category",
+                                    text      = "Tap + Budget above to set a spending limit\nfor each category",
                                     color     = TextMuted,
                                     fontSize  = 13.sp,
                                     textAlign = TextAlign.Center,
@@ -319,11 +310,39 @@ fun BudgetScreen(
                     fontWeight = FontWeight.Bold,
                     color      = TextPrimary
                 )
-                Text(
-                    text  = "This Month",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = TextSecondary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text  = "This Month",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextSecondary
+                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(AccentTeal.copy(alpha = 0.15f))
+                            .clickable { showAddSheet = true }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add Budget",
+                                tint = AccentTeal,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Budget",
+                                color = AccentTeal,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             }
         }
     }

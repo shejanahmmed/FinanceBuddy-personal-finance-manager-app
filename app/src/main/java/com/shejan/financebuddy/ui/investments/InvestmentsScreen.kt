@@ -133,30 +133,7 @@ fun InvestmentsScreen(
 
         Scaffold(
             containerColor = Color.Transparent,
-            topBar = {},
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { showAddSheet = true },
-                    containerColor = Color.Transparent,
-                    contentColor = BackgroundDark,
-                    shape = CircleShape,
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Brush.linearGradient(colors = listOf(AccentTeal, AccentBlue))),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Investment",
-                            tint = OnAccent,
-                            modifier = Modifier.size(26.dp)
-                        )
-                    }
-                }
-            }
+            topBar = {}
         ) { innerPadding ->
             Column(
                 modifier = Modifier

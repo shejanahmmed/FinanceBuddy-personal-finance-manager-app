@@ -915,6 +915,9 @@ fun MainDashboardContainer(
                 .fillMaxSize()
                 .blur(blurRadius)
         ) {
+            var showAddBudgetFromNav by remember { mutableStateOf(false) }
+            var showAddGoalFromNav by remember { mutableStateOf(false) }
+
             Box(
                 modifier = Modifier.fillMaxSize()
             ) {
@@ -945,11 +948,12 @@ fun MainDashboardContainer(
                         onSavePayee        = { name, bankName, accountNumber, type ->
                             scope.launch(Dispatchers.IO) {
                                 val payeeDao = database.payeeDao()
+                                val cleanName = name.trim()
                                 val existingPayees = payeeDao.getAllPayeesOnce()
-                                val payee = existingPayees.firstOrNull { it.name.equals(name, ignoreCase = true) }
+                                val payee = existingPayees.firstOrNull { it.name.equals(cleanName, ignoreCase = true) }
                                 val payeeId = if (payee == null) {
                                     val uniqueId = "PAY-" + java.util.UUID.randomUUID().toString().take(4).uppercase(java.util.Locale.ROOT)
-                                    payeeDao.insertPayee(com.shejan.financebuddy.data.db.PayeeEntity(name = name, uniqueId = uniqueId)).toInt()
+                                    payeeDao.insertPayee(com.shejan.financebuddy.data.db.PayeeEntity(name = cleanName, uniqueId = uniqueId)).toInt()
                                 } else {
                                     payee.id
                                 }
@@ -961,7 +965,7 @@ fun MainDashboardContainer(
                                             payeeId = payeeId,
                                             bankName = bankName,
                                             accountNumber = accountNumber,
-                                            recipientName = name,
+                                            recipientName = cleanName,
                                             type = type
                                         )
                                     )
@@ -999,7 +1003,9 @@ fun MainDashboardContainer(
                         },
                         onDeleteBudget    = { budget ->
                             scope.launch(Dispatchers.IO) { budgetDao.deleteBudget(budget) }
-                        }
+                        },
+                        triggerAddSheet = showAddBudgetFromNav,
+                        onResetTriggerAddSheet = { showAddBudgetFromNav = false }
                     )
                     "goals"  -> GoalsScreen(
                         goals        = goals,
@@ -1011,7 +1017,9 @@ fun MainDashboardContainer(
                         },
                         onDeleteGoal = { goal ->
                             scope.launch(Dispatchers.IO) { goalDao.deleteGoal(goal) }
-                        }
+                        },
+                        triggerAddSheet = showAddGoalFromNav,
+                        onResetTriggerAddSheet = { showAddGoalFromNav = false }
                     )
                 }
             }
@@ -1022,15 +1030,14 @@ fun MainDashboardContainer(
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    // Extra top padding to give the FAB room to protrude upward
-                    .padding(start = 20.dp, end = 20.dp, bottom = 10.dp, top = 28.dp)
+                    .padding(start = 20.dp, end = 20.dp, bottom = 10.dp)
             ) {
                 // ── The pill surface ─────────────────────────────────
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.BottomCenter),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(14.dp),
                     color = Color.White,
                     tonalElevation = 0.dp,
                     shadowElevation = 16.dp,
@@ -1063,8 +1070,38 @@ fun MainDashboardContainer(
                             modifier = Modifier.weight(1f)
                         )
 
-                        // ── 3. Center gap for FAB ──────────
-                        Spacer(modifier = Modifier.weight(1f))
+                        // ── 3. Central Add Button (+) ──────────
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(Brush.linearGradient(colors = listOf(AccentTeal, AccentBlue)))
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) { 
+                                        when (currentTab) {
+                                            "budget" -> showAddBudgetFromNav = true
+                                            "goals"  -> showAddGoalFromNav = true
+                                            else     -> showAddTransactionSheet = true
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Add Item",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
 
                         // ── 4. Goals ──────────────────────────
                         val isGoals = currentTab == "goals"
@@ -1083,27 +1120,6 @@ fun MainDashboardContainer(
                             modifier = Modifier.weight(1f)
                         )
                     }
-                }
-
-                // ── Central FAB — sibling of Surface, floats above pill ──
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .align(Alignment.TopCenter)
-                        .clip(CircleShape)
-                        .background(Brush.linearGradient(colors = listOf(AccentTeal, AccentBlue)))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { showAddTransactionSheet = true },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add Transaction",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
                 }
             }
 
@@ -1244,29 +1260,20 @@ private fun NavBarItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Box(
         modifier = modifier
             .fillMaxHeight()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onClick() },
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = icon,
             contentDescription = label,
             tint = if (isSelected) AccentTeal else Color(0xFFA0AEC0),
             modifier = Modifier.size(22.dp)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        // Active dot indicator
-        Box(
-            modifier = Modifier
-                .size(4.dp)
-                .clip(CircleShape)
-                .background(if (isSelected) AccentTeal else Color.Transparent)
         )
     }
 }
@@ -1277,15 +1284,14 @@ private fun NavBarInboxItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Box(
         modifier = modifier
             .fillMaxHeight()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onClick() },
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        contentAlignment = Alignment.Center
     ) {
         BadgedBox(
             badge = {
@@ -1308,12 +1314,5 @@ private fun NavBarInboxItem(
                 modifier = Modifier.size(22.dp)
             )
         }
-        Spacer(modifier = Modifier.height(4.dp))
-        Box(
-            modifier = Modifier
-                .size(4.dp)
-                .clip(CircleShape)
-                .background(Color.Transparent)
-        )
     }
 }
