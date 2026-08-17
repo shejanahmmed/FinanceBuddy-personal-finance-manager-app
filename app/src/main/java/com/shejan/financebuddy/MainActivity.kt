@@ -1038,10 +1038,10 @@ fun MainDashboardContainer(
                         .fillMaxWidth()
                         .align(Alignment.BottomCenter),
                     shape = RoundedCornerShape(14.dp),
-                    color = Color.White,
+                    color = CardDark,
                     tonalElevation = 0.dp,
                     shadowElevation = 16.dp,
-                    border = BorderStroke(1.dp, Color(0xFFF1F5F9))
+                    border = BorderStroke(1.dp, Color(0xFF334155).copy(alpha = 0.6f))
                 ) {
                     Row(
                         modifier = Modifier
@@ -1272,7 +1272,7 @@ private fun NavBarItem(
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = if (isSelected) AccentTeal else Color(0xFFA0AEC0),
+            tint = if (isSelected) AccentTeal else TextMuted,
             modifier = Modifier.size(22.dp)
         )
     }
@@ -1310,7 +1310,7 @@ private fun NavBarInboxItem(
             Icon(
                 imageVector = Icons.Default.Inbox,
                 contentDescription = "Transaction Inbox",
-                tint = Color(0xFFA0AEC0),
+                tint = TextMuted,
                 modifier = Modifier.size(22.dp)
             )
         }

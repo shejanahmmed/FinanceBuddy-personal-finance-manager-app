@@ -308,6 +308,23 @@ fun AddTransactionSheet(
         }
     }
 
+    val view = androidx.compose.ui.platform.LocalView.current
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+
+    val dismissKeyboard = {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+        (context as? android.app.Activity)?.currentFocus?.clearFocus()
+        (context as? android.app.Activity)?.window?.let { window ->
+            androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
+                .hide(androidx.core.view.WindowInsetsCompat.Type.ime())
+        }
+        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+        imm?.hideSoftInputFromWindow(view.windowToken, 0)
+        imm?.hideSoftInputFromWindow(view.applicationWindowToken, 0)
+    }
+
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
 
@@ -315,24 +332,32 @@ fun AddTransactionSheet(
     var toAccountY by remember { mutableStateOf(0) }
     var payeeY by remember { mutableStateOf(0) }
 
+    val dynamicBottomSpacer by animateDpAsState(
+        targetValue = if (fromAccountExpanded || toAccountExpanded || payeeExpanded) 360.dp else 24.dp,
+        label = "dynamicBottomSpacer"
+    )
+
     LaunchedEffect(fromAccountExpanded) {
         if (fromAccountExpanded && fromAccountY > 0) {
             delay(120)
-            scrollState.animateScrollTo((fromAccountY - 20).coerceAtLeast(0))
+            val absoluteY = scrollState.value + fromAccountY
+            scrollState.animateScrollTo((absoluteY - 4).coerceAtLeast(0))
         }
     }
 
     LaunchedEffect(toAccountExpanded) {
         if (toAccountExpanded && toAccountY > 0) {
             delay(120)
-            scrollState.animateScrollTo((toAccountY - 20).coerceAtLeast(0))
+            val absoluteY = scrollState.value + toAccountY
+            scrollState.animateScrollTo((absoluteY - 4).coerceAtLeast(0))
         }
     }
 
     LaunchedEffect(payeeExpanded) {
         if (payeeExpanded && payeeY > 0) {
             delay(120)
-            scrollState.animateScrollTo((payeeY - 20).coerceAtLeast(0))
+            val absoluteY = scrollState.value + payeeY
+            scrollState.animateScrollTo((absoluteY - 4).coerceAtLeast(0))
         }
     }
 
@@ -614,28 +639,29 @@ fun AddTransactionSheet(
                         fromAccountSearchText = it
                         fromAccountExpanded = true
                     },
+                    readOnly = selectedFromAccount != null,
                     textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                     label = { Text(if (selectedType == "TRANSFER") "From Account" else "Account", color = TextSecondary) },
                     placeholder = { Text("Select account", color = TextMuted) },
                     trailingIcon = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (selectedFromAccount != null || fromAccountSearchText.text.isNotEmpty()) {
-                                IconButton(
-                                    onClick = {
-                                        selectedFromAccount = null
-                                        fromAccountSearchText = TextFieldValue("")
-                                        fromAccountExpanded = true
-                                    },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Clear account",
-                                        tint = TextMuted,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
+                        val hasContent = selectedFromAccount != null || fromAccountSearchText.text.isNotEmpty()
+                        if (hasContent && !fromAccountExpanded) {
+                            IconButton(
+                                onClick = {
+                                    selectedFromAccount = null
+                                    fromAccountSearchText = TextFieldValue("")
+                                    fromAccountExpanded = true
+                                },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear account",
+                                    tint = TextMuted,
+                                    modifier = Modifier.size(16.dp)
+                                )
                             }
+                        } else {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = fromAccountExpanded)
                         }
                     },
@@ -677,6 +703,14 @@ fun AddTransactionSheet(
                                 selection = TextRange(account.name.length)
                             )
                             fromAccountExpanded = false
+                            dismissKeyboard()
+                            coroutineScope.launch {
+                                delay(50)
+                                dismissKeyboard()
+                                delay(100)
+                                dismissKeyboard()
+                                scrollState.animateScrollTo(0)
+                            }
                         },
                         onSelectNew = { name ->
                             selectedFromAccount = null
@@ -685,6 +719,14 @@ fun AddTransactionSheet(
                                 selection = TextRange(name.length)
                             )
                             fromAccountExpanded = false
+                            dismissKeyboard()
+                            coroutineScope.launch {
+                                delay(50)
+                                dismissKeyboard()
+                                delay(100)
+                                dismissKeyboard()
+                                scrollState.animateScrollTo(0)
+                            }
                         }
                     )
                 }
@@ -727,12 +769,11 @@ fun AddTransactionSheet(
                     expanded = toAccountExpanded,
                     onExpandedChange = { isExpanded ->
                         toAccountExpanded = isExpanded
-                        if (isExpanded) {
-                            toAccountSearchText = TextFieldValue("")
-                            if (toAccountY > 0) {
-                                coroutineScope.launch {
-                                    scrollState.animateScrollTo((toAccountY - 30).coerceAtLeast(0))
-                                }
+                        if (isExpanded && toAccountY > 0) {
+                            coroutineScope.launch {
+                                delay(80)
+                                val absoluteY = scrollState.value + toAccountY
+                                scrollState.animateScrollTo((absoluteY - 4).coerceAtLeast(0))
                             }
                         }
                     },
@@ -747,29 +788,36 @@ fun AddTransactionSheet(
                         onValueChange = {
                             toAccountSearchText = it
                             toAccountExpanded = true
+                            if (toAccountY > 0) {
+                                coroutineScope.launch {
+                                    val absoluteY = scrollState.value + toAccountY
+                                    scrollState.animateScrollTo((absoluteY - 4).coerceAtLeast(0))
+                                }
+                            }
                         },
+                        readOnly = selectedToAccount != null,
                         textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                         label = { Text(if (isOwnAccount) "To Account" else "To Bank/MFS", color = TextSecondary) },
                         placeholder = { Text(if (isOwnAccount) "Select destination" else "Select bank", color = TextMuted) },
                         trailingIcon = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (selectedToAccount != null || toAccountSearchText.text.isNotEmpty()) {
-                                    IconButton(
-                                        onClick = {
-                                            selectedToAccount = null
-                                            toAccountSearchText = TextFieldValue("")
-                                            toAccountExpanded = true
-                                        },
-                                        modifier = Modifier.size(28.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Clear account",
-                                            tint = TextMuted,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
+                            val hasContent = selectedToAccount != null || toAccountSearchText.text.isNotEmpty()
+                            if (hasContent && !toAccountExpanded) {
+                                IconButton(
+                                    onClick = {
+                                        selectedToAccount = null
+                                        toAccountSearchText = TextFieldValue("")
+                                        toAccountExpanded = true
+                                    },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear account",
+                                        tint = TextMuted,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                 }
+                            } else {
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = toAccountExpanded)
                             }
                         },
@@ -781,7 +829,9 @@ fun AddTransactionSheet(
                             .onFocusChanged { focusState ->
                                 if (focusState.isFocused && toAccountY > 0) {
                                     coroutineScope.launch {
-                                        scrollState.animateScrollTo((toAccountY - 30).coerceAtLeast(0))
+                                        delay(120)
+                                        val absoluteY = scrollState.value + toAccountY
+                                        scrollState.animateScrollTo((absoluteY - 4).coerceAtLeast(0))
                                     }
                                 }
                             }
@@ -811,6 +861,14 @@ fun AddTransactionSheet(
                                     selection = TextRange(account.name.length)
                                 )
                                 toAccountExpanded = false
+                                dismissKeyboard()
+                                coroutineScope.launch {
+                                    delay(50)
+                                    dismissKeyboard()
+                                    delay(100)
+                                    dismissKeyboard()
+                                    scrollState.animateScrollTo(0)
+                                }
                             },
                             onSelectNew = { name ->
                                 selectedToAccount = null
@@ -819,6 +877,14 @@ fun AddTransactionSheet(
                                     selection = TextRange(name.length)
                                 )
                                 toAccountExpanded = false
+                                dismissKeyboard()
+                                coroutineScope.launch {
+                                    delay(50)
+                                    dismissKeyboard()
+                                    delay(100)
+                                    dismissKeyboard()
+                                    scrollState.animateScrollTo(0)
+                                }
                             }
                         )
                     }
@@ -1053,7 +1119,8 @@ fun AddTransactionSheet(
                         if (focusState.isFocused && noteY > 0) {
                             coroutineScope.launch {
                                 delay(150)
-                                scrollState.animateScrollTo((noteY - 40).coerceAtLeast(0))
+                                val absoluteY = scrollState.value + noteY
+                                scrollState.animateScrollTo((absoluteY - 15).coerceAtLeast(0))
                             }
                         }
                     },
@@ -1194,7 +1261,7 @@ fun AddTransactionSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(180.dp))
+            Spacer(modifier = Modifier.height(dynamicBottomSpacer))
         }
 
         // ── Cancel Confirmation Dialog ──────────────────────────
