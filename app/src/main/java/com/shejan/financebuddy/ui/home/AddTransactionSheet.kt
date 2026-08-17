@@ -22,6 +22,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -515,6 +516,11 @@ fun AddTransactionSheet(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(if (isSelected) indicatorColor else CardDark)
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isSelected) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.25f),
+                                    shape = RoundedCornerShape(20.dp)
+                                )
                                 .combinedClickable(
                                     onClick = { selectedCategory = cat },
                                     onLongClick = {
@@ -1196,14 +1202,15 @@ fun AddTransactionSheet(
                     }
                 },
                 enabled  = isValid,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
                 shape    = RoundedCornerShape(12.dp),
+                border   = BorderStroke(1.dp, if (isValid) AccentTeal.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.15f)),
                 colors   = ButtonDefaults.buttonColors(
                     containerColor = Color.Transparent,
                     disabledContainerColor = CardDarker
                 ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
             ) {
                 Box(
@@ -1241,6 +1248,7 @@ fun AddTransactionSheet(
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = ExpenseRed
                 ),
@@ -1329,14 +1337,17 @@ fun AddTransactionSheet(
 
         // ── Custom Category Dialogs ──────────────────────────────
         if (showAddCategoryDialog) {
-            androidx.compose.ui.window.Dialog(onDismissRequest = { showAddCategoryDialog = false }) {
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { showAddCategoryDialog = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
                 Surface(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight()
-                        .padding(24.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    color = CardDark
+                        .fillMaxWidth(0.92f)
+                        .wrapContentHeight(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = CardDark,
+                    border = BorderStroke(1.dp, Color(0xFF334155))
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
@@ -1346,30 +1357,47 @@ fun AddTransactionSheet(
                             text = "Add Custom Category",
                             style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
                             color = TextPrimary,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
                         OutlinedTextField(
                             value = newCategoryName,
                             onValueChange = { newCategoryName = it },
                             textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                             label = { Text("Category Name", color = TextSecondary) },
                             singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
                             colors = TextFieldColors(),
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(24.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            TextButton(onClick = {
-                                showAddCategoryDialog = false
-                                newCategoryName = ""
-                            }) {
-                                Text("Cancel", color = TextSecondary)
+                            Button(
+                                onClick = {
+                                    showAddCategoryDialog = false
+                                    newCategoryName = ""
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = ExpenseRed,
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp)
+                            ) {
+                                Text(
+                                    text = "Cancel",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
                             }
-                            Spacer(modifier = Modifier.width(16.dp))
                             Button(
                                 onClick = {
                                     val trimmed = newCategoryName.trim()
@@ -1394,9 +1422,26 @@ fun AddTransactionSheet(
                                     newCategoryName = ""
                                 },
                                 enabled = newCategoryName.trim().isNotEmpty(),
-                                colors = ButtonDefaults.buttonColors(containerColor = AccentTeal)
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (newCategoryName.trim().isNotEmpty()) AccentTeal.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.15f)
+                                ),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = AccentTeal,
+                                    contentColor = BackgroundDark,
+                                    disabledContainerColor = Color(0xFF1E293B),
+                                    disabledContentColor = Color(0xFF64748B)
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp)
                             ) {
-                                Text("Add", color = BackgroundDark, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "Add",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
                             }
                         }
                     }
@@ -1405,14 +1450,17 @@ fun AddTransactionSheet(
         }
 
         if (showDeleteDialog) {
-            androidx.compose.ui.window.Dialog(onDismissRequest = { showDeleteDialog = false }) {
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { showDeleteDialog = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
                 Surface(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight()
-                        .padding(24.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    color = CardDark
+                        .fillMaxWidth(0.92f)
+                        .wrapContentHeight(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = CardDark,
+                    border = BorderStroke(1.dp, Color(0xFF334155))
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
@@ -1422,7 +1470,8 @@ fun AddTransactionSheet(
                             text = "Delete Category?",
                             style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
                             color = TextPrimary,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
@@ -1434,12 +1483,27 @@ fun AddTransactionSheet(
                         Spacer(modifier = Modifier.height(24.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            TextButton(onClick = { showDeleteDialog = false }) {
-                                Text("Cancel", color = TextSecondary)
+                            Button(
+                                onClick = { showDeleteDialog = false },
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF334155),
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp)
+                            ) {
+                                Text(
+                                    text = "Cancel",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
                             }
-                            Spacer(modifier = Modifier.width(16.dp))
                             Button(
                                 onClick = {
                                     if (selectedType == "INCOME") {
@@ -1459,9 +1523,21 @@ fun AddTransactionSheet(
                                     }
                                     showDeleteDialog = false
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed)
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = ExpenseRed,
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp)
                             ) {
-                                Text("Delete", color = OnAccent, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "Delete",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
                             }
                         }
                     }
@@ -1490,7 +1566,7 @@ private fun TextFieldColors() = OutlinedTextFieldDefaults.colors(
     unfocusedTextColor      = TextPrimary,
     disabledTextColor       = TextPrimary,
     focusedBorderColor      = AccentTeal,
-    unfocusedBorderColor    = DividerColor,
+    unfocusedBorderColor    = Color.White.copy(alpha = 0.35f),
     focusedContainerColor   = CardDark,
     unfocusedContainerColor = CardDark,
     disabledContainerColor  = CardDark,
