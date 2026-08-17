@@ -17,8 +17,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -236,27 +239,66 @@ fun StatisticsScreen(
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // SECTION 1: KPI Metric Tiles
+                // SECTION 1: Summary Stack Container (Outer dark ash card containing 4 full-width inner black cards)
                 item {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        MetricTile("Total Income", "৳${currencyFormat.format(totalIncome)}", IncomeGreen, Modifier.weight(1f))
-                        MetricTile("Total Expense", "৳${currencyFormat.format(totalExpense)}", ExpenseRed, Modifier.weight(1f))
-                    }
-                }
-                item {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        MetricTile(
-                            "Net Savings",
-                            "${if (netSavings >= 0) "+" else ""}৳${currencyFormat.format(netSavings)}",
-                            if (netSavings >= 0) AccentTeal else ExpenseRed,
-                            Modifier.weight(1f)
-                        )
-                        MetricTile(
-                            "Savings Rate",
-                            "${String.format(Locale.US, "%.1f", savingsRate)}%",
-                            AccentBlue,
-                            Modifier.weight(1f)
-                        )
+                    Card(
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardDark),
+                        border = BorderStroke(1.dp, DividerColor),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = "Overview",
+                                color = TextPrimary,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Financial summary for selected period",
+                                color = TextMuted,
+                                fontSize = 11.sp
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                MetricTile(
+                                    title = "Total Income",
+                                    value = "৳${currencyFormat.format(totalIncome)}",
+                                    icon = Icons.Default.TrendingUp,
+                                    color = IncomeGreen,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                MetricTile(
+                                    title = "Total Expense",
+                                    value = "৳${currencyFormat.format(totalExpense)}",
+                                    icon = Icons.Default.TrendingDown,
+                                    color = ExpenseRed,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                MetricTile(
+                                    title = "Net Savings",
+                                    value = "${if (netSavings >= 0) "+" else ""}৳${currencyFormat.format(netSavings)}",
+                                    icon = Icons.Default.AccountBalance,
+                                    color = if (netSavings >= 0) AccentTeal else ExpenseRed,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                MetricTile(
+                                    title = "Savings Rate",
+                                    value = "${String.format(Locale.US, "%.1f", savingsRate)}%",
+                                    icon = Icons.Default.Star,
+                                    color = AccentBlue,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -411,22 +453,65 @@ private fun StatCard(title: String, subtitle: String, content: @Composable Colum
     }
 }
 
-// ─── KPI Metric tile ─────────────────────────────────────────────────
+// ─── KPI Metric tile (Inner Pitch Black Card) ───────────────────────
 @Composable
-private fun MetricTile(title: String, value: String, color: Color, modifier: Modifier = Modifier) {
+private fun MetricTile(
+    title: String,
+    value: String,
+    icon: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
     Card(
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.3f)),
+        colors = CardDefaults.cardColors(containerColor = CardDarker),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
         modifier = modifier
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-            Text(title, fontSize = 11.sp, color = TextMuted, fontWeight = FontWeight.Medium)
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                value, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold,
-                color = color, maxLines = 1, overflow = TextOverflow.Ellipsis
-            )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(color.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = color,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = value,
+                    fontSize = 14.sp,
+                    lineHeight = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = title,
+                    fontSize = 11.sp,
+                    lineHeight = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
