@@ -1,5 +1,6 @@
 package com.shejan.financebuddy.ui.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import android.widget.Toast
@@ -223,12 +224,13 @@ fun HomeScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 14.dp, vertical = 8.dp),
                     shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF373B46))
+                    colors = CardDefaults.cardColors(containerColor = CardDark),
+                    border = BorderStroke(1.dp, DividerColor)
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 14.dp)
+                            .padding(horizontal = 16.dp, vertical = 16.dp)
                     ) {
                         // Header Row: "Total Balance" + Date Chip
                         Row(
@@ -238,31 +240,31 @@ fun HomeScreen(
                         ) {
                             Text(
                                 text = "Total Balance",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextSecondary
                             )
 
                             Box(
                                 modifier = Modifier
                                     .border(
                                         width = 1.dp,
-                                        color = Color.White.copy(alpha = 0.35f),
+                                        color = Color.White.copy(alpha = 0.15f),
                                         shape = RoundedCornerShape(20.dp)
                                     )
-                                    .background(Color.White.copy(alpha = 0.06f), shape = RoundedCornerShape(20.dp))
-                                    .padding(horizontal = 14.dp, vertical = 4.dp)
+                                    .background(CardDarker, shape = RoundedCornerShape(20.dp))
+                                    .padding(horizontal = 12.dp, vertical = 4.dp)
                             ) {
                                 Text(
                                     text = currentDateText,
-                                    color = Color.White,
+                                    color = TextPrimary,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         // Amount Display Row
                         Row(
@@ -279,9 +281,9 @@ fun HomeScreen(
 
                             Text(
                                 text = displayText,
-                                fontSize = 30.sp,
+                                fontSize = 32.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = TextPrimary
                             )
 
                             if (hideTotalBalance) {
@@ -292,14 +294,14 @@ fun HomeScreen(
                                     Icon(
                                         imageVector = if (showTemporarily) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                                         contentDescription = "Show/Hide Balance",
-                                        tint = Color.White.copy(alpha = 0.8f),
+                                        tint = TextSecondary,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         // Merged Income & Expense Sub-Cards
                         Row(
@@ -310,13 +312,14 @@ fun HomeScreen(
                             Surface(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(62.dp)
+                                    .height(64.dp)
                                     .clickable(
                                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                                         indication = null
                                     ) { onIncomeClick() },
                                 shape = RoundedCornerShape(16.dp),
-                                color = Color.White
+                                color = CardDarker,
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f))
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -326,16 +329,16 @@ fun HomeScreen(
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(Color(0xFFB3ECFF)),
+                                            .size(38.dp)
+                                            .clip(CircleShape)
+                                            .background(IncomeGreen.copy(alpha = 0.15f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.ArrowDownward,
                                             contentDescription = "Income",
-                                            tint = Color(0xFF1E293B),
-                                            modifier = Modifier.size(20.dp)
+                                            tint = IncomeGreen,
+                                            modifier = Modifier.size(18.dp)
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(10.dp))
@@ -344,14 +347,14 @@ fun HomeScreen(
                                     ) {
                                         Text(
                                             text = "Income",
-                                            color = Color(0xFF1E293B),
+                                            color = TextSecondary,
                                             fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Medium
                                         )
                                         Spacer(modifier = Modifier.height(1.dp))
                                         Text(
                                             text = "৳${currencyFormat.format(monthlyIncome)}",
-                                            color = Color(0xFF0F172A),
+                                            color = TextPrimary,
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Bold,
                                             maxLines = 1,
@@ -365,13 +368,14 @@ fun HomeScreen(
                             Surface(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(62.dp)
+                                    .height(64.dp)
                                     .clickable(
                                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                                         indication = null
                                     ) { onExpenseClick() },
                                 shape = RoundedCornerShape(16.dp),
-                                color = Color.White
+                                color = CardDarker,
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f))
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -381,16 +385,16 @@ fun HomeScreen(
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(Color(0xFFFFD1D1)),
+                                            .size(38.dp)
+                                            .clip(CircleShape)
+                                            .background(ExpenseRed.copy(alpha = 0.15f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.ArrowUpward,
                                             contentDescription = "Expenses",
-                                            tint = Color(0xFF1E293B),
-                                            modifier = Modifier.size(20.dp)
+                                            tint = ExpenseRed,
+                                            modifier = Modifier.size(18.dp)
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(10.dp))
@@ -399,14 +403,14 @@ fun HomeScreen(
                                     ) {
                                         Text(
                                             text = "Expenses",
-                                            color = Color(0xFF1E293B),
+                                            color = TextSecondary,
                                             fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Medium
                                         )
                                         Spacer(modifier = Modifier.height(1.dp))
                                         Text(
                                             text = "৳${currencyFormat.format(monthlyExpenses)}",
-                                            color = Color(0xFF0F172A),
+                                            color = TextPrimary,
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Bold,
                                             maxLines = 1,
