@@ -140,7 +140,9 @@ fun AddTransactionSheet(
     var selectedType by remember(initialType) { mutableStateOf(initialType ?: "EXPENSE") } // "INCOME", "EXPENSE", "TRANSFER"
     var selectedCategory by remember(initialCategory) { mutableStateOf(initialCategory ?: "") }
     var selectedFromAccount by remember(initialFromAccountId, accounts) {
-        mutableStateOf(accounts.firstOrNull { it.id == initialFromAccountId })
+        val initialAcc = accounts.firstOrNull { it.id == initialFromAccountId }
+        val defaultCashAcc = accounts.firstOrNull { it.type == "CASH" || it.name.contains("Cash", ignoreCase = true) || it.name.contains("Hand", ignoreCase = true) }
+        mutableStateOf(initialAcc ?: defaultCashAcc ?: accounts.firstOrNull())
     }
     var selectedToAccount by remember(initialToAccountId, accounts) {
         mutableStateOf(accounts.firstOrNull { it.id == initialToAccountId })
@@ -288,6 +290,7 @@ fun AddTransactionSheet(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf("") }
     var newCategoryName by remember { mutableStateOf("") }
+    var showCancelConfirmation by remember { mutableStateOf(false) }
 
     // Reset default category if type changes and current category is invalid
     androidx.compose.runtime.LaunchedEffect(selectedType) {
@@ -295,6 +298,13 @@ fun AddTransactionSheet(
             selectedCategory = "Transfer"
         } else if (selectedCategory.isEmpty() || !activeCategories.contains(selectedCategory)) {
             selectedCategory = activeCategories.first()
+        }
+
+        if (selectedType == "EXPENSE" && selectedFromAccount == null) {
+            val cashAcc = accounts.firstOrNull { it.type == "CASH" || it.name.contains("Cash", ignoreCase = true) || it.name.contains("Hand", ignoreCase = true) }
+            if (cashAcc != null) {
+                selectedFromAccount = cashAcc
+            }
         }
     }
 
@@ -344,32 +354,19 @@ fun AddTransactionSheet(
                     .imePadding()
             ) {
                 // ── Full Screen Top Header Bar ──────────────────────────────
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = TextPrimary
-                        )
-                    }
-
                     Text(
                         text = "Add Transaction",
                         style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
-
-                    Spacer(modifier = Modifier.size(48.dp))
                 }
-
-                HorizontalDivider(color = DividerColor, thickness = 1.dp)
 
                 // ── Scrollable Body ────────────────────────────────────
                 Column(
@@ -399,6 +396,7 @@ fun AddTransactionSheet(
                     .height(48.dp)
                     .clip(CircleShape)
                     .background(Color.Black)
+                    .border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape)
                     .padding(4.dp)
             ) {
                 val segmentWidth = maxWidth / 3
@@ -458,6 +456,7 @@ fun AddTransactionSheet(
                 textStyle     = TextStyleForAmount(indicatorColor),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine    = true,
+                shape         = RoundedCornerShape(12.dp),
                 modifier      = Modifier.fillMaxWidth(),
                 colors        = TextFieldColors()
             )
@@ -618,7 +617,28 @@ fun AddTransactionSheet(
                     textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                     label = { Text(if (selectedType == "TRANSFER") "From Account" else "Account", color = TextSecondary) },
                     placeholder = { Text("Select account", color = TextMuted) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = fromAccountExpanded) },
+                    trailingIcon = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (selectedFromAccount != null || fromAccountSearchText.text.isNotEmpty()) {
+                                IconButton(
+                                    onClick = {
+                                        selectedFromAccount = null
+                                        fromAccountSearchText = TextFieldValue("")
+                                        fromAccountExpanded = true
+                                    },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear account",
+                                        tint = TextMuted,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = fromAccountExpanded)
+                        }
+                    },
                     shape = RoundedCornerShape(12.dp),
                     colors = TextFieldColors(),
                     modifier = Modifier
@@ -731,7 +751,28 @@ fun AddTransactionSheet(
                         textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                         label = { Text(if (isOwnAccount) "To Account" else "To Bank/MFS", color = TextSecondary) },
                         placeholder = { Text(if (isOwnAccount) "Select destination" else "Select bank", color = TextMuted) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = toAccountExpanded) },
+                        trailingIcon = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (selectedToAccount != null || toAccountSearchText.text.isNotEmpty()) {
+                                    IconButton(
+                                        onClick = {
+                                            selectedToAccount = null
+                                            toAccountSearchText = TextFieldValue("")
+                                            toAccountExpanded = true
+                                        },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Clear account",
+                                            tint = TextMuted,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = toAccountExpanded)
+                            }
+                        },
                         shape = RoundedCornerShape(12.dp),
                         colors = TextFieldColors(),
                         modifier = Modifier
@@ -1002,6 +1043,7 @@ fun AddTransactionSheet(
                 textStyle     = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                 label         = { Text("Add Note (Optional)", color = TextSecondary) },
                 singleLine    = true,
+                shape         = RoundedCornerShape(12.dp),
                 modifier      = Modifier
                     .fillMaxWidth()
                     .onGloballyPositioned { coordinates ->
@@ -1090,7 +1132,7 @@ fun AddTransactionSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                shape    = RoundedCornerShape(16.dp),
+                shape    = RoundedCornerShape(12.dp),
                 colors   = ButtonDefaults.buttonColors(
                     containerColor = Color.Transparent,
                     disabledContainerColor = CardDarker
@@ -1117,7 +1159,105 @@ fun AddTransactionSheet(
                 }
             }
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // ── Cancel Button ──────────────────────────────────
+            Button(
+                onClick = {
+                    if (amount.isNotEmpty() || note.isNotEmpty()) {
+                        showCancelConfirmation = true
+                    } else {
+                        onDismiss()
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = ExpenseRed
+                ),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(ExpenseRed),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Cancel",
+                        style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(180.dp))
+        }
+
+        // ── Cancel Confirmation Dialog ──────────────────────────
+        if (showCancelConfirmation) {
+            androidx.compose.ui.window.Dialog(onDismissRequest = { showCancelConfirmation = false }) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                        .padding(20.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    color = CardDark
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(text = "⚠️", fontSize = 36.sp)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Discard Changes?",
+                            style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Are you sure you want to cancel? Any entered transaction details will be lost.",
+                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            TextButton(
+                                onClick = { showCancelConfirmation = false },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp)
+                                    .background(CardDarker, RoundedCornerShape(12.dp))
+                            ) {
+                                Text("Keep Editing", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                            }
+                            Button(
+                                onClick = {
+                                    showCancelConfirmation = false
+                                    onDismiss()
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Discard", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // ── Custom Category Dialogs ──────────────────────────────
@@ -1394,9 +1534,9 @@ private fun OptionalNewAccountSection(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 10.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(CardDark)
-            .border(1.dp, DividerColor, RoundedCornerShape(16.dp))
+            .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
             .padding(14.dp)
     ) {
         Row(
@@ -1481,7 +1621,7 @@ private fun OptionalNewAccountSection(
                 readOnly = true,
                 label = { Text("Account Type", color = TextSecondary, fontSize = 12.sp) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subtypeExpanded) },
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = TextFieldColors(),
                 singleLine = true,
                 textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 13.sp),
@@ -1520,7 +1660,7 @@ private fun OptionalNewAccountSection(
                 placeholder = { Text("0.00", color = TextMuted, fontSize = 12.sp) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine = true,
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = TextFieldColors(),
                 textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 13.sp),
                 modifier = Modifier.weight(1f)
@@ -1534,7 +1674,7 @@ private fun OptionalNewAccountSection(
                     placeholder = { Text("Optional", color = TextMuted, fontSize = 12.sp) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = TextFieldColors(),
                     textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 13.sp),
                     modifier = Modifier.weight(1f)
