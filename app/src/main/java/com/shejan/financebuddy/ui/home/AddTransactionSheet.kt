@@ -143,7 +143,13 @@ fun AddTransactionSheet(
     var selectedFromAccount by remember(initialFromAccountId, accounts) {
         val initialAcc = accounts.firstOrNull { it.id == initialFromAccountId }
         val defaultCashAcc = accounts.firstOrNull { it.type == "CASH" || it.name.contains("Cash", ignoreCase = true) || it.name.contains("Hand", ignoreCase = true) }
-        mutableStateOf(initialAcc ?: defaultCashAcc ?: accounts.firstOrNull())
+        mutableStateOf(
+            if (initialType == "INCOME" || initialType == "TRANSFER") {
+                initialAcc
+            } else {
+                initialAcc ?: defaultCashAcc ?: accounts.firstOrNull()
+            }
+        )
     }
     var selectedToAccount by remember(initialToAccountId, accounts) {
         mutableStateOf(accounts.firstOrNull { it.id == initialToAccountId })
@@ -301,10 +307,14 @@ fun AddTransactionSheet(
             selectedCategory = activeCategories.first()
         }
 
-        if (selectedType == "EXPENSE" && selectedFromAccount == null) {
-            val cashAcc = accounts.firstOrNull { it.type == "CASH" || it.name.contains("Cash", ignoreCase = true) || it.name.contains("Hand", ignoreCase = true) }
-            if (cashAcc != null) {
-                selectedFromAccount = cashAcc
+        if (selectedType == "EXPENSE") {
+            if (selectedFromAccount == null) {
+                val cashAcc = accounts.firstOrNull { it.type == "CASH" || it.name.contains("Cash", ignoreCase = true) || it.name.contains("Hand", ignoreCase = true) }
+                selectedFromAccount = cashAcc ?: accounts.firstOrNull()
+            }
+        } else if (selectedType == "INCOME" || selectedType == "TRANSFER") {
+            if (selectedFromAccount?.type == "CASH" || selectedFromAccount?.name?.contains("Cash", ignoreCase = true) == true) {
+                selectedFromAccount = null
             }
         }
     }
@@ -626,7 +636,7 @@ fun AddTransactionSheet(
                     fromAccountExpanded = isExpanded
                     if (isExpanded) {
                         fromAccountSearchText = TextFieldValue("")
-                        if (fromAccountY > 0) {
+                        if (fromAccountY > 0 && selectedType != "TRANSFER") {
                             coroutineScope.launch {
                                 scrollState.animateScrollTo((fromAccountY - 30).coerceAtLeast(0))
                             }
@@ -677,7 +687,7 @@ fun AddTransactionSheet(
                         .fillMaxWidth()
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
                         .onFocusChanged { focusState ->
-                            if (focusState.isFocused && fromAccountY > 0) {
+                            if (focusState.isFocused && fromAccountY > 0 && selectedType != "TRANSFER") {
                                 coroutineScope.launch {
                                     scrollState.animateScrollTo((fromAccountY - 30).coerceAtLeast(0))
                                 }
