@@ -265,31 +265,30 @@ fun SettingsScreen(
                 ) {
                     ThemeOptionRow(
                         title = "Follow System Default",
-                        description = "Matches device's system theme settings",
+                        description = "Matches device settings (Defaults to Dark Mode)",
                         icon = Icons.Default.Devices,
                         selected = themeMode == "SYSTEM",
                         onClick = {
                             scope.launch { preferencesManager.setThemeMode("SYSTEM") }
-                            showToast("Theme set to Follow System")
+                            showToast("Theme set to Follow System (Dark Mode)")
                         }
                     )
                     HorizontalDivider(color = DividerColor, modifier = Modifier.padding(horizontal = 16.dp))
                     ThemeOptionRow(
                         title = "Light Mode",
-                        description = "Crisp, bright background for daylight use",
+                        description = "Under active development — coming soon in a future update",
                         icon = Icons.Default.LightMode,
-                        selected = themeMode == "LIGHT",
-                        onClick = {
-                            scope.launch { preferencesManager.setThemeMode("LIGHT") }
-                            showToast("Switched to Light Mode \u2600\uFE0F")
-                        }
+                        selected = false,
+                        enabled = false,
+                        badgeText = "Coming Soon",
+                        onClick = { }
                     )
                     HorizontalDivider(color = DividerColor, modifier = Modifier.padding(horizontal = 16.dp))
                     ThemeOptionRow(
                         title = "Dark Mode",
                         description = "Power-saving, dark canvas optimal for night",
                         icon = Icons.Default.DarkMode,
-                        selected = themeMode == "DARK",
+                        selected = themeMode == "DARK" || themeMode == "LIGHT",
                         onClick = {
                             scope.launch { preferencesManager.setThemeMode("DARK") }
                             showToast("Switched to Dark Mode 🌙")
@@ -1248,12 +1247,14 @@ fun ThemeOptionRow(
     description: String,
     icon: ImageVector,
     selected: Boolean,
+    enabled: Boolean = true,
+    badgeText: String? = null,
     onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1262,13 +1263,17 @@ fun ThemeOptionRow(
             modifier = Modifier
                 .size(38.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(if (selected) AccentTeal.copy(alpha = 0.15f) else DividerColor.copy(alpha = 0.5f)),
+                .background(
+                    if (!enabled) DividerColor.copy(alpha = 0.2f)
+                    else if (selected) AccentTeal.copy(alpha = 0.15f)
+                    else DividerColor.copy(alpha = 0.5f)
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (selected) AccentTeal else TextSecondary,
+                tint = if (!enabled) TextMuted.copy(alpha = 0.4f) else if (selected) AccentTeal else TextSecondary,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -1276,15 +1281,33 @@ fun ThemeOptionRow(
         Spacer(modifier = Modifier.width(16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                color = if (selected) AccentTeal else TextPrimary,
-                fontSize = 14.sp,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = title,
+                    color = if (!enabled) TextMuted else if (selected) AccentTeal else TextPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold
+                )
+                if (badgeText != null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xFF334155), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = badgeText,
+                            color = Color(0xFF94A3B8),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(1.dp))
             Text(
                 text = description,
-                color = TextSecondary,
+                color = if (!enabled) TextMuted.copy(alpha = 0.6f) else TextSecondary,
                 fontSize = 11.sp,
                 lineHeight = 14.sp
             )
@@ -1296,10 +1319,14 @@ fun ThemeOptionRow(
         Box(
             modifier = Modifier
                 .size(16.dp)
-                .border(2.dp, if (selected) AccentTeal else TextMuted, RoundedCornerShape(8.dp))
+                .border(
+                    width = 2.dp,
+                    color = if (!enabled) TextMuted.copy(alpha = 0.3f) else if (selected) AccentTeal else TextMuted,
+                    shape = RoundedCornerShape(8.dp)
+                )
                 .padding(3.dp)
         ) {
-            if (selected) {
+            if (selected && enabled) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
