@@ -40,6 +40,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -127,43 +128,210 @@ fun StatisticsScreen(
             .toList().sortedByDescending { it.second }
     }
 
-    // Last 6 months income/expense bar data
-    val monthlyBarData = remember(allTransactions) {
-        val cal = Calendar.getInstance()
-        val monthNames = listOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
-        (5 downTo 0).map { offset ->
-            val c = cal.clone() as Calendar
-            c.add(Calendar.MONTH, -offset)
-            c.set(Calendar.DAY_OF_MONTH, 1)
-            c.set(Calendar.HOUR_OF_DAY, 0); c.set(Calendar.MINUTE, 0)
-            c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0)
-            val start = c.timeInMillis
-            c.set(Calendar.DAY_OF_MONTH, c.getActualMaximum(Calendar.DAY_OF_MONTH))
-            c.set(Calendar.HOUR_OF_DAY, 23); c.set(Calendar.MINUTE, 59)
-            c.set(Calendar.SECOND, 59); c.set(Calendar.MILLISECOND, 999)
-            val end = c.timeInMillis
-            val txs = allTransactions.filter { it.timestamp in start..end }
-            val inc = txs.filter { it.type == "INCOME" }.sumOf { it.amount }
-            val exp = txs.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-            val month = c.get(Calendar.MONTH)
-            Triple(monthNames[month], inc, exp)
+    // Dynamic Income vs Expense Comparison Bar Data based on selectedPeriod
+    val barChartTitle = remember(selectedPeriod) {
+        when (selectedPeriod) {
+            "WEEK"  -> "Daily Income vs Expense (This Week)"
+            "MONTH" -> "Weekly Income vs Expense (This Month)"
+            "YEAR"  -> "Monthly Income vs Expense (This Year)"
+            else    -> "6-Month Income vs Expense (All Time)"
         }
     }
 
-    // 30-day balance trend
-    val balanceTrendData = remember(allTransactions) {
+    val barChartData = remember(allTransactions, selectedPeriod) {
+        val now = Calendar.getInstance()
+        val monthNames = listOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
+        val dayNames = listOf("Sun","Mon","Tue","Wed","Thu","Fri","Sat")
+
+        when (selectedPeriod) {
+            "WEEK" -> {
+                // 7 Days of current week (Mon -> Sun)
+                val cal = now.clone() as Calendar
+                cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+                cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
+
+                (0..6).map { dayOffset ->
+                    val c = cal.clone() as Calendar
+                    c.add(Calendar.DAY_OF_YEAR, dayOffset)
+                    val start = c.timeInMillis
+                    val cEnd = c.clone() as Calendar
+                    cEnd.set(Calendar.HOUR_OF_DAY, 23); cEnd.set(Calendar.MINUTE, 59)
+                    cEnd.set(Calendar.SECOND, 59); cEnd.set(Calendar.MILLISECOND, 999)
+                    val end = cEnd.timeInMillis
+
+                    val txs = allTransactions.filter { it.timestamp in start..end }
+                    val inc = txs.filter { it.type == "INCOME" }.sumOf { it.amount }
+                    val exp = txs.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+                    val dayOfWeek = c.get(Calendar.DAY_OF_WEEK) - 1
+                    Triple(dayNames[dayOfWeek], inc, exp)
+                }
+            }
+            "MONTH" -> {
+                // 4 Weeks of current month
+                val cal = now.clone() as Calendar
+                val maxDays = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+                listOf(
+                    "Wk 1" to (1..7),
+                    "Wk 2" to (8..14),
+                    "Wk 3" to (15..21),
+                    "Wk 4" to (22..maxDays)
+                ).map { (label, dayRange) ->
+                    val cStart = cal.clone() as Calendar
+                    cStart.set(Calendar.DAY_OF_MONTH, dayRange.first)
+                    cStart.set(Calendar.HOUR_OF_DAY, 0); cStart.set(Calendar.MINUTE, 0)
+                    cStart.set(Calendar.SECOND, 0); cStart.set(Calendar.MILLISECOND, 0)
+                    val start = cStart.timeInMillis
+
+                    val cEnd = cal.clone() as Calendar
+                    cEnd.set(Calendar.DAY_OF_MONTH, dayRange.last)
+                    cEnd.set(Calendar.HOUR_OF_DAY, 23); cEnd.set(Calendar.MINUTE, 59)
+                    cEnd.set(Calendar.SECOND, 59); cEnd.set(Calendar.MILLISECOND, 999)
+                    val end = cEnd.timeInMillis
+
+                    val txs = allTransactions.filter { it.timestamp in start..end }
+                    val inc = txs.filter { it.type == "INCOME" }.sumOf { it.amount }
+                    val exp = txs.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+                    Triple(label, inc, exp)
+                }
+            }
+            "YEAR" -> {
+                // 12 Months of current year (Jan..Dec)
+                val cal = now.clone() as Calendar
+                (0..11).map { month ->
+                    val c = cal.clone() as Calendar
+                    c.set(Calendar.MONTH, month)
+                    c.set(Calendar.DAY_OF_MONTH, 1)
+                    c.set(Calendar.HOUR_OF_DAY, 0); c.set(Calendar.MINUTE, 0)
+                    c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0)
+                    val start = c.timeInMillis
+
+                    c.set(Calendar.DAY_OF_MONTH, c.getActualMaximum(Calendar.DAY_OF_MONTH))
+                    c.set(Calendar.HOUR_OF_DAY, 23); c.set(Calendar.MINUTE, 59)
+                    c.set(Calendar.SECOND, 59); c.set(Calendar.MILLISECOND, 999)
+                    val end = c.timeInMillis
+
+                    val txs = allTransactions.filter { it.timestamp in start..end }
+                    val inc = txs.filter { it.type == "INCOME" }.sumOf { it.amount }
+                    val exp = txs.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+                    Triple(monthNames[month], inc, exp)
+                }
+            }
+            else -> {
+                // ALL: Last 6 months
+                val cal = now.clone() as Calendar
+                (5 downTo 0).map { offset ->
+                    val c = cal.clone() as Calendar
+                    c.add(Calendar.MONTH, -offset)
+                    c.set(Calendar.DAY_OF_MONTH, 1)
+                    c.set(Calendar.HOUR_OF_DAY, 0); c.set(Calendar.MINUTE, 0)
+                    c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0)
+                    val start = c.timeInMillis
+
+                    c.set(Calendar.DAY_OF_MONTH, c.getActualMaximum(Calendar.DAY_OF_MONTH))
+                    c.set(Calendar.HOUR_OF_DAY, 23); c.set(Calendar.MINUTE, 59)
+                    c.set(Calendar.SECOND, 59); c.set(Calendar.MILLISECOND, 999)
+                    val end = c.timeInMillis
+
+                    val txs = allTransactions.filter { it.timestamp in start..end }
+                    val inc = txs.filter { it.type == "INCOME" }.sumOf { it.amount }
+                    val exp = txs.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+                    val m = c.get(Calendar.MONTH)
+                    Triple(monthNames[m], inc, exp)
+                }
+            }
+        }
+    }
+
+    // Dynamic Balance Trend Line Chart Data based on selectedPeriod
+    val balanceTrendTitle = remember(selectedPeriod) {
+        when (selectedPeriod) {
+            "WEEK"  -> "Balance Trend (This Week)"
+            "MONTH" -> "Balance Trend (This Month)"
+            "YEAR"  -> "Balance Trend (This Year)"
+            else    -> "30-Day Balance Trend"
+        }
+    }
+
+    val balanceTrendSubtitle = remember(selectedPeriod) {
+        when (selectedPeriod) {
+            "WEEK"  -> "Running total balance day-by-day this week"
+            "MONTH" -> "Running total balance day-by-day this month"
+            "YEAR"  -> "Running total balance month-by-month this year"
+            else    -> "Running total balance over the past month"
+        }
+    }
+
+    val balanceTrendData = remember(allTransactions, accounts, selectedPeriod) {
         val totalCurrentBalance = accounts.sumOf { it.balance }
         val today = Calendar.getInstance()
-        (29 downTo 0).map { daysAgo ->
-            val cal = today.clone() as Calendar
-            cal.add(Calendar.DAY_OF_YEAR, -daysAgo)
-            cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59)
-            cal.set(Calendar.SECOND, 59); cal.set(Calendar.MILLISECOND, 999)
-            val cutoff = cal.timeInMillis
-            val netAfter = allTransactions.filter { it.timestamp > cutoff }.sumOf { tx ->
-                when (tx.type) { "INCOME" -> tx.amount; "EXPENSE" -> -tx.amount; else -> 0.0 }
+
+        when (selectedPeriod) {
+            "WEEK" -> {
+                // 7 Days of current week (Mon -> Sun)
+                val cal = today.clone() as Calendar
+                cal.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
+                cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59)
+                cal.set(Calendar.SECOND, 59); cal.set(Calendar.MILLISECOND, 999)
+                val weekEnd = cal.timeInMillis
+
+                val netAfterWeek = allTransactions.filter { it.timestamp > weekEnd }.sumOf { tx ->
+                    when (tx.type) { "INCOME" -> tx.amount; "EXPENSE" -> -tx.amount; else -> 0.0 }
+                }
+                val balanceAtWeekEnd = totalCurrentBalance - netAfterWeek
+
+                (6 downTo 0).map { dayOffset ->
+                    val c = cal.clone() as Calendar
+                    c.add(Calendar.DAY_OF_YEAR, -dayOffset)
+                    val cutoff = c.timeInMillis
+                    val netAfter = allTransactions.filter { it.timestamp > cutoff && it.timestamp <= weekEnd }.sumOf { tx ->
+                        when (tx.type) { "INCOME" -> tx.amount; "EXPENSE" -> -tx.amount; else -> 0.0 }
+                    }
+                    balanceAtWeekEnd - netAfter
+                }
             }
-            totalCurrentBalance - netAfter
+            "MONTH" -> {
+                val days = today.get(Calendar.DAY_OF_MONTH).coerceAtLeast(7)
+                (days - 1 downTo 0).map { daysAgo ->
+                    val cal = today.clone() as Calendar
+                    cal.add(Calendar.DAY_OF_YEAR, -daysAgo)
+                    cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59)
+                    cal.set(Calendar.SECOND, 59); cal.set(Calendar.MILLISECOND, 999)
+                    val cutoff = cal.timeInMillis
+                    val netAfter = allTransactions.filter { it.timestamp > cutoff }.sumOf { tx ->
+                        when (tx.type) { "INCOME" -> tx.amount; "EXPENSE" -> -tx.amount; else -> 0.0 }
+                    }
+                    totalCurrentBalance - netAfter
+                }
+            }
+            "YEAR" -> {
+                val currentMonth = today.get(Calendar.MONTH)
+                (currentMonth downTo 0).map { monthOffset ->
+                    val cal = today.clone() as Calendar
+                    cal.set(Calendar.MONTH, currentMonth - monthOffset)
+                    cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
+                    cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59)
+                    cal.set(Calendar.SECOND, 59); cal.set(Calendar.MILLISECOND, 999)
+                    val cutoff = cal.timeInMillis
+                    val netAfter = allTransactions.filter { it.timestamp > cutoff }.sumOf { tx ->
+                        when (tx.type) { "INCOME" -> tx.amount; "EXPENSE" -> -tx.amount; else -> 0.0 }
+                    }
+                    totalCurrentBalance - netAfter
+                }.reversed()
+            }
+            else -> {
+                (29 downTo 0).map { daysAgo ->
+                    val cal = today.clone() as Calendar
+                    cal.add(Calendar.DAY_OF_YEAR, -daysAgo)
+                    cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59)
+                    cal.set(Calendar.SECOND, 59); cal.set(Calendar.MILLISECOND, 999)
+                    val cutoff = cal.timeInMillis
+                    val netAfter = allTransactions.filter { it.timestamp > cutoff }.sumOf { tx ->
+                        when (tx.type) { "INCOME" -> tx.amount; "EXPENSE" -> -tx.amount; else -> 0.0 }
+                    }
+                    totalCurrentBalance - netAfter
+                }
+            }
         }
     }
 
@@ -302,24 +470,62 @@ fun StatisticsScreen(
                     }
                 }
 
-                // SECTION 2: Monthly Income vs Expense Bar Chart
+                // SECTION 2: Income vs Expense Breakdown List (Per reference image design)
                 item {
-                    StatCard(title = "6-Month Income vs Expense", subtitle = "Tap any bar to inspect") {
-                        MonthlyComparisonBarChart(
-                            data = monthlyBarData,
-                            modifier = Modifier.fillMaxWidth().height(200.dp).padding(top = 8.dp)
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            LegendDot(IncomeGreen, "Income")
-                            LegendDot(ExpenseRed, "Expense")
+                    Card(
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardDark),
+                        border = BorderStroke(1.dp, DividerColor),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = barChartTitle,
+                                color = TextPrimary,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center
+                            )
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                barChartData.forEach { item ->
+                                    IncomeExpenseComparisonRow(
+                                        label = item.first,
+                                        income = item.second,
+                                        expense = item.third
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            // Legend Row at the bottom of the section box
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                LegendDot(IncomeGreen, "Income")
+                                Spacer(modifier = Modifier.width(24.dp))
+                                LegendDot(ExpenseRed, "Expense")
+                            }
                         }
                     }
                 }
 
                 // SECTION 3: Balance Trend Line Chart
                 item {
-                    StatCard(title = "30-Day Balance Trend", subtitle = "Running total balance over the past month") {
+                    StatCard(title = balanceTrendTitle, subtitle = balanceTrendSubtitle) {
                         if (balanceTrendData.distinct().size > 1) {
                             BalanceTrendChart(
                                 balances = balanceTrendData,
@@ -330,7 +536,7 @@ fun StatisticsScreen(
                                 modifier = Modifier.fillMaxWidth().height(100.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("Not enough data to show trend", color = TextMuted, fontSize = 12.sp)
+                                Text("No balance movement detected in this period.", color = TextMuted, fontSize = 12.sp)
                             }
                         }
                     }
@@ -516,13 +722,144 @@ private fun MetricTile(
     }
 }
 
-// ─── Legend dot ───────────────────────────────────────────────────────
+// ─── Legend Dot ───────────────────────────────────────────────────────
 @Composable
 private fun LegendDot(color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(color))
-        Spacer(modifier = Modifier.width(5.dp))
-        Text(label, color = TextMuted, fontSize = 11.sp)
+        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(color))
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(text = label, color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+// ─── Income vs Expense Comparison Row (Matching reference design) ───
+@Composable
+private fun IncomeExpenseComparisonRow(
+    label: String,
+    income: Double,
+    expense: Double
+) {
+    val total = income + expense
+    val incomeRatio = if (total > 0) (income / total).toFloat() else 0.5f
+    val expenseRatio = if (total > 0) (expense / total).toFloat() else 0.5f
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // Left Square Box (Label e.g. WK 1, SUN, JAN)
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = CardDarker),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
+            modifier = Modifier
+                .width(64.dp)
+                .fillMaxHeight()
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = label.uppercase(),
+                    color = TextPrimary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        // Right Rectangular Box (Progress Bar & Values)
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = CardDarker),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.SpaceEvenly,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Dual Segment Progress Bar
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF1E293B))
+                ) {
+                    if (total > 0) {
+                        Row(modifier = Modifier.fillMaxSize()) {
+                            if (incomeRatio > 0f) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .weight(incomeRatio)
+                                        .background(IncomeGreen)
+                                )
+                            }
+                            if (expenseRatio > 0f) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .weight(expenseRatio)
+                                        .background(ExpenseRed)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Compact Values Row underneath: ● ৳1000.00 | ● ৳1000.00
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(IncomeGreen)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "৳${String.format(Locale.US, "%.2f", income)}",
+                        color = TextPrimary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Text(
+                        text = "   |   ",
+                        color = TextMuted,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Light
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(ExpenseRed)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "৳${String.format(Locale.US, "%.2f", expense)}",
+                        color = TextPrimary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
     }
 }
 
