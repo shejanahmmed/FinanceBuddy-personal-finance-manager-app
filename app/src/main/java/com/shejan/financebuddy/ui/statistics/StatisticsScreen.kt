@@ -9,7 +9,11 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlin.math.roundToInt
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -243,13 +247,13 @@ fun StatisticsScreen(
         }
     }
 
-    // Dynamic Balance Trend Line Chart Data based on selectedPeriod
+    // Dynamic Balance Trend Line Chart Header based on selectedPeriod
     val balanceTrendTitle = remember(selectedPeriod) {
         when (selectedPeriod) {
-            "WEEK"  -> "Balance Trend (This Week)"
-            "MONTH" -> "Balance Trend (This Month)"
-            "YEAR"  -> "Balance Trend (This Year)"
-            else    -> "30-Day Balance Trend"
+            "WEEK"  -> "Weekly Balance Trend"
+            "MONTH" -> "Monthly Balance Trend"
+            "YEAR"  -> "Yearly Balance Trend"
+            else    -> "All-Time Balance Trend"
         }
     }
 
@@ -258,7 +262,27 @@ fun StatisticsScreen(
             "WEEK"  -> "Running total balance day-by-day this week"
             "MONTH" -> "Running total balance day-by-day this month"
             "YEAR"  -> "Running total balance month-by-month this year"
-            else    -> "Running total balance over the past month"
+            else    -> "Historical running balance across full account activity"
+        }
+    }
+
+    val balanceTrendXLabels = remember(selectedPeriod, allTransactions) {
+        val now = Calendar.getInstance()
+        when (selectedPeriod) {
+            "WEEK"  -> listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+            "MONTH" -> {
+                val maxDays = now.getActualMaximum(Calendar.DAY_OF_MONTH)
+                listOf("1", "${maxDays / 4}", "${maxDays / 2}", "${(maxDays * 3) / 4}", "$maxDays")
+            }
+            "YEAR"  -> listOf("Jan", "Mar", "May", "Jul", "Sep", "Nov")
+            else    -> {
+                val monthNames = listOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
+                (5 downTo 0).map { offset ->
+                    val c = now.clone() as Calendar
+                    c.add(Calendar.MONTH, -offset)
+                    monthNames[c.get(Calendar.MONTH)]
+                }
+            }
         }
     }
 
@@ -291,41 +315,67 @@ fun StatisticsScreen(
                 }
             }
             "MONTH" -> {
-                val days = today.get(Calendar.DAY_OF_MONTH).coerceAtLeast(7)
-                (days - 1 downTo 0).map { daysAgo ->
-                    val cal = today.clone() as Calendar
-                    cal.add(Calendar.DAY_OF_YEAR, -daysAgo)
-                    cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59)
-                    cal.set(Calendar.SECOND, 59); cal.set(Calendar.MILLISECOND, 999)
-                    val cutoff = cal.timeInMillis
-                    val netAfter = allTransactions.filter { it.timestamp > cutoff }.sumOf { tx ->
+                // Days of current month (1 to maxDays of month)
+                val maxDays = today.getActualMaximum(Calendar.DAY_OF_MONTH)
+                val calMonthEnd = today.clone() as Calendar
+                calMonthEnd.set(Calendar.DAY_OF_MONTH, maxDays)
+                calMonthEnd.set(Calendar.HOUR_OF_DAY, 23); calMonthEnd.set(Calendar.MINUTE, 59)
+                calMonthEnd.set(Calendar.SECOND, 59); calMonthEnd.set(Calendar.MILLISECOND, 999)
+                val monthEnd = calMonthEnd.timeInMillis
+
+                val netAfterMonth = allTransactions.filter { it.timestamp > monthEnd }.sumOf { tx ->
+                    when (tx.type) { "INCOME" -> tx.amount; "EXPENSE" -> -tx.amount; else -> 0.0 }
+                }
+                val balanceAtMonthEnd = totalCurrentBalance - netAfterMonth
+
+                (1..maxDays).map { dayNum ->
+                    val c = today.clone() as Calendar
+                    c.set(Calendar.DAY_OF_MONTH, dayNum)
+                    c.set(Calendar.HOUR_OF_DAY, 23); c.set(Calendar.MINUTE, 59)
+                    c.set(Calendar.SECOND, 59); c.set(Calendar.MILLISECOND, 999)
+                    val cutoff = c.timeInMillis
+                    val netAfter = allTransactions.filter { it.timestamp > cutoff && it.timestamp <= monthEnd }.sumOf { tx ->
                         when (tx.type) { "INCOME" -> tx.amount; "EXPENSE" -> -tx.amount; else -> 0.0 }
                     }
-                    totalCurrentBalance - netAfter
+                    balanceAtMonthEnd - netAfter
                 }
             }
             "YEAR" -> {
-                val currentMonth = today.get(Calendar.MONTH)
-                (currentMonth downTo 0).map { monthOffset ->
-                    val cal = today.clone() as Calendar
-                    cal.set(Calendar.MONTH, currentMonth - monthOffset)
-                    cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
-                    cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59)
-                    cal.set(Calendar.SECOND, 59); cal.set(Calendar.MILLISECOND, 999)
-                    val cutoff = cal.timeInMillis
-                    val netAfter = allTransactions.filter { it.timestamp > cutoff }.sumOf { tx ->
+                // 12 Months of current year (Jan..Dec)
+                val yearEnd = today.clone() as Calendar
+                yearEnd.set(Calendar.MONTH, 11)
+                yearEnd.set(Calendar.DAY_OF_MONTH, 31)
+                yearEnd.set(Calendar.HOUR_OF_DAY, 23); yearEnd.set(Calendar.MINUTE, 59)
+                yearEnd.set(Calendar.SECOND, 59); yearEnd.set(Calendar.MILLISECOND, 999)
+                val yearEndTime = yearEnd.timeInMillis
+
+                val netAfterYear = allTransactions.filter { it.timestamp > yearEndTime }.sumOf { tx ->
+                    when (tx.type) { "INCOME" -> tx.amount; "EXPENSE" -> -tx.amount; else -> 0.0 }
+                }
+                val balanceAtYearEnd = totalCurrentBalance - netAfterYear
+
+                (0..11).map { month ->
+                    val c = today.clone() as Calendar
+                    c.set(Calendar.MONTH, month)
+                    c.set(Calendar.DAY_OF_MONTH, c.getActualMaximum(Calendar.DAY_OF_MONTH))
+                    c.set(Calendar.HOUR_OF_DAY, 23); c.set(Calendar.MINUTE, 59)
+                    c.set(Calendar.SECOND, 59); c.set(Calendar.MILLISECOND, 999)
+                    val cutoff = c.timeInMillis
+                    val netAfter = allTransactions.filter { it.timestamp > cutoff && it.timestamp <= yearEndTime }.sumOf { tx ->
                         when (tx.type) { "INCOME" -> tx.amount; "EXPENSE" -> -tx.amount; else -> 0.0 }
                     }
-                    totalCurrentBalance - netAfter
-                }.reversed()
+                    balanceAtYearEnd - netAfter
+                }
             }
             else -> {
-                (29 downTo 0).map { daysAgo ->
-                    val cal = today.clone() as Calendar
-                    cal.add(Calendar.DAY_OF_YEAR, -daysAgo)
-                    cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59)
-                    cal.set(Calendar.SECOND, 59); cal.set(Calendar.MILLISECOND, 999)
-                    val cutoff = cal.timeInMillis
+                // ALL TIME: Last 6 months historical trajectory
+                (5 downTo 0).map { monthOffset ->
+                    val c = today.clone() as Calendar
+                    c.add(Calendar.MONTH, -monthOffset)
+                    c.set(Calendar.DAY_OF_MONTH, c.getActualMaximum(Calendar.DAY_OF_MONTH))
+                    c.set(Calendar.HOUR_OF_DAY, 23); c.set(Calendar.MINUTE, 59)
+                    c.set(Calendar.SECOND, 59); c.set(Calendar.MILLISECOND, 999)
+                    val cutoff = c.timeInMillis
                     val netAfter = allTransactions.filter { it.timestamp > cutoff }.sumOf { tx ->
                         when (tx.type) { "INCOME" -> tx.amount; "EXPENSE" -> -tx.amount; else -> 0.0 }
                     }
@@ -529,7 +579,8 @@ fun StatisticsScreen(
                         if (balanceTrendData.distinct().size > 1) {
                             BalanceTrendChart(
                                 balances = balanceTrendData,
-                                modifier = Modifier.fillMaxWidth().height(180.dp).padding(top = 8.dp)
+                                xLabels = balanceTrendXLabels,
+                                modifier = Modifier.fillMaxWidth().height(190.dp).padding(top = 8.dp)
                             )
                         } else {
                             Box(
@@ -863,118 +914,11 @@ private fun IncomeExpenseComparisonRow(
     }
 }
 
-// ─── Monthly Income vs Expense Grouped Bar Chart ───────────────────────
-@Composable
-private fun MonthlyComparisonBarChart(
-    data: List<Triple<String, Double, Double>>, // month, income, expense
-    modifier: Modifier = Modifier
-) {
-    val animProgress = remember { Animatable(0f) }
-    LaunchedEffect(data) {
-        animProgress.snapTo(0f)
-        animProgress.animateTo(1f, animationSpec = tween(900, easing = FastOutSlowInEasing))
-    }
-    val textMeasurer = rememberTextMeasurer()
-    val maxVal = remember(data) {
-        data.maxOfOrNull { maxOf(it.second, it.third) }?.coerceAtLeast(1.0) ?: 1.0
-    }
-
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        val leftPad = 52.dp.toPx()
-        val rightPad = 12.dp.toPx()
-        val topPad = 16.dp.toPx()
-        val botPad = 28.dp.toPx()
-        val chartW = w - leftPad - rightPad
-        val chartH = h - topPad - botPad
-        val n = data.size
-        if (n == 0) return@Canvas
-
-        // Grid lines + Y labels
-        for (i in 0..4) {
-            val y = topPad + chartH * (i / 4f)
-            val v = maxVal * (1f - i / 4f)
-            drawLine(
-                color = ChartGridLine,
-                start = Offset(leftPad, y), end = Offset(w - rightPad, y),
-                strokeWidth = 1.dp.toPx()
-            )
-            val lbl = when {
-                v >= 100_000 -> String.format(Locale.US, "%.0fL", v / 100_000)
-                v >= 1_000 -> String.format(Locale.US, "%.0fK", v / 1000)
-                else -> v.toInt().toString()
-            }
-            drawText(
-                textMeasurer, lbl,
-                topLeft = Offset(10.dp.toPx(), y - 7.dp.toPx()),
-                style = TextStyle(color = ChartLabel, fontSize = 9.sp)
-            )
-        }
-
-        val slotW = chartW / n
-        val barW = (slotW * 0.36f).coerceAtMost(18.dp.toPx())
-        val gap = 3.dp.toPx()
-
-        data.forEachIndexed { i, (month, income, expense) ->
-            val slotCenter = leftPad + slotW * i + slotW / 2f
-
-            // Income bar (left of center)
-            val incH = (income / maxVal).toFloat() * chartH * animProgress.value
-            val incX = slotCenter - barW - gap / 2f
-            if (incH > 0f) {
-                drawRoundRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(IncomeGreen, IncomeGreen.copy(alpha = 0.4f)),
-                        startY = topPad + chartH - incH, endY = topPad + chartH
-                    ),
-                    topLeft = Offset(incX, topPad + chartH - incH),
-                    size = Size(barW, incH.coerceAtLeast(2.dp.toPx())),
-                    cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
-                )
-            }
-
-            // Expense bar (right of center)
-            val expH = (expense / maxVal).toFloat() * chartH * animProgress.value
-            val expX = slotCenter + gap / 2f
-            if (expH > 0f) {
-                drawRoundRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(ExpenseRed, ExpenseRed.copy(alpha = 0.4f)),
-                        startY = topPad + chartH - expH, endY = topPad + chartH
-                    ),
-                    topLeft = Offset(expX, topPad + chartH - expH),
-                    size = Size(barW, expH.coerceAtLeast(2.dp.toPx())),
-                    cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
-                )
-            }
-
-            // X-axis label
-            val mResult = textMeasurer.measure(
-                month,
-                style = TextStyle(color = ChartLabel, fontSize = 9.sp)
-            )
-            drawText(
-                textMeasurer, month,
-                topLeft = Offset(slotCenter - mResult.size.width / 2f, topPad + chartH + 7.dp.toPx()),
-                style = TextStyle(color = ChartLabel, fontSize = 9.sp)
-            )
-        }
-
-        // X baseline
-        drawLine(
-            color = ChartGridLine,
-            start = Offset(leftPad, topPad + chartH),
-            end = Offset(w - rightPad, topPad + chartH),
-            strokeWidth = 1.dp.toPx()
-        )
-    }
-}
-
-// ─── Balance Trend Line Chart ──────────────────────────────────────────
+// ─── Balance Trend Glow-Gradient Area Chart with Peak/Dip Markers & Touch Scrubbing ───
 @Composable
 private fun BalanceTrendChart(
     balances: List<Double>,
+    xLabels: List<String> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     val animProgress = remember { Animatable(0f) }
@@ -985,32 +929,58 @@ private fun BalanceTrendChart(
     val textMeasurer = rememberTextMeasurer()
     val rawMin = remember(balances) { balances.minOrNull() ?: 0.0 }
     val rawMax = remember(balances) { balances.maxOrNull() ?: 0.0 }
+    val peakIdx = remember(balances) { balances.indexOf(rawMax) }
+    val dipIdx = remember(balances) { balances.indexOf(rawMin) }
+
     val minVal = remember(rawMin) {
         if (rawMin >= 0.0) 0.0 else rawMin * 1.15
     }
     val maxVal = remember(rawMax, minVal) {
-        (rawMax * 1.12).coerceAtLeast(minVal + 1000.0)
+        (rawMax * 1.15).coerceAtLeast(minVal + 1000.0)
     }
     val range = maxVal - minVal
 
-    Canvas(modifier = modifier) {
+    var activeTouchIdx by remember { mutableStateOf<Int?>(null) }
+
+    Canvas(
+        modifier = modifier
+            .pointerInput(balances) {
+                detectTapGestures(
+                    onPress = { offset ->
+                        activeTouchIdx = getClosestIndex(offset.x, size.width.toFloat(), balances.size)
+                    }
+                )
+            }
+            .pointerInput(balances) {
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        activeTouchIdx = getClosestIndex(offset.x, size.width.toFloat(), balances.size)
+                    },
+                    onDragEnd = { activeTouchIdx = null },
+                    onDragCancel = { activeTouchIdx = null },
+                    onDrag = { change, _ ->
+                        activeTouchIdx = getClosestIndex(change.position.x, size.width.toFloat(), balances.size)
+                    }
+                )
+            }
+    ) {
         val w = size.width
         val h = size.height
-        val leftPad = 56.dp.toPx()
+        val leftPad = 52.dp.toPx()
         val rightPad = 16.dp.toPx()
-        val topPad = 12.dp.toPx()
-        val botPad = 12.dp.toPx()
+        val topPad = 24.dp.toPx()
+        val botPad = 26.dp.toPx()
         val chartW = w - leftPad - rightPad
         val chartH = h - topPad - botPad
         val n = balances.size
         if (n < 2) return@Canvas
 
-        // Grid
+        // Grid lines + Y-axis labels
         for (i in 0..4) {
             val y = topPad + chartH * (i / 4f)
             val v = maxVal - range * (i / 4f)
             drawLine(
-                color = DividerColor.copy(alpha = 0.4f),
+                color = DividerColor.copy(alpha = 0.35f),
                 start = Offset(leftPad, y), end = Offset(w - rightPad, y),
                 strokeWidth = 1.dp.toPx()
             )
@@ -1044,9 +1014,10 @@ private fun BalanceTrendChart(
             )
         }
 
-        // Fill area
-        val fillPath = Path()
         val visPoints = visibleBalances.mapIndexed { i, b -> toPoint(i, b) }
+
+        // Glow gradient fill area underneath curve
+        val fillPath = Path()
         if (visPoints.isNotEmpty()) {
             fillPath.moveTo(visPoints[0].x, topPad + chartH)
             fillPath.lineTo(visPoints[0].x, visPoints[0].y)
@@ -1060,13 +1031,13 @@ private fun BalanceTrendChart(
             drawPath(
                 fillPath,
                 brush = Brush.verticalGradient(
-                    colors = listOf(AccentTeal.copy(alpha = 0.25f), Color.Transparent),
+                    colors = listOf(AccentTeal.copy(alpha = 0.35f), Color.Transparent),
                     startY = topPad, endY = topPad + chartH
                 )
             )
         }
 
-        // Stroke line
+        // Smooth Bezier line
         val strokePath = Path()
         if (visPoints.isNotEmpty()) {
             strokePath.moveTo(visPoints[0].x, visPoints[0].y)
@@ -1078,20 +1049,124 @@ private fun BalanceTrendChart(
         }
         drawPath(
             strokePath,
-            brush = Brush.linearGradient(
+            brush = Brush.horizontalGradient(
                 colors = listOf(AccentTeal, AccentBlue),
-                start = Offset(leftPad, 0f), end = Offset(w - rightPad, 0f)
+                startX = leftPad, endX = w - rightPad
             ),
             style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
         )
 
-        // Endpoint dot
-        if (visPoints.isNotEmpty()) {
-            val lp = visPoints.last()
-            drawCircle(color = AccentTeal.copy(alpha = 0.3f), radius = 10.dp.toPx(), center = lp)
-            drawCircle(color = AccentTeal, radius = 4.dp.toPx(), center = lp)
+        // Draw X-axis bottom labels & baseline
+        if (xLabels.isNotEmpty()) {
+            val xLabelCount = xLabels.size
+            val step = chartW / (xLabelCount - 1).coerceAtLeast(1)
+            xLabels.forEachIndexed { i, label ->
+                val lx = leftPad + i * step
+                val mResult = textMeasurer.measure(
+                    text = label,
+                    style = TextStyle(color = ChartLabel, fontSize = 9.sp)
+                )
+                drawText(
+                    textMeasurer = textMeasurer,
+                    text = label,
+                    topLeft = Offset(
+                        (lx - mResult.size.width / 2f).coerceIn(leftPad - 5f, w - rightPad - mResult.size.width.toFloat()),
+                        topPad + chartH + 6.dp.toPx()
+                    ),
+                    style = TextStyle(color = ChartLabel, fontSize = 9.sp)
+                )
+            }
+        }
+
+        // X-axis baseline
+        drawLine(
+            color = DividerColor.copy(alpha = 0.35f),
+            start = Offset(leftPad, topPad + chartH),
+            end = Offset(w - rightPad, topPad + chartH),
+            strokeWidth = 1.dp.toPx()
+        )
+
+        // Draw Peak Highlight Marker (Highest Balance)
+        if (peakIdx in visPoints.indices && peakIdx != dipIdx) {
+            val peakPt = visPoints[peakIdx]
+            drawCircle(color = IncomeGreen.copy(alpha = 0.25f), radius = 9.dp.toPx(), center = peakPt)
+            drawCircle(color = IncomeGreen, radius = 4.dp.toPx(), center = peakPt)
+            drawText(
+                textMeasurer,
+                text = "Peak: ৳${String.format(Locale.US, "%.0f", rawMax)}",
+                topLeft = Offset((peakPt.x - 24.dp.toPx()).coerceIn(leftPad, w - rightPad - 60.dp.toPx()), peakPt.y - 18.dp.toPx()),
+                style = TextStyle(color = IncomeGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            )
+        }
+
+        // Draw Dip Highlight Marker (Lowest Balance)
+        if (dipIdx in visPoints.indices && dipIdx != peakIdx) {
+            val dipPt = visPoints[dipIdx]
+            drawCircle(color = ExpenseRed.copy(alpha = 0.25f), radius = 9.dp.toPx(), center = dipPt)
+            drawCircle(color = ExpenseRed, radius = 4.dp.toPx(), center = dipPt)
+            drawText(
+                textMeasurer,
+                text = "Low: ৳${String.format(Locale.US, "%.0f", rawMin)}",
+                topLeft = Offset((dipPt.x - 24.dp.toPx()).coerceIn(leftPad, w - rightPad - 60.dp.toPx()), dipPt.y + 4.dp.toPx()),
+                style = TextStyle(color = ExpenseRed, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            )
+        }
+
+        // Touch Scrubbing Guideline & Tooltip
+        activeTouchIdx?.let { idx ->
+            if (idx in visPoints.indices) {
+                val touchPt = visPoints[idx]
+                val balValue = balances[idx]
+
+                // Vertical indicator line
+                drawLine(
+                    color = AccentTeal.copy(alpha = 0.6f),
+                    start = Offset(touchPt.x, topPad),
+                    end = Offset(touchPt.x, topPad + chartH),
+                    strokeWidth = 1.dp.toPx()
+                )
+
+                // Outer pulsing ring & center dot
+                drawCircle(color = AccentTeal.copy(alpha = 0.35f), radius = 10.dp.toPx(), center = touchPt)
+                drawCircle(color = Color.White, radius = 4.dp.toPx(), center = touchPt)
+
+                // Tooltip text at top
+                val tipText = "৳${DecimalFormat("##,##,##0.00").format(balValue)}"
+                val tipX = (touchPt.x - 40.dp.toPx()).coerceIn(leftPad, w - rightPad - 90.dp.toPx())
+                val tipY = topPad - 20.dp.toPx()
+
+                drawRoundRect(
+                    color = CardDarker,
+                    topLeft = Offset(tipX, tipY),
+                    size = Size(85.dp.toPx(), 18.dp.toPx()),
+                    cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                )
+                drawRoundRect(
+                    color = AccentTeal.copy(alpha = 0.5f),
+                    topLeft = Offset(tipX, tipY),
+                    size = Size(85.dp.toPx(), 18.dp.toPx()),
+                    cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx()),
+                    style = Stroke(1.dp.toPx())
+                )
+                drawText(
+                    textMeasurer,
+                    text = tipText,
+                    topLeft = Offset(tipX + 6.dp.toPx(), tipY + 2.dp.toPx()),
+                    style = TextStyle(color = TextPrimary, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+                )
+            }
         }
     }
+}
+
+private fun getClosestIndex(touchX: Float, width: Float, count: Int): Int {
+    val leftPad = 52.0f
+    val rightPad = 16.0f
+    val chartW = width - leftPad - rightPad
+    if (chartW <= 0 || count < 2) return 0
+    val xStep = chartW / (count - 1)
+    val idx = ((touchX - leftPad) / xStep).roundToInt()
+    return idx.coerceIn(0, count - 1)
 }
 
 // ─── Donut / Pie Chart ────────────────────────────────────────────────
