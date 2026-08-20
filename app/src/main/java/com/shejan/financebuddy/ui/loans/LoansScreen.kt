@@ -426,7 +426,7 @@ fun LoansScreen(
             onDismissRequest = { showAddTypeChooser = false },
             sheetState = typeChooserSheetState,
             containerColor = SurfaceDark,
-            dragHandle = { BottomSheetDefaults.DragHandle(color = DividerColor) }
+            dragHandle = { BottomSheetDefaults.DragHandle(color = TextSecondary.copy(alpha = 0.75f)) }
         ) {
             Column(
                 modifier = Modifier
@@ -548,7 +548,7 @@ fun LoansScreen(
             onDismissRequest = { showAddBankLoanSheet = false },
             sheetState = bankLoanSheetState,
             containerColor = SurfaceDark,
-            dragHandle = { BottomSheetDefaults.DragHandle(color = DividerColor) }
+            dragHandle = { BottomSheetDefaults.DragHandle(color = TextSecondary.copy(alpha = 0.75f)) }
         ) {
             AddLoanFormSheet(
                 accounts = accounts,
@@ -579,7 +579,7 @@ fun LoansScreen(
             onDismissRequest = { showAddPersonalLoanSheet = false },
             sheetState = personalLoanSheetState,
             containerColor = SurfaceDark,
-            dragHandle = { BottomSheetDefaults.DragHandle(color = DividerColor) }
+            dragHandle = { BottomSheetDefaults.DragHandle(color = TextSecondary.copy(alpha = 0.75f)) }
         ) {
             AddPersonalLoanFormSheet(
                 accounts = accounts,
@@ -612,7 +612,7 @@ fun LoansScreen(
         ModalBottomSheet(
             onDismissRequest = { repayingLoan = null },
             containerColor = SurfaceDark,
-            dragHandle = { BottomSheetDefaults.DragHandle(color = DividerColor) }
+            dragHandle = { BottomSheetDefaults.DragHandle(color = TextSecondary.copy(alpha = 0.75f)) }
         ) {
             val loan = repayingLoan!!
             val linkedAccount = remember(accounts, loan.accountId) {

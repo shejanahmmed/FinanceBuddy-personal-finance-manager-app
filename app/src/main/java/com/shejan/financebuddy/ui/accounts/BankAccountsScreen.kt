@@ -248,41 +248,66 @@ fun BankAccountsScreen(
         )
 
         Column(modifier = Modifier.fillMaxSize()) {
-            // Clean Top Bar without clutter
+            // Clean Top Bar with Top Right '+' Square Button
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
                     .padding(horizontal = 12.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(
-                    onClick = { onBack() },
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = { onBack() },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(CardDarker)
+                            .border(1.dp, DividerColor, CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "Back",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column {
+                        Text(
+                            text = "Bank Accounts",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "Manage your wallets & accounts",
+                            fontSize = 12.sp,
+                            color = TextMuted
+                        )
+                    }
+                }
+
+                // Add Account '+' Button in a Compact Square Box (shifted slightly left)
+                Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
+                        .padding(end = 6.dp)
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(6.dp))
                         .background(CardDarker)
-                        .border(1.dp, DividerColor, CircleShape)
+                        .border(1.dp, AccentTeal.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                        .clickable {
+                            editingAccount = null
+                            showAddSheet = true
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "Back",
-                        tint = TextPrimary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(14.dp))
-                Column {
-                    Text(
-                        text = "Bank Accounts",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "Manage your wallets & accounts",
-                        fontSize = 12.sp,
-                        color = TextMuted
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Account",
+                        tint = AccentTeal,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
@@ -967,7 +992,7 @@ private fun AccountFormSheet(
         sheetState = sheetState,
         containerColor = CardDark,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = DividerColor) }
+        dragHandle = { BottomSheetDefaults.DragHandle(color = TextSecondary.copy(alpha = 0.75f)) }
     ) {
         Column(
             modifier = Modifier
