@@ -27,7 +27,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shejan.financebuddy.data.db.AccountEntity
@@ -173,8 +175,25 @@ fun InvestmentsScreen(
                         )
                         Text(
                             text = "Portfolio, ROI & Asset Distribution",
-                            color = TextMuted,
+                            color = TextSecondary,
                             fontSize = 12.sp
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(CardDarker)
+                            .border(1.dp, AccentTeal.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                            .clickable { showAddSheet = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Investment",
+                            tint = AccentTeal,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -200,7 +219,7 @@ fun InvestmentsScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column {
-                                        Text("Portfolio Net Value", fontSize = 12.sp, color = TextMuted)
+                                        Text("Portfolio Net Value", fontSize = 12.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
                                         Text(
                                             "৳${currencyFormat.format(totalCurrentValue)}",
                                             fontSize = 26.sp,
@@ -248,7 +267,7 @@ fun InvestmentsScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Column {
-                                        Text("Total Invested", fontSize = 11.sp, color = TextMuted)
+                                        Text("Total Invested", fontSize = 11.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
                                         Text(
                                             "৳${currencyFormat.format(totalInvested)}",
                                             fontSize = 14.sp,
@@ -257,7 +276,7 @@ fun InvestmentsScreen(
                                         )
                                     }
                                     Column(horizontalAlignment = Alignment.End) {
-                                        Text("Total Profit / Loss", fontSize = 11.sp, color = TextMuted)
+                                        Text("Total Profit / Loss", fontSize = 11.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
                                         Text(
                                             "${if (totalProfitLoss >= 0) "+" else ""}৳${currencyFormat.format(totalProfitLoss)}",
                                             fontSize = 14.sp,
@@ -270,7 +289,7 @@ fun InvestmentsScreen(
                                 // Asset allocation horizontal segmented bar
                                 if (categoryBreakdown.isNotEmpty()) {
                                     Spacer(modifier = Modifier.height(16.dp))
-                                    Text("Asset Allocation", fontSize = 11.sp, color = TextMuted, fontWeight = FontWeight.Medium)
+                                    Text("Asset Allocation", fontSize = 11.5.sp, color = TextSecondary, fontWeight = FontWeight.SemiBold)
                                     Spacer(modifier = Modifier.height(6.dp))
 
                                     Row(
@@ -310,7 +329,8 @@ fun InvestmentsScreen(
                                                 Text(
                                                     "${categoryLabels[catType]?.take(10)}.. ${String.format(Locale.US, "%.0f", pct)}%",
                                                     fontSize = 10.sp,
-                                                    color = TextMuted
+                                                    color = TextSecondary,
+                                                    fontWeight = FontWeight.Medium
                                                 )
                                             }
                                         }
@@ -380,7 +400,7 @@ fun InvestmentsScreen(
                                     Icon(
                                         imageVector = Icons.Default.ShowChart,
                                         contentDescription = null,
-                                        tint = TextMuted,
+                                        tint = TextSecondary,
                                         modifier = Modifier.size(48.dp)
                                     )
                                     Spacer(modifier = Modifier.height(12.dp))
@@ -393,7 +413,7 @@ fun InvestmentsScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         "Tap + at bottom right to add your FDR, Sanchayapatra, or Stocks",
-                                        color = TextMuted,
+                                        color = TextSecondary,
                                         fontSize = 12.sp,
                                         modifier = Modifier.padding(horizontal = 16.dp)
                                     )
@@ -465,27 +485,68 @@ fun InvestmentsScreen(
         }
 
         deletingInvestment?.let { inv ->
-            AlertDialog(
-                onDismissRequest = { deletingInvestment = null },
-                containerColor = CardDark,
-                title = { Text("Delete Investment?", color = TextPrimary) },
-                text = { Text("Are you sure you want to delete '${inv.name}'? This action cannot be undone.", color = TextMuted) },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            onDeleteInvestment(inv)
-                            deletingInvestment = null
-                        }
+            Dialog(onDismissRequest = { deletingInvestment = null }) {
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardDark),
+                    border = BorderStroke(1.dp, DividerColor),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("Delete", color = ExpenseRed, fontWeight = FontWeight.Bold)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { deletingInvestment = null }) {
-                        Text("Cancel", color = TextSecondary)
+                        Box(
+                            modifier = Modifier
+                                .size(54.dp)
+                                .clip(CircleShape)
+                                .background(ExpenseRed.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = ExpenseRed, modifier = Modifier.size(26.dp))
+                        }
+
+                        Text("Delete Investment?", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("Are you sure you want to delete '${inv.name}'? This action cannot be undone.", color = TextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center)
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { deletingInvestment = null },
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, DividerColor),
+                                colors = ButtonDefaults.outlinedButtonColors(containerColor = CardDarker, contentColor = Color.White),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp)
+                            ) {
+                                Text("Cancel", color = Color.White, fontWeight = FontWeight.SemiBold)
+                            }
+
+                            Button(
+                                onClick = {
+                                    onDeleteInvestment(inv)
+                                    deletingInvestment = null
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed, contentColor = Color.White),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp)
+                            ) {
+                                Text("Delete", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
-            )
+            }
         }
     }
 }
@@ -551,7 +612,7 @@ private fun InvestmentCard(
                                 Text(
                                     investment.status,
                                     fontSize = 9.sp,
-                                    color = TextMuted,
+                                    color = TextSecondary,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     fontWeight = FontWeight.Bold
                                 )
@@ -560,64 +621,101 @@ private fun InvestmentCard(
                     }
                     Text(
                         text = "${categoryLabels[investment.type] ?: investment.type} • ${investment.institution.ifBlank { "N/A" }}",
-                        color = TextMuted,
+                        color = TextSecondary,
                         fontSize = 11.5.sp
                     )
                 }
 
-                IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit", tint = TextMuted, modifier = Modifier.size(16.dp))
-                }
-                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = ExpenseRed.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
+                var showMenu by remember { mutableStateOf(false) }
+
+                Box {
+                    IconButton(
+                        onClick = { showMenu = true },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Options",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        shape = RoundedCornerShape(14.dp),
+                        containerColor = CardDarker,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .border(1.dp, DividerColor, RoundedCornerShape(14.dp))
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = null,
+                                        tint = AccentTeal,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text("Edit Investment", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                onEdit()
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = ExpenseRed,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text("Delete Investment", color = ExpenseRed, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                onDelete()
+                            }
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CardDarker)
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+            // 3 Stacked Single Column Stat Boxes
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column {
-                    Text("Invested Principal", fontSize = 10.5.sp, color = TextMuted)
-                    Text(
-                        "৳${currencyFormat.format(investment.investedAmount)}",
-                        fontSize = 13.5.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextSecondary
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Current Value", fontSize = 10.5.sp, color = TextMuted)
-                    Text(
-                        "৳${currencyFormat.format(investment.currentValue)}",
-                        fontSize = 13.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("Profit / Gain", fontSize = 10.5.sp, color = TextMuted)
-                    Text(
-                        "${if (isPositive) "+" else ""}৳${currencyFormat.format(profit)}",
-                        fontSize = 13.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isPositive) IncomeGreen else ExpenseRed
-                    )
-                    Text(
-                        "${if (isPositive) "+" else ""}${String.format(Locale.US, "%.1f", roiPct)}%",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (isPositive) IncomeGreen else ExpenseRed
-                    )
-                }
+                // Stat 1: Invested Principal
+                InvestmentStatBox(
+                    title = "Invested Principal",
+                    value = "৳${currencyFormat.format(investment.investedAmount)}",
+                    valueColor = TextSecondary
+                )
+                // Stat 2: Current Value
+                InvestmentStatBox(
+                    title = "Current Value",
+                    value = "৳${currencyFormat.format(investment.currentValue)}",
+                    valueColor = TextPrimary
+                )
+                // Stat 3: Profit / Gain
+                InvestmentStatBox(
+                    title = "Profit / Gain (${if (isPositive) "+" else ""}${String.format(Locale.US, "%.1f", roiPct)}%)",
+                    value = "${if (isPositive) "+" else ""}৳${currencyFormat.format(profit)}",
+                    valueColor = if (isPositive) IncomeGreen else ExpenseRed
+                )
             }
 
             if (investment.expectedReturnRate > 0 || investment.maturityDate != null) {
@@ -641,7 +739,7 @@ private fun InvestmentCard(
                         Text(
                             "Matures: $dateStr",
                             fontSize = 11.sp,
-                            color = TextMuted
+                            color = TextSecondary
                         )
                     }
                 }
@@ -653,17 +751,16 @@ private fun InvestmentCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedButton(
+                Button(
                     onClick = onUpdateValue,
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                    border = BorderStroke(1.dp, DividerColor),
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentBlue.copy(alpha = 0.18f), contentColor = AccentBlue),
                     modifier = Modifier.weight(1f).height(36.dp),
                     contentPadding = PaddingValues(0.dp)
                 ) {
                     Icon(Icons.Default.TrendingUp, contentDescription = null, modifier = Modifier.size(14.dp), tint = AccentBlue)
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Update Value", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Update Value", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                 }
 
                 Button(
@@ -681,6 +778,48 @@ private fun InvestmentCard(
         }
     }
 }
+
+@Composable
+private fun InvestmentStatBox(
+    title: String,
+    value: String,
+    valueColor: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CardDarker)
+            .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            fontSize = 11.5.sp,
+            color = TextSecondary,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = value,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = valueColor
+        )
+    }
+}
+
+@Composable
+private fun investmentTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = AccentTeal,
+    unfocusedBorderColor = TextMuted.copy(alpha = 0.4f),
+    focusedLabelColor = AccentTeal,
+    unfocusedLabelColor = TextSecondary,
+    focusedTextColor = TextPrimary,
+    unfocusedTextColor = TextPrimary,
+    cursorColor = AccentTeal
+)
 
 // ─── Add / Edit Investment Bottom Sheet (Scrollable & Non-Clipping) ────────
 @OptIn(ExperimentalMaterial3Api::class)
@@ -746,21 +885,17 @@ private fun AddEditInvestmentSheet(
                 value = name,
                 onValueChange = { name = it; errorMessage = "" },
                 label = { Text("Investment Name") },
-                placeholder = { Text("e.g. 3-Year Sanchayapatra", color = TextMuted.copy(alpha = 0.5f)) },
+                placeholder = { Text("e.g. 3-Year Sanchayapatra", color = TextSecondary.copy(alpha = 0.5f)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 maxLines = 1,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentTeal,
-                    unfocusedBorderColor = DividerColor,
-                    focusedLabelColor = AccentTeal,
-                    unfocusedLabelColor = TextMuted
-                )
+                shape = RoundedCornerShape(14.dp),
+                colors = investmentTextFieldColors()
             )
 
             // Category Selection Row
             Column {
-                Text("Category / Asset Type", fontSize = 12.sp, color = TextMuted, fontWeight = FontWeight.Medium)
+                Text("Category / Asset Type", fontSize = 12.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
                 Spacer(modifier = Modifier.height(6.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(categoryLabels.toList()) { (typeKey, label) ->
@@ -790,91 +925,69 @@ private fun AddEditInvestmentSheet(
                 value = institution,
                 onValueChange = { institution = it },
                 label = { Text("Institution / Broker") },
-                placeholder = { Text("e.g. BRAC Bank, DSE, Savings Bureau", color = TextMuted.copy(alpha = 0.5f)) },
+                placeholder = { Text("e.g. BRAC Bank, DSE, Savings Bureau", color = TextSecondary.copy(alpha = 0.5f)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 maxLines = 1,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentTeal,
-                    unfocusedBorderColor = DividerColor,
-                    focusedLabelColor = AccentTeal,
-                    unfocusedLabelColor = TextMuted
-                )
+                shape = RoundedCornerShape(14.dp),
+                colors = investmentTextFieldColors()
             )
 
-            // Invested & Current Amounts (Side by side)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = investedAmountStr,
-                    onValueChange = {
-                        investedAmountStr = it
-                        if (currentValueStr.isEmpty()) currentValueStr = it
-                        errorMessage = ""
-                    },
-                    label = { Text("Invested (৳)") },
-                    placeholder = { Text("0.00", color = TextMuted.copy(alpha = 0.5f)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    maxLines = 1,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AccentTeal,
-                        unfocusedBorderColor = DividerColor,
-                        focusedLabelColor = AccentTeal,
-                        unfocusedLabelColor = TextMuted
-                    )
-                )
+            // Invested & Current Amounts (Single Column Stack)
+            OutlinedTextField(
+                value = investedAmountStr,
+                onValueChange = {
+                    investedAmountStr = it
+                    if (currentValueStr.isEmpty()) currentValueStr = it
+                    errorMessage = ""
+                },
+                label = { Text("Invested Amount (৳)") },
+                placeholder = { Text("0.00", color = TextSecondary.copy(alpha = 0.5f)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                maxLines = 1,
+                shape = RoundedCornerShape(14.dp),
+                colors = investmentTextFieldColors()
+            )
 
-                OutlinedTextField(
-                    value = currentValueStr,
-                    onValueChange = { currentValueStr = it; errorMessage = "" },
-                    label = { Text("Current Value (৳)") },
-                    placeholder = { Text("0.00", color = TextMuted.copy(alpha = 0.5f)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    maxLines = 1,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AccentTeal,
-                        unfocusedBorderColor = DividerColor,
-                        focusedLabelColor = AccentTeal,
-                        unfocusedLabelColor = TextMuted
-                    )
-                )
-            }
+            OutlinedTextField(
+                value = currentValueStr,
+                onValueChange = { currentValueStr = it; errorMessage = "" },
+                label = { Text("Current Value (৳)") },
+                placeholder = { Text("0.00", color = TextSecondary.copy(alpha = 0.5f)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                maxLines = 1,
+                shape = RoundedCornerShape(14.dp),
+                colors = investmentTextFieldColors()
+            )
 
             // Return Rate & Notes
             OutlinedTextField(
                 value = expectedReturnStr,
                 onValueChange = { expectedReturnStr = it },
                 label = { Text("Expected Return Rate (% p.a.)") },
-                placeholder = { Text("e.g. 11.5", color = TextMuted.copy(alpha = 0.5f)) },
+                placeholder = { Text("e.g. 11.5", color = TextSecondary.copy(alpha = 0.5f)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 maxLines = 1,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentTeal,
-                    unfocusedBorderColor = DividerColor,
-                    focusedLabelColor = AccentTeal,
-                    unfocusedLabelColor = TextMuted
-                )
+                shape = RoundedCornerShape(14.dp),
+                colors = investmentTextFieldColors()
             )
 
             OutlinedTextField(
                 value = note,
                 onValueChange = { note = it },
                 label = { Text("Notes & References") },
-                placeholder = { Text("e.g. Certificate #, Folio no", color = TextMuted.copy(alpha = 0.5f)) },
+                placeholder = { Text("e.g. Certificate #, Folio no", color = TextSecondary.copy(alpha = 0.5f)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 maxLines = 1,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentTeal,
-                    unfocusedBorderColor = DividerColor,
-                    focusedLabelColor = AccentTeal,
-                    unfocusedLabelColor = TextMuted
-                )
+                shape = RoundedCornerShape(14.dp),
+                colors = investmentTextFieldColors()
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -923,9 +1036,9 @@ private fun AddEditInvestmentSheet(
                 },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentTeal)
+                colors = ButtonDefaults.buttonColors(containerColor = AccentTeal, contentColor = Color.White)
             ) {
-                Text("Save Investment", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text("Save Investment", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
         }
     }
@@ -942,17 +1055,24 @@ private fun QuickUpdateValueDialog(
     var valStr by remember { mutableStateOf(investment.currentValue.toInt().toString()) }
     var errorMsg by remember { mutableStateOf("") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = CardDark,
-        title = {
-            Text("Update Market Value", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Investment: ${investment.name}", color = TextMuted, fontSize = 12.sp)
-                Text("Invested Principal: ৳${currencyFormat.format(investment.investedAmount)}", color = TextSecondary, fontSize = 12.sp)
-                Spacer(modifier = Modifier.height(4.dp))
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = CardDark),
+            border = BorderStroke(1.dp, DividerColor),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text("Update Market Value", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Investment: ${investment.name}", color = TextSecondary, fontSize = 12.5.sp)
+                    Text("Invested Principal: ৳${currencyFormat.format(investment.investedAmount)}", color = TextSecondary, fontSize = 12.5.sp)
+                }
+
                 OutlinedTextField(
                     value = valStr,
                     onValueChange = { valStr = it; errorMsg = "" },
@@ -961,37 +1081,52 @@ private fun QuickUpdateValueDialog(
                     singleLine = true,
                     maxLines = 1,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AccentTeal,
-                        unfocusedBorderColor = DividerColor
-                    )
+                    shape = RoundedCornerShape(14.dp),
+                    colors = investmentTextFieldColors()
                 )
                 if (errorMsg.isNotEmpty()) {
-                    Text(errorMsg, color = ExpenseRed, fontSize = 11.sp)
+                    Text(errorMsg, color = ExpenseRed, fontSize = 11.5.sp)
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, DividerColor),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = CardDarker, contentColor = Color.White),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                    ) {
+                        Text("Cancel", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    }
+
+                    Button(
+                        onClick = {
+                            val newVal = valStr.toDoubleOrNull()
+                            if (newVal == null || newVal < 0) {
+                                errorMsg = "Please enter a valid amount"
+                                return@Button
+                            }
+                            onSave(newVal)
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentTeal, contentColor = Color.White),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                    ) {
+                        Text("Update", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val newVal = valStr.toDoubleOrNull()
-                    if (newVal == null || newVal < 0) {
-                        errorMsg = "Please enter a valid amount"
-                        return@Button
-                    }
-                    onSave(newVal)
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = AccentTeal)
-            ) {
-                Text("Update", color = OnAccent, fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel", color = TextSecondary)
-            }
         }
-    )
+    }
 }
 
 // ─── Log Dividend / Returns Dialog ─────────────────────────────────────────
@@ -1008,15 +1143,20 @@ private fun LogDividendDialog(
     var note by remember { mutableStateOf("Dividend payout from ${investment.name}") }
     var errorMsg by remember { mutableStateOf("") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = CardDark,
-        title = {
-            Text("Log Return / Dividend", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Record a dividend or interest payout received into one of your accounts.", color = TextMuted, fontSize = 12.sp)
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = CardDark),
+            border = BorderStroke(1.dp, DividerColor),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text("Log Return / Dividend", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+
+                Text("Record a dividend or interest payout received into one of your accounts.", color = TextSecondary, fontSize = 12.5.sp)
 
                 OutlinedTextField(
                     value = amountStr,
@@ -1026,28 +1166,28 @@ private fun LogDividendDialog(
                     singleLine = true,
                     maxLines = 1,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AccentTeal,
-                        unfocusedBorderColor = DividerColor
-                    )
+                    shape = RoundedCornerShape(14.dp),
+                    colors = investmentTextFieldColors()
                 )
 
-                Text("Deposit To Account", fontSize = 12.sp, color = TextMuted)
-                if (accounts.isEmpty()) {
-                    Text("No accounts found. Please add an account first.", color = ExpenseRed, fontSize = 11.sp)
-                } else {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(accounts) { acc ->
-                            val isSel = selectedAccountId == acc.id
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(if (isSel) AccentTeal.copy(alpha = 0.2f) else CardDarker)
-                                    .border(1.dp, if (isSel) AccentTeal else DividerColor, RoundedCornerShape(10.dp))
-                                    .clickable { selectedAccountId = acc.id }
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                            ) {
-                                Text(acc.name, fontSize = 12.sp, color = if (isSel) AccentTeal else TextSecondary)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Deposit To Account", fontSize = 12.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+                    if (accounts.isEmpty()) {
+                        Text("No accounts found. Please add an account first.", color = ExpenseRed, fontSize = 11.sp)
+                    } else {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(accounts) { acc ->
+                                val isSel = selectedAccountId == acc.id
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (isSel) AccentTeal.copy(alpha = 0.2f) else CardDarker)
+                                        .border(1.dp, if (isSel) AccentTeal else DividerColor, RoundedCornerShape(10.dp))
+                                        .clickable { selectedAccountId = acc.id }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text(acc.name, fontSize = 12.sp, color = if (isSel) AccentTeal else TextSecondary)
+                                }
                             }
                         }
                     }
@@ -1060,40 +1200,55 @@ private fun LogDividendDialog(
                     singleLine = true,
                     maxLines = 1,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AccentTeal,
-                        unfocusedBorderColor = DividerColor
-                    )
+                    shape = RoundedCornerShape(14.dp),
+                    colors = investmentTextFieldColors()
                 )
 
                 if (errorMsg.isNotEmpty()) {
-                    Text(errorMsg, color = ExpenseRed, fontSize = 11.sp)
+                    Text(errorMsg, color = ExpenseRed, fontSize = 11.5.sp)
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, DividerColor),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = CardDarker, contentColor = Color.White),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                    ) {
+                        Text("Cancel", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    }
+
+                    Button(
+                        onClick = {
+                            val amt = amountStr.toDoubleOrNull()
+                            if (amt == null || amt <= 0) {
+                                errorMsg = "Please enter a valid payout amount"
+                                return@Button
+                            }
+                            if (selectedAccountId == 0) {
+                                errorMsg = "Please select a deposit account"
+                                return@Button
+                            }
+                            onConfirm(amt, selectedAccountId, note)
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentTeal, contentColor = Color.White),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                    ) {
+                        Text("Log Income", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val amt = amountStr.toDoubleOrNull()
-                    if (amt == null || amt <= 0) {
-                        errorMsg = "Please enter a valid payout amount"
-                        return@Button
-                    }
-                    if (selectedAccountId == 0) {
-                        errorMsg = "Please select a deposit account"
-                        return@Button
-                    }
-                    onConfirm(amt, selectedAccountId, note)
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = AccentTeal)
-            ) {
-                Text("Log Income", color = OnAccent, fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel", color = TextSecondary)
-            }
         }
-    )
+    }
 }
