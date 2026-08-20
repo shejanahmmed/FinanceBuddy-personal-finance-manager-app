@@ -11,18 +11,30 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -30,12 +42,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shejan.financebuddy.data.db.PayeeAccountEntity
 import com.shejan.financebuddy.data.db.PayeeEntity
+import com.shejan.financebuddy.data.db.TransactionEntity
+import com.shejan.financebuddy.data.db.AccountEntity
 import com.shejan.financebuddy.ui.theme.*
 import kotlinx.coroutines.launch
+import java.text.DecimalFormat
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 private val PRESET_BANKS = listOf(
@@ -73,7 +92,10 @@ private val BANK_COLOR_MAP = mapOf(
 fun PayeeDetailScreen(
     payee: PayeeEntity?,
     accounts: List<PayeeAccountEntity>,
+    allTransactions: List<TransactionEntity> = emptyList(),
+    allAccounts: List<AccountEntity> = emptyList(),
     onBack: () -> Unit,
+    onUpdatePayee: (PayeeEntity) -> Unit,
     onDeletePayee: () -> Unit,
     onAddAccount: (PayeeAccountEntity) -> Unit,
     onUpdateAccount: (PayeeAccountEntity) -> Unit,
@@ -86,10 +108,43 @@ fun PayeeDetailScreen(
         return
     }
 
+    val context = LocalContext.current
     var showAddSheet by remember { mutableStateOf(false) }
     var editingAccount by remember { mutableStateOf<PayeeAccountEntity?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var accountToDelete by remember { mutableStateOf<PayeeAccountEntity?>(null) }
+    var showMenu by remember { mutableStateOf(false) }
+    var showHistory by remember { mutableStateOf(false) }
+
+    val recipientTransactions = remember(allTransactions, payee, accounts) {
+        val accNums = accounts.map { it.accountNumber.trim() }.filter { it.isNotBlank() }
+        allTransactions.filter { tx ->
+            tx.note.contains(payee.name, ignoreCase = true) ||
+            tx.note.contains(payee.uniqueId, ignoreCase = true) ||
+            tx.category.contains(payee.name, ignoreCase = true) ||
+            accNums.any { num -> tx.note.contains(num, ignoreCase = true) }
+        }.sortedByDescending { it.timestamp }
+    }
+    val currencyFormat = remember { DecimalFormat("#,##0.00") }
+    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy • hh:mm a", Locale.getDefault()) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            onUpdatePayee(payee.copy(imageUri = uri.toString()))
+        }
+    }
+
+    val profileBitmap = rememberBitmapFromUri(payee.imageUri)
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -100,42 +155,224 @@ fun PayeeDetailScreen(
         colors[Math.abs(hash) % colors.size]
     }
 
-    // Delete Payee Confirmation
+    // Delete Payee Confirmation Dialog
     if (showDeleteConfirm) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            containerColor = CardDark,
-            title = { Text("Delete Recipient Profile?", color = TextPrimary, fontWeight = FontWeight.Bold) },
-            text = { Text("This will permanently delete \"${payee.name}\" and all their saved accounts.", color = TextSecondary) },
-            confirmButton = {
-                TextButton(onClick = {
-                    onDeletePayee()
-                    showDeleteConfirm = false
-                }) { Text("Delete", color = ExpenseRed, fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel", color = TextSecondary) }
+        Dialog(onDismissRequest = { showDeleteConfirm = false }) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = CardDark,
+                border = BorderStroke(1.dp, DividerColor),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Top Warning Trash Icon Badge
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(CircleShape)
+                            .background(ExpenseRed.copy(alpha = 0.15f))
+                            .border(1.dp, ExpenseRed.copy(alpha = 0.35f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = ExpenseRed,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = "Delete Recipient Profile?",
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Are you sure you want to permanently delete \"${payee.name}\" and all their saved accounts?",
+                        fontSize = 13.5.sp,
+                        color = TextSecondary,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 19.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(22.dp))
+
+                    // Centered Equal-Sized Buttons Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Cancel Button
+                        Surface(
+                            onClick = { showDeleteConfirm = false },
+                            shape = RoundedCornerShape(12.dp),
+                            color = CardDarker,
+                            border = BorderStroke(1.dp, DividerColor),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "Cancel",
+                                    color = TextPrimary,
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        // Delete Button
+                        Surface(
+                            onClick = {
+                                onDeletePayee()
+                                showDeleteConfirm = false
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = ExpenseRed,
+                            border = BorderStroke(1.dp, ExpenseRed),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "Delete",
+                                    color = Color.White,
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
             }
-        )
+        }
     }
 
-    // Delete Account Confirmation
+    // Delete Account Confirmation Dialog
     accountToDelete?.let { acc ->
-        AlertDialog(
-            onDismissRequest = { accountToDelete = null },
-            containerColor = CardDark,
-            title = { Text("Remove Saved Account?", color = TextPrimary, fontWeight = FontWeight.Bold) },
-            text = { Text("Are you sure you want to remove this ${acc.bankName} account?", color = TextSecondary) },
-            confirmButton = {
-                TextButton(onClick = {
-                    onDeleteAccount(acc)
-                    accountToDelete = null
-                }) { Text("Remove", color = ExpenseRed, fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = {
-                TextButton(onClick = { accountToDelete = null }) { Text("Cancel", color = TextSecondary) }
+        Dialog(onDismissRequest = { accountToDelete = null }) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = CardDark,
+                border = BorderStroke(1.dp, DividerColor),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Top Warning Trash Icon Badge
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(CircleShape)
+                            .background(ExpenseRed.copy(alpha = 0.15f))
+                            .border(1.dp, ExpenseRed.copy(alpha = 0.35f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = ExpenseRed,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = "Remove Saved Account?",
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Are you sure you want to remove this ${acc.bankName} account?",
+                        fontSize = 13.5.sp,
+                        color = TextSecondary,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 19.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(22.dp))
+
+                    // Centered Equal-Sized Buttons Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Cancel Button
+                        Surface(
+                            onClick = { accountToDelete = null },
+                            shape = RoundedCornerShape(12.dp),
+                            color = CardDarker,
+                            border = BorderStroke(1.dp, DividerColor),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "Cancel",
+                                    color = TextPrimary,
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        // Remove Button
+                        Surface(
+                            onClick = {
+                                onDeleteAccount(acc)
+                                accountToDelete = null
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = ExpenseRed,
+                            border = BorderStroke(1.dp, ExpenseRed),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "Remove",
+                                    color = Color.White,
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
             }
-        )
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(BackgroundDark)) {
@@ -172,15 +409,76 @@ fun PayeeDetailScreen(
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))
-                IconButton(
-                    onClick = { showDeleteConfirm = true },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(ExpenseRed.copy(alpha = 0.12f))
-                        .border(1.dp, ExpenseRed.copy(alpha = 0.25f), CircleShape)
-                ) {
-                    Icon(Icons.Default.Delete, "Delete Payee", tint = ExpenseRed, modifier = Modifier.size(20.dp))
+
+                // Plain 3-Dots Options Button (Not inside circle)
+                Box {
+                    IconButton(
+                        onClick = { showMenu = true },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Options",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        modifier = Modifier.background(CardDark)
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.AddAPhoto, null, tint = AccentTeal, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(10.dp))
+                                    Text(
+                                        text = if (!payee.imageUri.isNullOrEmpty()) "Change Photo" else "Upload Photo",
+                                        color = TextPrimary,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            }
+                        )
+
+                        if (!payee.imageUri.isNullOrEmpty()) {
+                            HorizontalDivider(color = DividerColor)
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.NoPhotography, null, tint = TransferYellow, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(10.dp))
+                                        Text("Remove Photo", color = TransferYellow, fontSize = 13.sp)
+                                    }
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    onUpdatePayee(payee.copy(imageUri = null))
+                                }
+                            )
+                        }
+
+                        HorizontalDivider(color = DividerColor)
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Delete, null, tint = ExpenseRed, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(10.dp))
+                                    Text("Delete Recipient", color = ExpenseRed, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                showDeleteConfirm = true
+                            }
+                        )
+                    }
                 }
             }
 
@@ -191,6 +489,7 @@ fun PayeeDetailScreen(
                     .padding(horizontal = 20.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Clean Profile Avatar Circle
                 Box(
                     modifier = Modifier
                         .size(80.dp)
@@ -199,26 +498,111 @@ fun PayeeDetailScreen(
                         .border(2.dp, avatarBg.copy(alpha = 0.35f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(payee.name.take(1).uppercase(Locale.ROOT), color = avatarBg, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+                    if (profileBitmap != null) {
+                        Image(
+                            bitmap = profileBitmap,
+                            contentDescription = payee.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Text(
+                            text = payee.name.take(1).uppercase(Locale.ROOT),
+                            color = avatarBg,
+                            fontSize = 34.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
                 Spacer(Modifier.height(12.dp))
                 Text(payee.name, color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(6.dp))
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(CardDarker)
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                        .border(1.dp, DividerColor, RoundedCornerShape(8.dp))
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(payee.uniqueId, color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    // Unique ID Badge (High-contrast, proper padding/border order)
+                    Box(
+                        modifier = Modifier
+                            .background(CardDarker, RoundedCornerShape(8.dp))
+                            .border(1.dp, DividerColor, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            text = payee.uniqueId,
+                            color = TextSecondary,
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+
+                    // Saved Accounts Count Badge in a Separate Box
+                    val accCount = accounts.size
+                    val countLabel = if (accCount == 1) "1 Account" else "$accCount Accounts"
+                    Box(
+                        modifier = Modifier
+                            .background(AccentBlue.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                            .border(1.dp, AccentBlue.copy(alpha = 0.30f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AccountBalanceWallet,
+                                contentDescription = null,
+                                tint = AccentBlue,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = countLabel,
+                                color = AccentBlue,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    // View History / View Accounts Toggle Badge
+                    val toggleBg = if (showHistory) AccentBlue.copy(alpha = 0.12f) else AccentTeal.copy(alpha = 0.12f)
+                    val toggleBorder = if (showHistory) AccentBlue.copy(alpha = 0.30f) else AccentTeal.copy(alpha = 0.30f)
+                    val toggleColor = if (showHistory) AccentBlue else AccentTeal
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(toggleBg)
+                            .border(1.dp, toggleBorder, RoundedCornerShape(8.dp))
+                            .clickable { showHistory = !showHistory }
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (showHistory) Icons.Default.AccountBalanceWallet else Icons.Default.History,
+                                contentDescription = null,
+                                tint = toggleColor,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = if (showHistory) "View Accounts" else "View History",
+                                color = toggleColor,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
             }
 
             Spacer(Modifier.height(16.dp))
             HorizontalDivider(color = DividerColor, modifier = Modifier.padding(horizontal = 20.dp))
 
-            // -- Accounts Header ----------------------------------
+            // -- Accounts / History Header ------------------------
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -226,53 +610,99 @@ fun PayeeDetailScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Saved Accounts", color = TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(AccentBlue.copy(alpha = 0.12f))
-                        .clickable { editingAccount = null; showAddSheet = true }
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Add, null, tint = AccentBlue, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Add Account", color = AccentBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = if (showHistory) "Transaction History" else "Saved Accounts",
+                    color = TextSecondary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                if (!showHistory) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(AccentBlue.copy(alpha = 0.12f))
+                            .clickable { editingAccount = null; showAddSheet = true }
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Add, null, tint = AccentBlue, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Add Account", color = AccentBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
 
-            // -- Linked Accounts List -----------------------------
-            if (accounts.isEmpty()) {
-                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(CircleShape)
-                                .background(CardDarker)
-                                .border(1.dp, DividerColor, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.AccountBalanceWallet, null, tint = TextMuted.copy(alpha = 0.6f), modifier = Modifier.size(30.dp))
+            // -- List Content (History vs Accounts) ---------------
+            if (showHistory) {
+                if (recipientTransactions.isEmpty()) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(CircleShape)
+                                    .background(CardDarker)
+                                    .border(1.dp, DividerColor, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.History, null, tint = TextMuted.copy(alpha = 0.6f), modifier = Modifier.size(30.dp))
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("No transaction history found for ${payee.name}", color = TextMuted, fontSize = 13.sp)
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text("No saved accounts for this recipient", color = TextMuted, fontSize = 13.sp)
+                    }
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        items(recipientTransactions, key = { it.id }) { tx ->
+                            val accName = remember(allAccounts, tx.fromAccountId) {
+                                allAccounts.firstOrNull { it.id == tx.fromAccountId }?.name ?: "Account"
+                            }
+                            RecipientHistoryCard(
+                                transaction = tx,
+                                accountName = accName,
+                                currencyFormat = currencyFormat,
+                                dateFormat = dateFormat
+                            )
+                        }
                     }
                 }
             } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    items(accounts, key = { it.id }) { acc ->
-                        PayeeAccountCard(
-                            account = acc,
-                            onEdit = { editingAccount = acc; showAddSheet = true },
-                            onDelete = { accountToDelete = acc }
-                        )
+                if (accounts.isEmpty()) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(CircleShape)
+                                    .background(CardDarker)
+                                    .border(1.dp, DividerColor, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.AccountBalanceWallet, null, tint = TextMuted.copy(alpha = 0.6f), modifier = Modifier.size(30.dp))
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("No saved accounts for this recipient", color = TextMuted, fontSize = 13.sp)
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        items(accounts, key = { it.id }) { acc ->
+                            PayeeAccountCard(
+                                account = acc,
+                                onEdit = { editingAccount = acc; showAddSheet = true },
+                                onDelete = { accountToDelete = acc }
+                            )
+                        }
                     }
                 }
             }
@@ -297,30 +727,41 @@ fun PayeeDetailScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PayeeAccountCard(
     account: PayeeAccountEntity,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    var showActions by remember { mutableStateOf(false) }
+
     val cardColor = remember(account.bankName) {
         try { Color(android.graphics.Color.parseColor(BANK_COLOR_MAP[account.bankName] ?: "#0096FF")) }
         catch (e: Exception) { AccentTeal }
     }
 
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark),
+    Box(
         modifier = Modifier
             .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .clip(RoundedCornerShape(16.dp))
+            .background(CardDark)
             .border(1.dp, cardColor.copy(alpha = 0.20f), RoundedCornerShape(16.dp))
+            .combinedClickable(
+                onClick = { if (showActions) showActions = false },
+                onLongClick = { showActions = true }
+            )
     ) {
+        val blurRadius = if (showActions) 8.dp else 0.dp
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .blur(blurRadius)
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Bank / MFS Icon Badge
             Box(
                 modifier = Modifier
                     .size(44.dp)
@@ -336,65 +777,151 @@ private fun PayeeAccountCard(
                     modifier = Modifier.size(22.dp)
                 )
             }
+
             Spacer(Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = account.bankName,
-                        color = TextPrimary,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (account.nickname.isNotBlank()) {
-                        Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(AccentTeal.copy(alpha = 0.14f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                            Text(account.nickname, color = AccentTeal, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(cardColor.copy(alpha = 0.14f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                        Text(account.type, color = cardColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-                Spacer(Modifier.height(3.dp))
-                val maskedNumber = if (account.accountNumber.length > 4) {
-                    val last4 = account.accountNumber.takeLast(4)
-                    when (account.accountNumber.length) {
-                        16 -> "•••• •••• •••• $last4"
-                        13 -> "•••• •••• • $last4"
-                        11 -> "•••• ••• $last4"
-                        else -> "•".repeat(account.accountNumber.length - 4) + " $last4"
-                    }
+
+            // Account Details Column with uniform 4.dp spacing
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = account.bankName,
+                    color = TextPrimary,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                val displayNum = if (account.accountNumber.length > 4) {
+                    "•••• ${account.accountNumber.takeLast(4)}"
                 } else {
                     account.accountNumber
                 }
-                Text("Number: $maskedNumber", color = TextSecondary, fontSize = 12.sp)
-                if (account.recipientName.isNotBlank()) {
-                    Text("Name: ${account.recipientName}", color = TextMuted, fontSize = 11.sp)
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    if (account.accountNumber.isNotBlank()) {
+                        Text(
+                            text = "Acc: $displayNum",
+                            color = TextSecondary,
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
+                    val secondaryLabel = when {
+                        account.nickname.isNotBlank() -> "Nickname: ${account.nickname}"
+                        account.recipientName.isNotBlank() -> "Name: ${account.recipientName}"
+                        else -> ""
+                    }
+                    if (account.accountNumber.isNotBlank() && secondaryLabel.isNotBlank()) {
+                        Text(
+                            text = "•",
+                            color = TextMuted,
+                            fontSize = 11.5.sp
+                        )
+                    }
+                    if (secondaryLabel.isNotBlank()) {
+                        Text(
+                            text = secondaryLabel,
+                            color = TextSecondary,
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(CardDarker)
-                        .border(1.dp, DividerColor, RoundedCornerShape(8.dp))
-                        .clickable { onEdit() },
-                    contentAlignment = Alignment.Center
+
+            // 3-Dots Options Menu Icon (⋮)
+            IconButton(
+                onClick = { showActions = true },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "Account Options",
+                    tint = TextPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        // Animated action overlay for Edit & Delete
+        AnimatedVisibility(
+            visible = showActions,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(BackgroundDark.copy(alpha = 0.90f))
+                    .clickable { showActions = false },
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Edit, "Edit", tint = AccentBlue, modifier = Modifier.size(14.dp))
-                }
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(ExpenseRed.copy(alpha = 0.12f))
-                        .border(1.dp, ExpenseRed.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                        .clickable { onDelete() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Delete, "Delete", tint = ExpenseRed, modifier = Modifier.size(14.dp))
+                    // Edit Button (Teal Theme, Equal Size)
+                    Surface(
+                        onClick = {
+                            showActions = false
+                            onEdit()
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = AccentTeal.copy(alpha = 0.22f),
+                        border = BorderStroke(1.dp, AccentTeal.copy(alpha = 0.6f)),
+                        modifier = Modifier
+                            .width(115.dp)
+                            .height(42.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit",
+                                tint = AccentTeal,
+                                modifier = Modifier.size(17.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Edit", color = AccentTeal, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Delete Button (Red Theme, Equal Size)
+                    Surface(
+                        onClick = {
+                            showActions = false
+                            onDelete()
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = ExpenseRed.copy(alpha = 0.22f),
+                        border = BorderStroke(1.dp, ExpenseRed.copy(alpha = 0.6f)),
+                        modifier = Modifier
+                            .width(115.dp)
+                            .height(42.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = ExpenseRed,
+                                modifier = Modifier.size(17.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Delete", color = ExpenseRed, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             }
         }
@@ -430,7 +957,7 @@ private fun PayeeAccountFormSheet(
         sheetState = sheetState,
         containerColor = CardDark,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = DividerColor) }
+        dragHandle = { BottomSheetDefaults.DragHandle(color = TextSecondary.copy(alpha = 0.75f)) }
     ) {
         Column(
             modifier = Modifier
@@ -699,3 +1226,110 @@ private fun formTextFieldColors() = OutlinedTextFieldDefaults.colors(
     cursorColor = AccentBlue, focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary,
     focusedContainerColor = CardDarker, unfocusedContainerColor = CardDarker
 )
+
+@Composable
+private fun rememberBitmapFromUri(uriString: String?): ImageBitmap? {
+    val context = LocalContext.current
+    return remember(uriString) {
+        if (uriString.isNullOrEmpty()) null
+        else {
+            try {
+                val uri = android.net.Uri.parse(uriString)
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    android.graphics.BitmapFactory.decodeStream(stream)?.asImageBitmap()
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecipientHistoryCard(
+    transaction: TransactionEntity,
+    accountName: String,
+    currencyFormat: DecimalFormat,
+    dateFormat: SimpleDateFormat
+) {
+    val isIncome = transaction.type == "INCOME"
+    val amountColor = if (isIncome) IncomeGreen else ExpenseRed
+    val sign = if (isIncome) "+" else "-"
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardDark),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, DividerColor, RoundedCornerShape(16.dp))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Icon
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(amountColor.copy(alpha = 0.12f))
+                    .border(1.dp, amountColor.copy(alpha = 0.25f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isIncome) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                    contentDescription = null,
+                    tint = amountColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(Modifier.width(14.dp))
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Text(
+                    text = accountName,
+                    color = TextPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = dateFormat.format(Date(transaction.timestamp)),
+                        color = TextSecondary,
+                        fontSize = 11.sp
+                    )
+                    if (transaction.note.isNotBlank()) {
+                        Text("•", color = TextMuted, fontSize = 11.sp)
+                        Text(
+                            text = transaction.note,
+                            color = TextMuted,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.width(10.dp))
+
+            Text(
+                text = "$sign৳${currencyFormat.format(transaction.amount)}",
+                color = amountColor,
+                fontSize = 14.5.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}

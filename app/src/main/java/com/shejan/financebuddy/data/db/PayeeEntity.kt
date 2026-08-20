@@ -8,5 +8,6 @@ data class PayeeEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
     val uniqueId: String,       // e.g. "PAY-8F3A"
+    val imageUri: String? = null,
     val createdAt: Long = System.currentTimeMillis()
 )

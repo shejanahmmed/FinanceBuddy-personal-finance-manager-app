@@ -640,7 +640,7 @@ fun PendingTransactionsScreen(
                 containerColor   = CardDarker,
                 shape            = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
                 tonalElevation   = 8.dp,
-                dragHandle = { BottomSheetDefaults.DragHandle(color = DividerColor) }
+                dragHandle = { BottomSheetDefaults.DragHandle(color = TextSecondary.copy(alpha = 0.75f)) }
             ) {
                 SmsSenderMappingsConfigSheet(
                     accounts = accounts,

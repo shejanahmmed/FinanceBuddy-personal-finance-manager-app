@@ -456,7 +456,12 @@ fun AppNavigation(
                 PayeeDetailScreen(
                     payee = payee,
                     accounts = currentAccounts,
+                    allTransactions = allTransactions,
+                    allAccounts = accounts,
                     onBack = { navController.popBackStack() },
+                    onUpdatePayee = { updated ->
+                        scope.launch(Dispatchers.IO) { payeeDao.updatePayee(updated) }
+                    },
                     onDeletePayee = {
                         scope.launch(Dispatchers.IO) {
                             payee?.let { payeeDao.deletePayee(it) }

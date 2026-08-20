@@ -109,7 +109,7 @@ fun NotificationsBottomSheet(
         sheetState = sheetState,
         containerColor = BackgroundDark,
         scrimColor = ScrimColor,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = DividerColor) },
+        dragHandle = { BottomSheetDefaults.DragHandle(color = TextSecondary.copy(alpha = 0.75f)) },
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(

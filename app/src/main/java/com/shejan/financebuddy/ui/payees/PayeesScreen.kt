@@ -23,6 +23,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -100,28 +105,26 @@ fun PayeesScreen(
                     Text("Recipient Profiles", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     Text("Manage contacts and payment accounts", fontSize = 12.sp, color = TextMuted)
                 }
-            }
 
-            // -- Search Bar ---------------------------------------
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("Search by name...", color = TextMuted) },
-                leadingIcon = { Icon(Icons.Default.Search, null, tint = AccentBlue, modifier = Modifier.size(20.dp)) },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Close, null, tint = TextMuted, modifier = Modifier.size(18.dp))
-                        }
-                    }
-                },
-                singleLine = true,
-                colors = SearchTextFieldColors(),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            )
+                // Add Recipient '+' Button in a Compact Square Box (shifted slightly left)
+                Box(
+                    modifier = Modifier
+                        .padding(end = 6.dp)
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(CardDarker)
+                        .border(1.dp, AccentTeal.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                        .clickable { showAddSheet = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Recipient",
+                        tint = AccentTeal,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
 
             // -- Payees List --------------------------------------
             if (filteredPayees.isEmpty()) {
@@ -194,6 +197,7 @@ private fun PayeeCard(
         val colors = listOf(AccentTeal, AccentBlue, TransferYellow, IncomeGreen, Color(0xFF9C27B0), Color(0xFFE91E63))
         colors[Math.abs(hash) % colors.size]
     }
+    val profileBitmap = rememberBitmapFromUri(payee.imageUri)
 
     Card(
         shape = RoundedCornerShape(18.dp),
@@ -207,7 +211,7 @@ private fun PayeeCard(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Profile initial avatar
+            // Profile initial or uploaded image avatar
             Box(
                 modifier = Modifier
                     .size(46.dp)
@@ -216,12 +220,21 @@ private fun PayeeCard(
                     .border(1.dp, avatarBg.copy(alpha = 0.25f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = initial,
-                    color = avatarBg,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                if (profileBitmap != null) {
+                    Image(
+                        bitmap = profileBitmap,
+                        contentDescription = payee.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Text(
+                        text = initial,
+                        color = avatarBg,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
             Spacer(Modifier.width(14.dp))
@@ -295,7 +308,7 @@ private fun AddPayeeSheet(
         sheetState = sheetState,
         containerColor = CardDark,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = DividerColor) }
+        dragHandle = { BottomSheetDefaults.DragHandle(color = TextSecondary.copy(alpha = 0.75f)) }
     ) {
         Column(
             modifier = Modifier
@@ -698,3 +711,21 @@ private val PRESET_BANKS = listOf(
 private val PRESET_MFS = listOf(
     "bKash", "Nagad", "Rocket", "Upay", "CellFin (IBBL)", "Ok Wallet", "MyCash"
 )
+
+@Composable
+private fun rememberBitmapFromUri(uriString: String?): ImageBitmap? {
+    val context = LocalContext.current
+    return remember(uriString) {
+        if (uriString.isNullOrEmpty()) null
+        else {
+            try {
+                val uri = android.net.Uri.parse(uriString)
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    android.graphics.BitmapFactory.decodeStream(stream)?.asImageBitmap()
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+}
