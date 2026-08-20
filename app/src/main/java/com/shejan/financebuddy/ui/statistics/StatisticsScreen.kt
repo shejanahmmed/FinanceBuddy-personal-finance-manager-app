@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
@@ -407,8 +409,11 @@ fun StatisticsScreen(
             ) {
                 IconButton(
                     onClick = onBack,
-                    modifier = Modifier.size(40.dp).clip(CircleShape)
-                        .background(CardDarker).border(1.dp, DividerColor, CircleShape)
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(CardDarker)
+                        .border(1.dp, DividerColor, CircleShape)
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.KeyboardArrowLeft,
@@ -422,31 +427,67 @@ fun StatisticsScreen(
                     Text("Financial Statistics", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Text("Visual analytics & spending insights", color = TextMuted, fontSize = 12.sp)
                 }
-            }
 
-            // ── Timeframe Selector ────────────────────────────────────────
-            val periodOptions = listOf("WEEK" to "This Week", "MONTH" to "This Month", "YEAR" to "This Year", "ALL" to "All Time")
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(periodOptions) { (key, label) ->
-                    val isSelected = selectedPeriod == key
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(if (isSelected) AccentTeal.copy(alpha = 0.18f) else CardDark)
-                            .border(1.dp, if (isSelected) AccentTeal else DividerColor, RoundedCornerShape(20.dp))
-                            .clickable { selectedPeriod = key }
-                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                // Top-Right Filter Icon Button with Dropdown Menu
+                var filterMenuExpanded by remember { mutableStateOf(false) }
+                val periodOptions = listOf(
+                    "WEEK" to "This Week",
+                    "MONTH" to "This Month",
+                    "YEAR" to "This Year",
+                    "ALL" to "All Time"
+                )
+
+                Box {
+                    IconButton(
+                        onClick = { filterMenuExpanded = true }
                     ) {
-                        Text(
-                            label,
-                            color = if (isSelected) AccentTeal else TextSecondary,
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = "Filter Timeframe",
+                            tint = if (selectedPeriod != "ALL") AccentTeal else TextPrimary,
+                            modifier = Modifier.size(24.dp)
                         )
+                    }
+
+                    DropdownMenu(
+                        expanded = filterMenuExpanded,
+                        onDismissRequest = { filterMenuExpanded = false },
+                        modifier = Modifier
+                            .background(CardDarker)
+                            .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
+                    ) {
+                        periodOptions.forEach { (key, label) ->
+                            val isSelected = selectedPeriod == key
+                            DropdownMenuItem(
+                                text = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            color = if (isSelected) AccentTeal else TextPrimary,
+                                            fontSize = 13.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                        )
+                                        if (isSelected) {
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "Selected",
+                                                tint = AccentTeal,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                },
+                                onClick = {
+                                    selectedPeriod = key
+                                    filterMenuExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -597,40 +638,78 @@ fun StatisticsScreen(
                 if (categoryExpenses.isNotEmpty()) {
                     item {
                         StatCard(title = "Expense by Category", subtitle = "Distribution of spending across categories") {
-                            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                // Centered Donut Chart
                                 DonutChart(
                                     data = categoryExpenses,
-                                    modifier = Modifier.size(170.dp)
+                                    modifier = Modifier.fillMaxWidth().height(210.dp)
                                 )
-                                Spacer(modifier = Modifier.width(12.dp))
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Category boxes stacked underneath the chart inside the section card
                                 Column(
-                                    modifier = Modifier.weight(1f),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     categoryExpenses.take(6).forEachIndexed { index, (cat, amt) ->
                                         val pct = if (totalExpense > 0) (amt / totalExpense * 100) else 0.0
                                         val color = chartPalette[index % chartPalette.size]
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = CardDarker,
+                                            border = BorderStroke(1.dp, DividerColor.copy(alpha = 0.5f)),
                                             modifier = Modifier.fillMaxWidth()
                                         ) {
-                                            Box(modifier = Modifier.size(9.dp).clip(CircleShape).background(color))
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    cat, color = TextPrimary, fontSize = 11.sp,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(10.dp)
+                                                        .clip(CircleShape)
+                                                        .background(color)
                                                 )
+                                                Spacer(modifier = Modifier.width(10.dp))
                                                 Text(
-                                                    "${String.format(Locale.US, "%.1f", pct)}%",
-                                                    color = TextMuted, fontSize = 10.sp
+                                                    text = cat,
+                                                    color = TextPrimary,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = "${String.format(Locale.US, "%.1f", pct)}%",
+                                                    color = AccentTeal,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Text(
+                                                    text = "৳${currencyFormat.format(amt)}",
+                                                    color = TextSecondary,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Medium
                                                 )
                                             }
                                         }
                                     }
                                     if (categoryExpenses.size > 6) {
-                                        Text("+${categoryExpenses.size - 6} more categories", color = TextMuted, fontSize = 10.sp)
+                                        Text(
+                                            "+${categoryExpenses.size - 6} more categories",
+                                            color = TextMuted,
+                                            fontSize = 11.sp,
+                                            modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                                        )
                                     }
                                 }
                             }
@@ -1169,7 +1248,7 @@ private fun getClosestIndex(touchX: Float, width: Float, count: Int): Int {
     return idx.coerceIn(0, count - 1)
 }
 
-// ─── Donut / Pie Chart ────────────────────────────────────────────────
+// ─── Donut / Pie Chart with Leader Line Callouts ───────────────────────
 @Composable
 private fun DonutChart(
     data: List<Pair<String, Double>>,
@@ -1180,21 +1259,29 @@ private fun DonutChart(
         animProgress.snapTo(0f)
         animProgress.animateTo(1f, animationSpec = tween(900, easing = FastOutSlowInEasing))
     }
+    val textMeasurer = rememberTextMeasurer()
     val total = data.sumOf { it.second }.coerceAtLeast(1.0)
 
-    Canvas(modifier = modifier.padding(8.dp)) {
-        val s = minOf(size.width, size.height)
-        val cx = size.width / 2f
-        val cy = size.height / 2f
-        val outerR = s / 2f
-        val innerR = s * 0.35f  // donut hole
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val cx = w / 2f
+        val cy = h / 2f
+
+        // Available radius leaving side margin for leader lines & callout text labels
+        val availableR = (minOf(w, h) / 2f - 42.dp.toPx()).coerceAtLeast(35.dp.toPx())
+        val outerR = availableR
+        val innerR = outerR * 0.58f
         val strokeW = outerR - innerR
+        val arcR = innerR + strokeW / 2f
+
         var startAngle = -90f
 
-        data.forEachIndexed { i, (_, value) ->
+        data.forEachIndexed { i, (category, value) ->
             val sweep = (value / total).toFloat() * 360f * animProgress.value
             val color = chartPalette[i % chartPalette.size]
-            val arcR = innerR + strokeW / 2f
+
+            // 1. Draw segment arc
             drawArc(
                 color = color,
                 startAngle = startAngle,
@@ -1204,10 +1291,57 @@ private fun DonutChart(
                 size = Size(arcR * 2f, arcR * 2f),
                 style = Stroke(width = strokeW, cap = StrokeCap.Butt)
             )
-            startAngle += sweep + 1.5f  // small gap between segments
+
+            // 2. Draw Leader Callout Line & Text Label (matching reference drawing)
+            if (sweep >= 3f && animProgress.value > 0.75f) {
+                val midAngleRad = Math.toRadians((startAngle + sweep / 2f).toDouble())
+                val cosA = Math.cos(midAngleRad).toFloat()
+                val sinA = Math.sin(midAngleRad).toFloat()
+
+                val ptRimX = cx + outerR * cosA
+                val ptRimY = cy + outerR * sinA
+
+                val ptOutX = cx + (outerR + 8.dp.toPx()) * cosA
+                val ptOutY = cy + (outerR + 8.dp.toPx()) * sinA
+
+                val isRightSide = cosA >= 0
+                val kneeLength = 12.dp.toPx()
+                val ptKneeX = if (isRightSide) ptOutX + kneeLength else ptOutX - kneeLength
+                val ptKneeY = ptOutY
+
+                // Leader Line starting directly at outer rim edge touching donut segment
+                val linePath = Path().apply {
+                    moveTo(ptRimX, ptRimY)
+                    lineTo(ptOutX, ptOutY)
+                    lineTo(ptKneeX, ptKneeY)
+                }
+                drawPath(
+                    path = linePath,
+                    color = color,
+                    style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                )
+
+                // Label Text
+                val mResult = textMeasurer.measure(
+                    text = category,
+                    style = TextStyle(color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                )
+
+                val textX = if (isRightSide) ptKneeX + 4.dp.toPx() else ptKneeX - mResult.size.width - 4.dp.toPx()
+                val textY = ptKneeY - mResult.size.height / 2f
+
+                drawText(
+                    textMeasurer = textMeasurer,
+                    text = category,
+                    topLeft = Offset(textX, textY),
+                    style = TextStyle(color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                )
+            }
+
+            startAngle += sweep
         }
 
-        // Center hole fill — uses BackgroundDark so it blends with card surface in both themes
-        drawCircle(color = BackgroundDark, radius = innerR * 0.92f, center = Offset(cx, cy))
+        // Center hole fill
+        drawCircle(color = CardDark, radius = innerR, center = Offset(cx, cy))
     }
 }
