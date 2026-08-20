@@ -621,6 +621,7 @@ fun StatisticsScreen(
                             BalanceTrendChart(
                                 balances = balanceTrendData,
                                 xLabels = balanceTrendXLabels,
+                                selectedPeriod = selectedPeriod,
                                 modifier = Modifier.fillMaxWidth().height(190.dp).padding(top = 8.dp)
                             )
                         } else {
@@ -1020,6 +1021,7 @@ private fun IncomeExpenseComparisonRow(
 private fun BalanceTrendChart(
     balances: List<Double>,
     xLabels: List<String> = emptyList(),
+    selectedPeriod: String = "ALL",
     modifier: Modifier = Modifier
 ) {
     val animProgress = remember { Animatable(0f) }
@@ -1213,11 +1215,38 @@ private fun BalanceTrendChart(
             )
         }
 
-        // Touch Scrubbing Guideline & Tooltip
+        // Touch Scrubbing Guideline & Centered Multi-Line Tooltip Box
         activeTouchIdx?.let { idx ->
             if (idx in visPoints.indices) {
                 val touchPt = visPoints[idx]
                 val balValue = balances[idx]
+                val dateText = run {
+                    val today = Calendar.getInstance()
+                    when (selectedPeriod) {
+                        "WEEK" -> {
+                            val days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+                            if (idx in days.indices) days[idx] else ""
+                        }
+                        "MONTH" -> {
+                            val c = today.clone() as Calendar
+                            val dayNum = idx + 1
+                            if (dayNum <= c.getActualMaximum(Calendar.DAY_OF_MONTH)) {
+                                c.set(Calendar.DAY_OF_MONTH, dayNum)
+                                SimpleDateFormat("MMM d", Locale.getDefault()).format(c.time)
+                            } else ""
+                        }
+                        "YEAR" -> {
+                            val monthNames = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+                            if (idx in monthNames.indices) monthNames[idx] else ""
+                        }
+                        else -> {
+                            val c = today.clone() as Calendar
+                            c.add(Calendar.MONTH, -(balances.size - 1 - idx))
+                            SimpleDateFormat("MMM yyyy", Locale.getDefault()).format(c.time)
+                        }
+                    }
+                }
+                val amountText = "৳${DecimalFormat("##,##,##0.00").format(balValue)}"
 
                 // Vertical indicator line
                 drawLine(
@@ -1231,29 +1260,59 @@ private fun BalanceTrendChart(
                 drawCircle(color = AccentTeal.copy(alpha = 0.35f), radius = 10.dp.toPx(), center = touchPt)
                 drawCircle(color = Color.White, radius = 4.dp.toPx(), center = touchPt)
 
-                // Tooltip text at top
-                val tipText = "৳${DecimalFormat("##,##,##0.00").format(balValue)}"
-                val tipX = (touchPt.x - 40.dp.toPx()).coerceIn(leftPad, w - rightPad - 90.dp.toPx())
-                val tipY = topPad - 20.dp.toPx()
+                // Measure text for exact centering inside box
+                val mDate = textMeasurer.measure(
+                    text = dateText,
+                    style = TextStyle(color = AccentTeal, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                )
+                val mAmount = textMeasurer.measure(
+                    text = amountText,
+                    style = TextStyle(color = TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                )
 
+                val paddingH = 10.dp.toPx()
+                val boxW = maxOf(mDate.size.width, mAmount.size.width) + paddingH * 2f
+                val boxH = 30.dp.toPx()
+
+                val tipX = (touchPt.x - boxW / 2f).coerceIn(leftPad, w - rightPad - boxW)
+                val tipY = (topPad - boxH - 2.dp.toPx()).coerceAtLeast(2.dp.toPx())
+
+                // Tooltip box background container
                 drawRoundRect(
                     color = CardDarker,
                     topLeft = Offset(tipX, tipY),
-                    size = Size(85.dp.toPx(), 18.dp.toPx()),
-                    cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                    size = Size(boxW, boxH),
+                    cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx())
                 )
+                // Glowing border frame
                 drawRoundRect(
-                    color = AccentTeal.copy(alpha = 0.5f),
+                    color = AccentTeal.copy(alpha = 0.6f),
                     topLeft = Offset(tipX, tipY),
-                    size = Size(85.dp.toPx(), 18.dp.toPx()),
-                    cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx()),
+                    size = Size(boxW, boxH),
+                    cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx()),
                     style = Stroke(1.dp.toPx())
                 )
+
+                // Draw centered Date/Period text (Line 1)
                 drawText(
-                    textMeasurer,
-                    text = tipText,
-                    topLeft = Offset(tipX + 6.dp.toPx(), tipY + 2.dp.toPx()),
-                    style = TextStyle(color = TextPrimary, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+                    textMeasurer = textMeasurer,
+                    text = dateText,
+                    topLeft = Offset(
+                        tipX + (boxW - mDate.size.width) / 2f,
+                        tipY + 2.dp.toPx()
+                    ),
+                    style = TextStyle(color = AccentTeal, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                )
+
+                // Draw centered Amount text (Line 2)
+                drawText(
+                    textMeasurer = textMeasurer,
+                    text = amountText,
+                    topLeft = Offset(
+                        tipX + (boxW - mAmount.size.width) / 2f,
+                        tipY + 14.dp.toPx()
+                    ),
+                    style = TextStyle(color = TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 )
             }
         }
@@ -1270,7 +1329,16 @@ private fun getClosestIndex(touchX: Float, width: Float, count: Int): Int {
     return idx.coerceIn(0, count - 1)
 }
 
-// ─── Donut / Pie Chart with Leader Line Callouts ───────────────────────
+private data class CalloutCandidate(
+    val category: String,
+    val color: Color,
+    val rimX: Float,
+    val rimY: Float,
+    val rawY: Float,
+    val isRightSide: Boolean
+)
+
+// ─── Donut / Pie Chart with Smart Non-Overlapping Leader Line Callouts ─
 @Composable
 private fun DonutChart(
     data: List<Pair<String, Double>>,
@@ -1290,14 +1358,15 @@ private fun DonutChart(
         val cx = w / 2f
         val cy = h / 2f
 
-        // Available radius leaving side margin for leader lines & callout text labels
-        val availableR = (minOf(w, h) / 2f - 42.dp.toPx()).coerceAtLeast(35.dp.toPx())
+        // Large prominent donut radius leaving room for compact callout text labels
+        val availableR = (minOf(w, h) / 2f - 52.dp.toPx()).coerceAtLeast(45.dp.toPx())
         val outerR = availableR
         val innerR = outerR * 0.58f
         val strokeW = outerR - innerR
         val arcR = innerR + strokeW / 2f
 
         var startAngle = -90f
+        val candidates = mutableListOf<CalloutCandidate>()
 
         data.forEachIndexed { i, (category, value) ->
             val sweep = (value / total).toFloat() * 360f * animProgress.value
@@ -1314,7 +1383,7 @@ private fun DonutChart(
                 style = Stroke(width = strokeW, cap = StrokeCap.Butt)
             )
 
-            // 2. Draw Leader Callout Line & Text Label (matching reference drawing)
+            // Collect callout candidates
             if (sweep >= 3f && animProgress.value > 0.75f) {
                 val midAngleRad = Math.toRadians((startAngle + sweep / 2f).toDouble())
                 val cosA = Math.cos(midAngleRad).toFloat()
@@ -1322,45 +1391,86 @@ private fun DonutChart(
 
                 val ptRimX = cx + outerR * cosA
                 val ptRimY = cy + outerR * sinA
-
-                val ptOutX = cx + (outerR + 8.dp.toPx()) * cosA
-                val ptOutY = cy + (outerR + 8.dp.toPx()) * sinA
-
                 val isRightSide = cosA >= 0
-                val kneeLength = 12.dp.toPx()
-                val ptKneeX = if (isRightSide) ptOutX + kneeLength else ptOutX - kneeLength
-                val ptKneeY = ptOutY
 
-                // Leader Line starting directly at outer rim edge touching donut segment
-                val linePath = Path().apply {
-                    moveTo(ptRimX, ptRimY)
-                    lineTo(ptOutX, ptOutY)
-                    lineTo(ptKneeX, ptKneeY)
-                }
-                drawPath(
-                    path = linePath,
-                    color = color,
-                    style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-                )
-
-                // Label Text
-                val mResult = textMeasurer.measure(
-                    text = category,
-                    style = TextStyle(color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                )
-
-                val textX = if (isRightSide) ptKneeX + 4.dp.toPx() else ptKneeX - mResult.size.width - 4.dp.toPx()
-                val textY = ptKneeY - mResult.size.height / 2f
-
-                drawText(
-                    textMeasurer = textMeasurer,
-                    text = category,
-                    topLeft = Offset(textX, textY),
-                    style = TextStyle(color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                )
+                candidates.add(CalloutCandidate(category, color, ptRimX, ptRimY, ptRimY, isRightSide))
             }
 
             startAngle += sweep
+        }
+
+        // 2. Smart Vertical Collision Avoidance (guarantees labels never overlap)
+        val minGap = 14.dp.toPx()
+
+        fun resolveSideCollisions(items: List<CalloutCandidate>): List<Pair<CalloutCandidate, Float>> {
+            if (items.isEmpty()) return emptyList()
+            val sorted = items.sortedBy { it.rawY }
+            val finalY = sorted.map { it.rawY }.toFloatArray()
+
+            // Pass 1: Push down overlapping items
+            for (idx in 1 until sorted.size) {
+                if (finalY[idx] < finalY[idx - 1] + minGap) {
+                    finalY[idx] = finalY[idx - 1] + minGap
+                }
+            }
+
+            // Pass 2: Push back up if bottommost extends past canvas bounds
+            val maxY = cy + outerR + 10.dp.toPx()
+            if (finalY.last() > maxY) {
+                finalY[finalY.lastIndex] = maxY
+                for (idx in sorted.size - 2 downTo 0) {
+                    if (finalY[idx] > finalY[idx + 1] - minGap) {
+                        finalY[idx] = finalY[idx + 1] - minGap
+                    }
+                }
+            }
+
+            return sorted.mapIndexed { idx, item -> item to finalY[idx] }
+        }
+
+        val rightSide = resolveSideCollisions(candidates.filter { it.isRightSide })
+        val leftSide = resolveSideCollisions(candidates.filter { !it.isRightSide })
+
+        // 3. Draw Leader Lines & Text Labels with resolved non-overlapping Y coordinates and smart edge padding
+        (rightSide + leftSide).forEach { (candidate, adjustedY) ->
+            val isRightSide = candidate.isRightSide
+            val kneeLength = 6.dp.toPx()
+
+            val ptOutX = if (isRightSide) cx + outerR + 6.dp.toPx() else cx - outerR - 6.dp.toPx()
+
+            // Compact Callout Text (9.5sp specifically for the graph)
+            val mResult = textMeasurer.measure(
+                text = candidate.category,
+                style = TextStyle(color = TextPrimary, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+            )
+
+            // Clamp text position so it strictly respects outer card edge padding (min 10dp inside)
+            val edgePadding = 10.dp.toPx()
+            val textX = if (isRightSide) {
+                (ptOutX + kneeLength + 3.dp.toPx()).coerceAtMost(w - edgePadding - mResult.size.width)
+            } else {
+                (ptOutX - kneeLength - mResult.size.width - 3.dp.toPx()).coerceAtLeast(edgePadding)
+            }
+            val textY = adjustedY - mResult.size.height / 2f
+
+            // Leader Line starting directly at outer rim edge touching donut segment
+            val linePath = Path().apply {
+                moveTo(candidate.rimX, candidate.rimY)
+                lineTo(ptOutX, adjustedY)
+                lineTo(if (isRightSide) textX - 3.dp.toPx() else textX + mResult.size.width + 3.dp.toPx(), adjustedY)
+            }
+            drawPath(
+                path = linePath,
+                color = candidate.color,
+                style = Stroke(width = 1.2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+            )
+
+            drawText(
+                textMeasurer = textMeasurer,
+                text = candidate.category,
+                topLeft = Offset(textX, textY),
+                style = TextStyle(color = TextPrimary, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+            )
         }
 
         // Center hole fill
