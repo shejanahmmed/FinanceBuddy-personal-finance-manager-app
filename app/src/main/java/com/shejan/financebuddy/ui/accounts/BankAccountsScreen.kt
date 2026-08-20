@@ -5,14 +5,20 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -50,6 +56,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shejan.financebuddy.data.db.AccountEntity
@@ -118,27 +126,112 @@ fun BankAccountsScreen(
     val scope = rememberCoroutineScope()
 
     deletingAccount?.let { acc ->
-        AlertDialog(
-            onDismissRequest = { deletingAccount = null },
-            containerColor   = CardDark,
-            title = { Text("Delete Account?", color = TextPrimary, fontWeight = FontWeight.Bold) },
-            text  = {
-                Text(
-                    "Are you sure you want to remove \"${acc.name}\"? Existing transactions will not be deleted.",
-                    color = TextSecondary, fontSize = 14.sp
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { onDeleteAccount(acc); deletingAccount = null }) {
-                    Text("Delete", color = ExpenseRed, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { deletingAccount = null }) {
-                    Text("Cancel", color = TextSecondary)
+        Dialog(onDismissRequest = { deletingAccount = null }) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = CardDark,
+                border = BorderStroke(1.dp, DividerColor),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Top Warning Icon Badge
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(CircleShape)
+                            .background(ExpenseRed.copy(alpha = 0.15f))
+                            .border(1.dp, ExpenseRed.copy(alpha = 0.35f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = ExpenseRed,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = "Delete Account?",
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Are you sure you want to remove \"${acc.name}\"? Existing transactions will remain intact.",
+                        fontSize = 13.5.sp,
+                        color = TextSecondary,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 19.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(22.dp))
+
+                    // Centered Equal-Sized Buttons Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Cancel Button
+                        Surface(
+                            onClick = { deletingAccount = null },
+                            shape = RoundedCornerShape(12.dp),
+                            color = CardDarker,
+                            border = BorderStroke(1.dp, DividerColor),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "Cancel",
+                                    color = TextPrimary,
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        // Delete Button
+                        Surface(
+                            onClick = {
+                                onDeleteAccount(acc)
+                                deletingAccount = null
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = ExpenseRed,
+                            border = BorderStroke(1.dp, ExpenseRed),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "Delete",
+                                    color = Color.White,
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 }
             }
-        )
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(BackgroundDark)) {
@@ -253,7 +346,7 @@ fun BankAccountsScreen(
                     }
 
                     if (cash.isNotEmpty()) {
-                        item { SectionGroupHeader(title = "Hand Cash", count = cash.size) }
+                        item { SectionGroupHeader(title = "Hand Cash", showCount = false) }
                         items(cash, key = { it.id }) { account ->
                             AccountManageCard(
                                 account = account,
@@ -324,8 +417,23 @@ private fun AccountsHeroCard(
     mfsCount: Int,
     currencyFormat: DecimalFormat
 ) {
+    var isExpanded by remember { mutableStateOf(false) }
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
+        label = "ArrowRotation"
+    )
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(
+                animationSpec = spring(
+                    stiffness = Spring.StiffnessMediumLow,
+                    dampingRatio = Spring.DampingRatioNoBouncy
+                )
+            )
+            .clickable { isExpanded = !isExpanded },
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = CardDark),
         border = BorderStroke(
@@ -353,7 +461,7 @@ private fun AccountsHeroCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .padding(start = 18.dp, top = 18.dp, end = 18.dp, bottom = 12.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -449,98 +557,66 @@ private fun AccountsHeroCard(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = DividerColor.copy(alpha = 0.6f))
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                AnimatedVisibility(
+                    visible = isExpanded,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
                 ) {
-                    // Cash Pill
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(IncomeGreen.copy(alpha = 0.12f)),
-                            contentAlignment = Alignment.Center
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(color = DividerColor.copy(alpha = 0.6f))
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Single Column of separate boxes for Cash, Banks, MFS
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Payments,
-                                contentDescription = null,
-                                tint = IncomeGreen,
-                                modifier = Modifier.size(15.dp)
+                            // 1. Cash Box
+                            AccountCategorySummaryBox(
+                                icon = Icons.Default.Payments,
+                                iconColor = IncomeGreen,
+                                title = "Hand Cash",
+                                subtitle = "Physical Cash",
+                                balanceStr = "৳${currencyFormat.format(cashBalance)}"
+                            )
+
+                            // 2. Banks Box
+                            AccountCategorySummaryBox(
+                                icon = Icons.Default.AccountBalance,
+                                iconColor = AccentBlue,
+                                title = "Bank Accounts",
+                                subtitle = "$bankCount ${if (bankCount == 1) "account" else "accounts"}",
+                                balanceStr = "৳${currencyFormat.format(bankBalance)}"
+                            )
+
+                            // 3. MFS Box
+                            AccountCategorySummaryBox(
+                                icon = Icons.Default.PhoneAndroid,
+                                iconColor = ExpenseRed,
+                                title = "Mobile Financial Services",
+                                subtitle = "$mfsCount ${if (mfsCount == 1) "account" else "accounts"}",
+                                balanceStr = "৳${currencyFormat.format(mfsBalance)}"
                             )
                         }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Column {
-                            Text("Cash ($cashCount)", fontSize = 10.sp, color = TextMuted)
-                            Text("৳${currencyFormat.format(cashBalance)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                        }
                     }
+                }
 
-                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(DividerColor))
-                    Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                    // Banks Pill
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(AccentBlue.copy(alpha = 0.12f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AccountBalance,
-                                contentDescription = null,
-                                tint = AccentBlue,
-                                modifier = Modifier.size(15.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Column {
-                            Text("Banks ($bankCount)", fontSize = 10.sp, color = TextMuted)
-                            Text("৳${currencyFormat.format(bankBalance)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                        }
-                    }
-
-                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(DividerColor))
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    // MFS Pill
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(ExpenseRed.copy(alpha = 0.12f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PhoneAndroid,
-                                contentDescription = null,
-                                tint = ExpenseRed,
-                                modifier = Modifier.size(15.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Column {
-                            Text("MFS ($mfsCount)", fontSize = 10.sp, color = TextMuted)
-                            Text("৳${currencyFormat.format(mfsBalance)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                        }
-                    }
+                // Expand/Collapse Chevron Indicator in bottom-center
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = if (isExpanded) "Collapse" else "Expand",
+                        tint = AccentTeal,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .rotate(arrowRotation)
+                    )
                 }
             }
         }
@@ -548,7 +624,72 @@ private fun AccountsHeroCard(
 }
 
 @Composable
-private fun SectionGroupHeader(title: String, count: Int) {
+private fun AccountCategorySummaryBox(
+    icon: ImageVector,
+    iconColor: Color,
+    title: String,
+    subtitle: String,
+    balanceStr: String
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = CardDarker,
+        border = BorderStroke(1.dp, DividerColor.copy(alpha = 0.5f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(iconColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconColor,
+                        modifier = Modifier.size(17.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = title,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = subtitle,
+                        fontSize = 11.sp,
+                        color = TextSecondary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+            Text(
+                text = balanceStr,
+                fontSize = 13.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+        }
+    }
+}
+
+@Composable
+private fun SectionGroupHeader(title: String, count: Int = 0, showCount: Boolean = true) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
@@ -567,19 +708,21 @@ private fun SectionGroupHeader(title: String, count: Int) {
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.5.sp
         )
-        Spacer(Modifier.width(8.dp))
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(AccentTeal.copy(alpha = 0.12f))
-                .padding(horizontal = 7.dp, vertical = 2.dp)
-        ) {
-            Text(
-                text = count.toString(),
-                color = AccentTeal,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
+        if (showCount) {
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(AccentTeal.copy(alpha = 0.12f))
+                    .padding(horizontal = 7.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = count.toString(),
+                    color = AccentTeal,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -635,57 +778,27 @@ private fun AccountManageCard(
 
             Spacer(Modifier.width(14.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = account.name,
-                        color = TextPrimary,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = account.name,
+                    color = TextPrimary,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
 
-                    if (account.accountSubtype.isNotBlank()) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(cardColor.copy(alpha = 0.14f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = account.accountSubtype,
-                                color = cardColor,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
+                Text(
+                    text = "৳${currencyFormat.format(account.balance)}",
+                    color = TextPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
 
-                Spacer(Modifier.height(4.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Balance: ",
-                        color = TextMuted,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = "৳${currencyFormat.format(account.balance)}",
-                        color = if (account.balance > 0) TextPrimary else TextMuted,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                if (account.accountNumber.isNotBlank() || account.showAs.isNotBlank()) {
-                    Spacer(Modifier.height(3.dp))
+                if (account.accountNumber.isNotBlank() || account.accountSubtype.isNotBlank() || account.showAs.isNotBlank()) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -699,28 +812,32 @@ private fun AccountManageCard(
                             Text(
                                 text = "Acc: $displayNum",
                                 color = TextSecondary,
-                                fontSize = 11.sp
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Normal
                             )
                         }
-                        if (account.accountNumber.isNotBlank() && account.showAs.isNotBlank()) {
+                        if (account.accountNumber.isNotBlank() && account.accountSubtype.isNotBlank()) {
                             Text(
                                 text = "•",
                                 color = TextMuted,
-                                fontSize = 11.sp
+                                fontSize = 11.5.sp
                             )
                         }
-                        if (account.showAs.isNotBlank()) {
+                        if (account.accountSubtype.isNotBlank()) {
                             Text(
-                                text = "Show as: ${account.showAs}",
+                                text = "Type: ${account.accountSubtype}",
                                 color = TextSecondary,
-                                fontSize = 11.sp
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Normal
                             )
                         }
                     }
                 }
             }
 
-            // Quick Menu Button
+            Spacer(Modifier.width(8.dp))
+
+            // Quick Menu Button (Clean High Contrast Icon)
             IconButton(
                 onClick = { showActions = true },
                 modifier = Modifier.size(32.dp)
@@ -728,8 +845,8 @@ private fun AccountManageCard(
                 Icon(
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = "Account Options",
-                    tint = TextMuted,
-                    modifier = Modifier.size(18.dp)
+                    tint = TextPrimary,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
@@ -749,53 +866,63 @@ private fun AccountManageCard(
                 contentAlignment = Alignment.Center
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
+                    // Edit Button (Teal Theme, Equal Size)
+                    Surface(
                         onClick = {
                             showActions = false
                             onEdit()
                         },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = CardDarker
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        border = BorderStroke(1.dp, DividerColor),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                        modifier = Modifier.height(38.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        color = AccentTeal.copy(alpha = 0.22f),
+                        border = BorderStroke(1.dp, AccentTeal.copy(alpha = 0.6f)),
+                        modifier = Modifier
+                            .width(115.dp)
+                            .height(42.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit",
-                            tint = AccentTeal,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Edit", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit",
+                                tint = AccentTeal,
+                                modifier = Modifier.size(17.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Edit", color = AccentTeal, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
 
-                    Button(
+                    // Delete Button (Red Theme, Equal Size)
+                    Surface(
                         onClick = {
                             showActions = false
                             onDelete()
                         },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = ExpenseRed.copy(alpha = 0.15f)
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        border = BorderStroke(1.dp, ExpenseRed.copy(alpha = 0.35f)),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                        modifier = Modifier.height(38.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        color = ExpenseRed.copy(alpha = 0.22f),
+                        border = BorderStroke(1.dp, ExpenseRed.copy(alpha = 0.6f)),
+                        modifier = Modifier
+                            .width(115.dp)
+                            .height(42.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = ExpenseRed,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Delete", color = ExpenseRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = ExpenseRed,
+                                modifier = Modifier.size(17.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Delete", color = ExpenseRed, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
