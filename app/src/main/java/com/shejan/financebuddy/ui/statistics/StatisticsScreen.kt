@@ -721,45 +721,67 @@ fun StatisticsScreen(
                 if (topTransactions.isNotEmpty()) {
                     item {
                         StatCard(title = "Largest Transactions", subtitle = "Top 5 by amount in selected period") {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 topTransactions.forEach { tx ->
                                     val isIncome = tx.type == "INCOME"
                                     val txColor = if (isIncome) IncomeGreen else if (tx.type == "TRANSFER") TransferYellow else ExpenseRed
                                     val dateStr = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(tx.timestamp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = CardDarker,
+                                        border = BorderStroke(1.dp, DividerColor.copy(alpha = 0.5f)),
+                                        modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Row(
-                                            modifier = Modifier.weight(1f),
-                                            verticalAlignment = Alignment.CenterVertically
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            Box(
-                                                modifier = Modifier.size(36.dp).clip(CircleShape)
-                                                    .background(txColor.copy(alpha = 0.15f)),
-                                                contentAlignment = Alignment.Center
+                                            Row(
+                                                modifier = Modifier.weight(1f),
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Icon(
-                                                    imageVector = if (isIncome) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
-                                                    contentDescription = null, tint = txColor,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(36.dp)
+                                                        .clip(CircleShape)
+                                                        .background(txColor.copy(alpha = 0.15f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (isIncome) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                                                        contentDescription = null,
+                                                        tint = txColor,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = tx.category.ifBlank { tx.type },
+                                                        color = TextPrimary,
+                                                        fontSize = 13.5.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                    Text(
+                                                        text = dateStr,
+                                                        color = TextSecondary,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Medium
+                                                    )
+                                                }
                                             }
-                                            Spacer(modifier = Modifier.width(10.dp))
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = tx.category.ifBlank { tx.type },
-                                                    color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                                                    maxLines = 1, overflow = TextOverflow.Ellipsis
-                                                )
-                                                Text(dateStr, color = TextMuted, fontSize = 10.5.sp)
-                                            }
+                                            Text(
+                                                text = "${if (isIncome) "+" else "-"}৳${DecimalFormat("##,##,##0.00").format(tx.amount)}",
+                                                color = txColor,
+                                                fontSize = 13.5.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
                                         }
-                                        Text(
-                                            text = "${if (isIncome) "+" else "-"}৳${DecimalFormat("##,##,##0.00").format(tx.amount)}",
-                                            color = txColor, fontSize = 13.sp, fontWeight = FontWeight.Bold
-                                        )
                                     }
                                 }
                             }
