@@ -427,7 +427,11 @@ fun PayeeDetailScreen(
                     DropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
-                        modifier = Modifier.background(CardDark)
+                        shape = RoundedCornerShape(14.dp),
+                        containerColor = CardDark,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .border(1.dp, DividerColor, RoundedCornerShape(14.dp))
                     ) {
                         DropdownMenuItem(
                             text = {
