@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +24,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -53,6 +56,10 @@ fun ReportsScreen(
 
     // Report view mode state: "MONTHLY" or "YEARLY"
     var selectedReportType by remember { mutableStateOf("MONTHLY") }
+
+    // Fullscreen table dialog states
+    var showFullscreenTable by remember { mutableStateOf(false) }
+    var showFullscreenYearlyTable by remember { mutableStateOf(false) }
 
     // Calendar state for month/year selection
     val selectedCalendar = remember {
@@ -269,7 +276,7 @@ fun ReportsScreen(
                 ) {
                     Text(
                         text = "Monthly Breakdown",
-                        color = if (isMonthly) OnAccent else TextSecondary,
+                        color = if (isMonthly) Color.White else TextSecondary,
                         fontSize = 13.sp,
                         fontWeight = if (isMonthly) FontWeight.Bold else FontWeight.Medium
                     )
@@ -286,7 +293,7 @@ fun ReportsScreen(
                 ) {
                     Text(
                         text = "Yearly Summary",
-                        color = if (isYearly) OnAccent else TextSecondary,
+                        color = if (isYearly) Color.White else TextSecondary,
                         fontSize = 13.sp,
                         fontWeight = if (isYearly) FontWeight.Bold else FontWeight.Medium
                     )
@@ -383,13 +390,32 @@ fun ReportsScreen(
                     // MONTHLY VIEW DETAILED TABLE
                     // ───────────────────────────────────────────────────────
                     item {
-                        Text(
-                            text = "Monthly Transactions Breakdown",
-                            color = TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(bottom = 6.dp, start = 4.dp)
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 6.dp, start = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Monthly Transactions Breakdown",
+                                color = TextPrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            IconButton(
+                                onClick = { showFullscreenTable = true },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Fullscreen,
+                                    contentDescription = "Expand Table to Fullscreen",
+                                    tint = AccentTeal,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        }
 
                         Box(
                             modifier = Modifier
@@ -453,7 +479,7 @@ fun ReportsScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(text = formattedDate, color = TextPrimary, fontSize = 11.5.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false, modifier = Modifier.width(75.dp))
-                                            Text(text = tx.category, color = TextPrimary, fontSize = 11.5.sp, maxLines = 1, softWrap = false, modifier = Modifier.width(130.dp))
+                                            Text(text = if (tx.category.isNotBlank()) tx.category else tx.type, color = TextPrimary, fontSize = 11.5.sp, maxLines = 1, softWrap = false, modifier = Modifier.width(130.dp))
                                             Box(modifier = Modifier.width(85.dp)) {
                                                 Surface(shape = RoundedCornerShape(4.dp), color = typeColor.copy(alpha = 0.15f)) {
                                                     Text(text = typeLabel, color = typeColor, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp))
@@ -524,13 +550,32 @@ fun ReportsScreen(
                     // YEARLY VIEW (12 MONTHS SUMMARY TABLE)
                     // ───────────────────────────────────────────────────────
                     item {
-                        Text(
-                            text = "Annual Monthly History ($year)",
-                            color = TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(bottom = 6.dp, start = 4.dp)
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 6.dp, start = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Annual Monthly History ($year)",
+                                color = TextPrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            IconButton(
+                                onClick = { showFullscreenYearlyTable = true },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Fullscreen,
+                                    contentDescription = "Expand Yearly Table to Fullscreen",
+                                    tint = AccentTeal,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        }
 
                         Box(
                             modifier = Modifier
@@ -680,16 +725,259 @@ fun ReportsScreen(
                         Icon(
                             imageVector = Icons.Default.PictureAsPdf,
                             contentDescription = "Export PDF Icon",
-                            tint = OnAccent,
+                            tint = Color.White,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (selectedReportType == "MONTHLY") "Export Monthly Statement as PDF" else "Export Annual Report as PDF",
-                            color = OnAccent,
+                            color = Color.White,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
+                    }
+                }
+            }
+        }
+    }
+
+    // Fullscreen Monthly Transactions Table Dialog
+    if (showFullscreenTable) {
+        Dialog(
+            onDismissRequest = { showFullscreenTable = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = BackgroundDark
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                ) {
+                    // Fullscreen Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(
+                                text = "Monthly Transactions Breakdown",
+                                color = TextPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "$monthName $year • ${monthTransactions.size} transactions recorded",
+                                color = AccentTeal,
+                                fontSize = 11.5.sp
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { showFullscreenTable = false },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(CardDarker)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = TextPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = DividerColor)
+
+                    // Fullscreen Scrollable Table
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.width(620.dp),
+                            contentPadding = PaddingValues(bottom = 32.dp)
+                        ) {
+                            // Table Headers
+                            item {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(CardDarker)
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Date", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(85.dp))
+                                    Text("Category", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(140.dp))
+                                    Text("Type", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(90.dp))
+                                    Text("Account", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(145.dp))
+                                    Text("Amount", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.width(150.dp))
+                                }
+                                HorizontalDivider(color = DividerColor)
+                            }
+
+                            if (monthTransactions.isEmpty()) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(48.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("No transactions found for $monthName $year", color = TextMuted, fontSize = 14.sp)
+                                    }
+                                }
+                            } else {
+                                itemsIndexed(monthTransactions) { index, tx ->
+                                    val isLast = index == monthTransactions.size - 1
+                                    val bgColor = if (index % 2 == 0) CardDark else CardDarker.copy(alpha = 0.5f)
+                                    val formattedDate = remember(tx.timestamp) { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(tx.timestamp)) }
+                                    val accName = accountsMap[tx.fromAccountId]?.name ?: "Account #${tx.fromAccountId}"
+                                    val (typeLabel, typeColor) = when (tx.type) {
+                                        "INCOME" -> "Income" to IncomeGreen
+                                        "EXPENSE" -> "Expense" to ExpenseRed
+                                        else -> "Transfer" to TransferYellow
+                                    }
+
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(bgColor)
+                                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(text = formattedDate, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.width(85.dp))
+                                        Text(text = if (tx.category.isNotBlank()) tx.category else tx.type, color = TextPrimary, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(140.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Box(modifier = Modifier.width(90.dp)) {
+                                            Surface(shape = RoundedCornerShape(4.dp), color = typeColor.copy(alpha = 0.15f)) {
+                                                Text(text = typeLabel, color = typeColor, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp))
+                                            }
+                                        }
+                                        Text(text = accName, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(145.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        val prefix = if (tx.type == "INCOME") "+৳" else if (tx.type == "EXPENSE") "-৳" else "৳"
+                                        Text(text = "$prefix${currencyFormat.format(tx.amount)}", color = typeColor, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.width(150.dp))
+                                    }
+                                    if (!isLast) HorizontalDivider(color = DividerColor.copy(alpha = 0.4f))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Fullscreen Yearly Monthly History Table Dialog
+    if (showFullscreenYearlyTable) {
+        Dialog(
+            onDismissRequest = { showFullscreenYearlyTable = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = BackgroundDark
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                ) {
+                    // Fullscreen Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(
+                                text = "Annual Monthly History",
+                                color = TextPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Calendar Year $year • 12 Months Statement",
+                                color = AccentTeal,
+                                fontSize = 11.5.sp
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { showFullscreenYearlyTable = false },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(CardDarker)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = TextPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = DividerColor)
+
+                    // Fullscreen Scrollable Table
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.width(700.dp),
+                            contentPadding = PaddingValues(bottom = 32.dp)
+                        ) {
+                            // Table Headers
+                            item {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(CardDarker)
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Month", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(110.dp))
+                                    Text("Starting Bal", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(140.dp))
+                                    Text("Income (+)", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(140.dp))
+                                    Text("Expense (-)", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(140.dp))
+                                    Text("Closing Bal", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.width(170.dp))
+                                }
+                                HorizontalDivider(color = DividerColor)
+                            }
+
+                            itemsIndexed(yearlyMonthlySummaries) { index, mData ->
+                                val isLast = index == yearlyMonthlySummaries.size - 1
+                                val bgColor = if (index % 2 == 0) CardDark else CardDarker.copy(alpha = 0.5f)
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(bgColor)
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(text = mData.monthName, color = TextPrimary, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(110.dp))
+                                    Text(text = "৳${currencyFormat.format(mData.startingBalance)}", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(140.dp))
+                                    Text(text = "+৳${currencyFormat.format(mData.totalIncome)}", color = IncomeGreen, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(140.dp))
+                                    Text(text = "-৳${currencyFormat.format(mData.totalExpense)}", color = ExpenseRed, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(140.dp))
+                                    Text(text = "৳${currencyFormat.format(mData.remainingBalance)}", color = AccentTeal, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.width(170.dp))
+                                }
+                                if (!isLast) HorizontalDivider(color = DividerColor.copy(alpha = 0.4f))
+                            }
+                        }
                     }
                 }
             }
