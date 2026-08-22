@@ -57,14 +57,6 @@ import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
 
-// ─── Categories ──────────────────────────────────────────────────────────────
-
-private val CATEGORIES = listOf(
-    "Mobile Banking", "Banking", "Food & Dining", "Shopping", "Transport",
-    "Utilities", "Healthcare", "Education", "Entertainment", "Salary",
-    "Freelance", "Business", "Investment", "Transfer", "Other"
-)
-
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)

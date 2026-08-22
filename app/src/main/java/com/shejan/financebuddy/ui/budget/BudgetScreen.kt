@@ -96,15 +96,20 @@ private val expenseCategories = listOf(
 )
 
 private val categoryColors = mapOf(
-    "Food"          to "#FF5C7C",
-    "Groceries"     to "#00C897",
-    "Rent"          to "#0096FF",
-    "Utilities"     to "#FFBD2E",
-    "Travel"        to "#7C5CFC",
-    "Shopping"      to "#FF7A45",
-    "Entertainment" to "#00D4AA",
-    "Medical"       to "#FF3B6F",
-    "Other"         to "#8A94B2"
+    "Food"           to "#FF5C7C",
+    "Groceries"      to "#00C897",
+    "Rent"           to "#0096FF",
+    "Utilities"      to "#FFBD2E",
+    "Travel"         to "#7C5CFC",
+    "Shopping"       to "#FF7A45",
+    "Entertainment"  to "#00D4AA",
+    "Medical"        to "#FF3B6F",
+    "Banking"        to "#0096FF",
+    "Mobile Banking" to "#00D4AA",
+    "Salary"         to "#00C897",
+    "Freelance"      to "#7C5CFC",
+    "Investment"     to "#FFBD2E",
+    "Other"          to "#8A94B2"
 )
 
 private val niceColors = listOf(

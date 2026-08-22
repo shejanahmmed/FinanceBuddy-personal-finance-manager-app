@@ -199,8 +199,8 @@ fun HomeScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                // Spacer matching top bar height (76.dp) + status bar padding
-                Spacer(modifier = Modifier.statusBarsPadding().height(76.dp))
+                // Spacer matching top bar height (84.dp) + status bar padding
+                Spacer(modifier = Modifier.statusBarsPadding().height(84.dp))
 
                 val context = LocalContext.current
                 val preferencesManager = remember { com.shejan.financebuddy.data.PreferencesManager(context.applicationContext) }
@@ -222,7 +222,7 @@ fun HomeScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 8.dp),
+                        .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 8.dp),
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = CardDark),
                     border = BorderStroke(1.dp, DividerColor)

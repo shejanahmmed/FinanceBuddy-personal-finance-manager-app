@@ -99,7 +99,7 @@ object PdfReportGenerator {
                 c.drawText("Account", colXAcc, y + 16f, headerTextPaint)
 
                 val amountHeaderPaint = Paint(headerTextPaint).apply { textAlign = Paint.Align.RIGHT }
-                c.drawText("Amount (৳)", colXAmount, y + 16f, amountHeaderPaint)
+                c.drawText("Amount (Tk)", colXAmount, y + 16f, amountHeaderPaint)
             }
 
             drawTableHeader(canvas, currentY)
@@ -141,7 +141,8 @@ object PdfReportGenerator {
                 val (typeText, typeColor) = when (tx.type) {
                     "INCOME" -> "Income" to "#16A34A"
                     "EXPENSE" -> "Expense" to "#DC2626"
-                    else -> "Transfer" to "#D97706"
+                    "TRANSFER" -> "Transfer" to "#D97706"
+                    else -> tx.type to "#475569"
                 }
 
                 val typePaint = Paint(bodyTextPaint).apply {
@@ -163,7 +164,7 @@ object PdfReportGenerator {
                 canvas.drawText(typeText, colXType, currentY + 14f, typePaint)
                 canvas.drawText(safeAcc, colXAcc, currentY + 14f, bodyTextPaint)
 
-                val prefix = if (tx.type == "INCOME") "+৳" else if (tx.type == "EXPENSE") "-৳" else "৳"
+                val prefix = if (tx.type == "INCOME") "+Tk " else if (tx.type == "EXPENSE") "-Tk " else "Tk "
                 canvas.drawText("$prefix${currencyFormat.format(tx.amount)}", colXAmount, currentY + 14f, amountPaint)
 
                 currentY += rowHeight
@@ -239,19 +240,19 @@ object PdfReportGenerator {
 
             // Starting balance
             canvas.drawText("Starting Bank / Accounts Balance:", MARGIN + 14f, boxY, boxLabelPaint)
-            canvas.drawText("৳${currencyFormat.format(startingBalance)}", PAGE_WIDTH - MARGIN - 14f, boxY, boxValPaint)
+            canvas.drawText("Tk ${currencyFormat.format(startingBalance)}", PAGE_WIDTH - MARGIN - 14f, boxY, boxValPaint)
             boxY += 15f
 
             // Total Income
             val incomeValPaint = Paint(boxValPaint).apply { color = Color.parseColor("#16A34A") }
             canvas.drawText("Total Monthly Income (+):", MARGIN + 14f, boxY, boxLabelPaint)
-            canvas.drawText("+৳${currencyFormat.format(totalIncome)}", PAGE_WIDTH - MARGIN - 14f, boxY, incomeValPaint)
+            canvas.drawText("+Tk ${currencyFormat.format(totalIncome)}", PAGE_WIDTH - MARGIN - 14f, boxY, incomeValPaint)
             boxY += 15f
 
             // Total Expense
             val expenseValPaint = Paint(boxValPaint).apply { color = Color.parseColor("#DC2626") }
             canvas.drawText("Total Monthly Expenses (-):", MARGIN + 14f, boxY, boxLabelPaint)
-            canvas.drawText("-৳${currencyFormat.format(totalExpense)}", PAGE_WIDTH - MARGIN - 14f, boxY, expenseValPaint)
+            canvas.drawText("-Tk ${currencyFormat.format(totalExpense)}", PAGE_WIDTH - MARGIN - 14f, boxY, expenseValPaint)
             boxY += 16f
 
             // Remaining balance
@@ -260,7 +261,7 @@ object PdfReportGenerator {
                 color = Color.parseColor("#00D4AA")
             }
             canvas.drawText("Net Remaining Balance (Closing):", MARGIN + 14f, boxY, boxTitlePaint)
-            canvas.drawText("৳${currencyFormat.format(remainingBalance)}", PAGE_WIDTH - MARGIN - 14f, boxY, remainingValPaint)
+            canvas.drawText("Tk ${currencyFormat.format(remainingBalance)}", PAGE_WIDTH - MARGIN - 14f, boxY, remainingValPaint)
 
             // Draw Footer
             drawFooter(canvas, PAGE_WIDTH.toFloat(), PAGE_HEIGHT.toFloat(), MARGIN)
@@ -281,7 +282,7 @@ object PdfReportGenerator {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(context, "Error exporting PDF: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Failed to generate PDF: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -307,13 +308,13 @@ object PdfReportGenerator {
                 canvas = canvas,
                 context = context,
                 reportName = "Annual Financial Report",
-                periodText = "Calendar Year $year",
+                periodText = "Year $year (12 Months Overview)",
                 generatedDateStr = genDateStr,
                 margin = MARGIN,
                 pageWidth = PAGE_WIDTH.toFloat()
             )
 
-            // Table Headers
+            // Table Paints
             val headerBgPaint = Paint().apply { color = Color.parseColor("#F1F5F9") }
             val headerTextPaint = Paint().apply {
                 isAntiAlias = true
@@ -331,22 +332,23 @@ object PdfReportGenerator {
                 strokeWidth = 1f
             }
 
+            // Columns
             val colXMonth = MARGIN + 8f
-            val colXStart = MARGIN + 90f
-            val colXIncome = MARGIN + 200f
-            val colXExpense = MARGIN + 310f
+            val colXStart = MARGIN + 100f
+            val colXIncome = MARGIN + 215f
+            val colXExpense = MARGIN + 330f
             val colXRemaining = PAGE_WIDTH - MARGIN - 8f
 
             val rect = RectF(MARGIN, currentY, PAGE_WIDTH - MARGIN, currentY + 24f)
             canvas.drawRoundRect(rect, 4f, 4f, headerBgPaint)
 
             canvas.drawText("Month", colXMonth, currentY + 16f, headerTextPaint)
-            canvas.drawText("Starting Bal (৳)", colXStart, currentY + 16f, headerTextPaint)
-            canvas.drawText("Income (৳)", colXIncome, currentY + 16f, headerTextPaint)
-            canvas.drawText("Expense (৳)", colXExpense, currentY + 16f, headerTextPaint)
+            canvas.drawText("Starting Bal (Tk)", colXStart, currentY + 16f, headerTextPaint)
+            canvas.drawText("Income (Tk)", colXIncome, currentY + 16f, headerTextPaint)
+            canvas.drawText("Expense (Tk)", colXExpense, currentY + 16f, headerTextPaint)
 
             val rightHeaderPaint = Paint(headerTextPaint).apply { textAlign = Paint.Align.RIGHT }
-            canvas.drawText("Closing Bal (৳)", colXRemaining, currentY + 16f, rightHeaderPaint)
+            canvas.drawText("Closing Bal (Tk)", colXRemaining, currentY + 16f, rightHeaderPaint)
 
             currentY += 28f
 
@@ -358,10 +360,10 @@ object PdfReportGenerator {
 
             for (summary in monthlySummaries) {
                 canvas.drawText(summary.monthName, colXMonth, currentY + 14f, bodyTextPaint)
-                canvas.drawText("৳${currencyFormat.format(summary.startingBalance)}", colXStart, currentY + 14f, bodyTextPaint)
-                canvas.drawText("+৳${currencyFormat.format(summary.totalIncome)}", colXIncome, currentY + 14f, incomeTextPaint)
-                canvas.drawText("-৳${currencyFormat.format(summary.totalExpense)}", colXExpense, currentY + 14f, expenseTextPaint)
-                canvas.drawText("৳${currencyFormat.format(summary.remainingBalance)}", colXRemaining, currentY + 14f, rightValPaint)
+                canvas.drawText("Tk ${currencyFormat.format(summary.startingBalance)}", colXStart, currentY + 14f, bodyTextPaint)
+                canvas.drawText("+Tk ${currencyFormat.format(summary.totalIncome)}", colXIncome, currentY + 14f, incomeTextPaint)
+                canvas.drawText("-Tk ${currencyFormat.format(summary.totalExpense)}", colXExpense, currentY + 14f, expenseTextPaint)
+                canvas.drawText("Tk ${currencyFormat.format(summary.remainingBalance)}", colXRemaining, currentY + 14f, rightValPaint)
 
                 currentY += rowHeight
                 canvas.drawLine(MARGIN, currentY, PAGE_WIDTH - MARGIN, currentY, linePaint)
@@ -411,17 +413,17 @@ object PdfReportGenerator {
             boxY += 16f
 
             canvas.drawText("Year-Start Opening Balance:", MARGIN + 14f, boxY, boxLabelPaint)
-            canvas.drawText("৳${currencyFormat.format(annualStartingBalance)}", PAGE_WIDTH - MARGIN - 14f, boxY, boxValPaint)
+            canvas.drawText("Tk ${currencyFormat.format(annualStartingBalance)}", PAGE_WIDTH - MARGIN - 14f, boxY, boxValPaint)
             boxY += 15f
 
             val incBoxPaint = Paint(boxValPaint).apply { color = Color.parseColor("#16A34A") }
             canvas.drawText("Total Annual Income (+):", MARGIN + 14f, boxY, boxLabelPaint)
-            canvas.drawText("+৳${currencyFormat.format(totalAnnualIncome)}", PAGE_WIDTH - MARGIN - 14f, boxY, incBoxPaint)
+            canvas.drawText("+Tk ${currencyFormat.format(totalAnnualIncome)}", PAGE_WIDTH - MARGIN - 14f, boxY, incBoxPaint)
             boxY += 15f
 
             val expBoxPaint = Paint(boxValPaint).apply { color = Color.parseColor("#DC2626") }
             canvas.drawText("Total Annual Expenses (-):", MARGIN + 14f, boxY, boxLabelPaint)
-            canvas.drawText("-৳${currencyFormat.format(totalAnnualExpense)}", PAGE_WIDTH - MARGIN - 14f, boxY, expBoxPaint)
+            canvas.drawText("-Tk ${currencyFormat.format(totalAnnualExpense)}", PAGE_WIDTH - MARGIN - 14f, boxY, expBoxPaint)
             boxY += 16f
 
             val remBoxPaint = Paint(boxValPaint).apply {
@@ -429,7 +431,7 @@ object PdfReportGenerator {
                 color = Color.parseColor("#00D4AA")
             }
             canvas.drawText("Year-End Closing Balance:", MARGIN + 14f, boxY, boxTitlePaint)
-            canvas.drawText("৳${currencyFormat.format(annualRemainingBalance)}", PAGE_WIDTH - MARGIN - 14f, boxY, remBoxPaint)
+            canvas.drawText("Tk ${currencyFormat.format(annualRemainingBalance)}", PAGE_WIDTH - MARGIN - 14f, boxY, remBoxPaint)
 
             // Draw Footer
             drawFooter(canvas, PAGE_WIDTH.toFloat(), PAGE_HEIGHT.toFloat(), MARGIN)
