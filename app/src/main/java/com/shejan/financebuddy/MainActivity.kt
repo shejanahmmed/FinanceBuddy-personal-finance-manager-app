@@ -93,7 +93,6 @@ import com.shejan.financebuddy.ui.home.HomeScreen
 import com.shejan.financebuddy.ui.home.AddTransactionSheet
 import com.shejan.financebuddy.ui.home.TransactionListScreen
 import com.shejan.financebuddy.ui.history.HistoryScreen
-import com.shejan.financebuddy.ui.reports.ReportsScreen
 import com.shejan.financebuddy.ui.onboarding.OnboardingScreenRoot
 import com.shejan.financebuddy.ui.statistics.StatisticsScreen
 import com.shejan.financebuddy.ui.investments.InvestmentsScreen
@@ -288,7 +287,6 @@ fun AppNavigation(
                     onNavigateToPayees = { navController.navigate("payees") },
                     onNavigateToLoans = { navController.navigate("loans") },
                     onNavigateToHistory = { navController.navigate("transaction_history") },
-                    onNavigateToReports = { navController.navigate("reports") },
                     onNavigateToStatistics = { navController.navigate("statistics") },
                     onNavigateToInvestments = { navController.navigate("investments") }
                 )
@@ -338,14 +336,6 @@ fun AppNavigation(
 
             composable("statistics") {
                 StatisticsScreen(
-                    allTransactions = allTransactions,
-                    accounts = accounts,
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable("reports") {
-                ReportsScreen(
                     allTransactions = allTransactions,
                     accounts = accounts,
                     onBack = { navController.popBackStack() }
@@ -580,7 +570,6 @@ fun MainDashboardContainer(
     onNavigateToPayees: () -> Unit = {},
     onNavigateToLoans: () -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
-    onNavigateToReports: () -> Unit = {},
     onNavigateToStatistics: () -> Unit = {},
     onNavigateToInvestments: () -> Unit = {}
 ) {
@@ -863,14 +852,6 @@ fun MainDashboardContainer(
                         onClick = {
                             scope.launch { drawerState.close() }
                             onNavigateToHistory()
-                        }
-                    )
-                    DrawerMenuItem(
-                        icon = Icons.Default.Summarize,
-                        label = "Financial Report",
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            onNavigateToReports()
                         }
                     )
                     DrawerMenuItem(

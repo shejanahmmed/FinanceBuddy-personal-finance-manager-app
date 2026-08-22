@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.TrendingDown
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shejan.financebuddy.data.db.AccountEntity
 import com.shejan.financebuddy.data.db.TransactionEntity
+import com.shejan.financebuddy.ui.reports.PdfReportGenerator
 import com.shejan.financebuddy.ui.theme.*
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
@@ -223,6 +225,37 @@ fun HistoryScreen(
 
     val hasActiveFilters = selectedTypeFilter != "ALL" || selectedPeriodFilter != "ALL" || selectedAccountIdFilter != 0
 
+    val triggerPdfExport: () -> Unit = remember(context, filteredTransactions, accounts, transactions, totalInflow, totalOutflow) {
+        {
+            val monthName = SimpleDateFormat("MMMM", Locale.getDefault()).format(Date())
+            val year = Calendar.getInstance().get(Calendar.YEAR)
+            val accountsMap = accounts.associateBy { it.id }
+            val totalCurrentBalance = accounts.sumOf { it.balance }
+            val minTime = filteredTransactions.minOfOrNull { it.timestamp } ?: 0L
+            val netChangesAfterStart = transactions.filter { it.timestamp >= minTime }.sumOf { tx ->
+                when (tx.type) {
+                    "INCOME" -> tx.amount
+                    "EXPENSE" -> -tx.amount
+                    else -> 0.0
+                }
+            }
+            val startingBalance = totalCurrentBalance - netChangesAfterStart
+            val remainingBalance = startingBalance + totalInflow - totalOutflow
+
+            PdfReportGenerator.exportMonthlyReportPdf(
+                context = context,
+                monthName = monthName,
+                year = year,
+                transactions = filteredTransactions,
+                accountsMap = accountsMap,
+                startingBalance = startingBalance,
+                totalIncome = totalInflow,
+                totalExpense = totalOutflow,
+                remainingBalance = remainingBalance
+            )
+        }
+    }
+
     if (showFilterSheet) {
         HistoryFilterSheet(
             accounts = accounts,
@@ -302,7 +335,7 @@ fun HistoryScreen(
                     )
                 }
 
-                // Header Filter Action Button (Matching StatisticsScreen)
+                // Header Filter Action Button
                 IconButton(
                     onClick = { showFilterSheet = true }
                 ) {
@@ -625,9 +658,127 @@ fun HistoryScreen(
                             )
                         }
                     }
+
+                    // ─── Statement & Balance Summary Card ───
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        val totalCurrentBalance = remember(accounts) { accounts.sumOf { it.balance } }
+                        val minTime = remember(filteredTransactions) { filteredTransactions.minOfOrNull { it.timestamp } ?: 0L }
+                        val netChangesAfterStart = remember(transactions, minTime) {
+                            transactions.filter { it.timestamp >= minTime }.sumOf { tx ->
+                                when (tx.type) {
+                                    "INCOME" -> tx.amount
+                                    "EXPENSE" -> -tx.amount
+                                    else -> 0.0
+                                }
+                            }
+                        }
+                        val startingBalance = totalCurrentBalance - netChangesAfterStart
+                        val remainingBalance = startingBalance + totalInflow - totalOutflow
+
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = CardDark),
+                            border = BorderStroke(1.dp, AccentTeal.copy(alpha = 0.3f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Statement & Balance Summary", color = AccentTeal, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = AccentTeal.copy(alpha = 0.12f)
+                                    ) {
+                                        Text(
+                                            text = "${filteredTransactions.size} Records",
+                                            color = AccentTeal,
+                                            fontSize = 10.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
+
+                                HorizontalDivider(color = DividerColor, modifier = Modifier.padding(vertical = 4.dp))
+
+                                HistoryMetricRow(title = "🏦 Starting Balance", value = "৳${currencyFormat.format(startingBalance)}", valueColor = TextPrimary)
+                                HistoryMetricRow(title = "📈 Total Inflow (+)", value = "+৳${currencyFormat.format(totalInflow)}", valueColor = IncomeGreen)
+                                HistoryMetricRow(title = "📉 Total Outflow (-)", value = "-৳${currencyFormat.format(totalOutflow)}", valueColor = ExpenseRed)
+                                HistoryMetricRow(title = "💳 Remaining Closing Balance", value = "৳${currencyFormat.format(remainingBalance)}", valueColor = AccentTeal, isHighlight = true)
+                            }
+                        }
+                    }
+
+                    // ─── Export Statement PDF Button (At the Very End of the Page) ───
+                    item {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = { triggerPdfExport() },
+                            colors = ButtonDefaults.buttonColors(containerColor = AccentTeal),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 8.dp)
+                                .height(50.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PictureAsPdf,
+                                contentDescription = "Export PDF",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Export Statement as PDF",
+                                color = Color.White,
+                                fontSize = 14.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(28.dp))
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun HistoryMetricRow(
+    title: String,
+    value: String,
+    valueColor: Color,
+    isHighlight: Boolean = false
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            color = if (isHighlight) TextPrimary else TextSecondary,
+            fontSize = 12.5.sp,
+            fontWeight = if (isHighlight) FontWeight.Bold else FontWeight.Medium
+        )
+        Text(
+            text = value,
+            color = valueColor,
+            fontSize = if (isHighlight) 14.sp else 13.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
