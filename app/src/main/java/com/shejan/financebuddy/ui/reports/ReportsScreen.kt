@@ -404,16 +404,26 @@ fun ReportsScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
 
-                            IconButton(
-                                onClick = { showFullscreenTable = true },
-                                modifier = Modifier.size(28.dp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Fullscreen,
-                                    contentDescription = "Expand Table to Fullscreen",
-                                    tint = AccentTeal,
-                                    modifier = Modifier.size(22.dp)
+                                Text(
+                                    text = "↔ Scrollable",
+                                    color = TextMuted,
+                                    fontSize = 11.sp
                                 )
+                                IconButton(
+                                    onClick = { showFullscreenTable = true },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Fullscreen,
+                                        contentDescription = "Expand Table to Fullscreen",
+                                        tint = AccentTeal,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
                             }
                         }
 
@@ -564,16 +574,26 @@ fun ReportsScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
 
-                            IconButton(
-                                onClick = { showFullscreenYearlyTable = true },
-                                modifier = Modifier.size(28.dp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Fullscreen,
-                                    contentDescription = "Expand Yearly Table to Fullscreen",
-                                    tint = AccentTeal,
-                                    modifier = Modifier.size(22.dp)
+                                Text(
+                                    text = "↔ Scrollable",
+                                    color = TextMuted,
+                                    fontSize = 11.sp
                                 )
+                                IconButton(
+                                    onClick = { showFullscreenYearlyTable = true },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Fullscreen,
+                                        contentDescription = "Expand Yearly Table to Fullscreen",
+                                        tint = AccentTeal,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
                             }
                         }
 
