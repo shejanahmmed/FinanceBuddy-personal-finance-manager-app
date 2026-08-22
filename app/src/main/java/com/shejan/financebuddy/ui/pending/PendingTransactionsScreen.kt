@@ -547,23 +547,56 @@ fun PendingTransactionsScreen(
 
         // ── Dismiss All Dialog ─────────────────────────────────────────────
         if (showDismissAllDialog) {
+            val mappedCount   = remember(pendingList) { pendingList.count { it.fromAccountId != -1 } }
+            val unmappedCount = remember(pendingList) { pendingList.size - mappedCount }
+
             AlertDialog(
                 onDismissRequest = { showDismissAllDialog = false },
                 containerColor   = CardDarker,
                 title = {
                     Text(
-                        "Dismiss All transactions?",
+                        "Dismiss All Pending?",
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp
                     )
                 },
                 text = {
-                    Text(
-                        "All ${pendingList.size} unconfirmed SMS detections will be moved to the Dismissed tab.",
-                        color = TextSecondary,
-                        fontSize = 14.sp
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (mappedCount > 0) {
+                            // Warn: some items already have a bank account assigned
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(ExpenseRed.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
+                                    .border(1.dp, ExpenseRed.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
+                                    .padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = ExpenseRed,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "$mappedCount item(s) already have a bank account assigned and are ready to accept — they will also be dismissed.",
+                                    color = ExpenseRed,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                        Text(
+                            text = buildString {
+                                append("All ${pendingList.size} pending transaction(s) will be moved to the Dismissed tab.")
+                                if (unmappedCount > 0) append(" ($unmappedCount unmatched, $mappedCount mapped)")
+                            },
+                            color = TextSecondary,
+                            fontSize = 13.sp
+                        )
+                    }
                 },
                 confirmButton = {
                     Button(
@@ -574,7 +607,7 @@ fun PendingTransactionsScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("Dismiss All", color = OnAccent, fontWeight = FontWeight.Bold)
+                        Text("Dismiss All (${pendingList.size})", color = OnAccent, fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {
@@ -691,7 +724,11 @@ private fun PendingTransactionCard(
     onEdit: () -> Unit
 ) {
     val matchedAccount = accounts.firstOrNull { it.id == pending.fromAccountId }
-    val typeColor = if (pending.type == "INCOME") IncomeGreen else ExpenseRed
+    val typeColor = when (pending.type) {
+        "INCOME"   -> IncomeGreen
+        "TRANSFER" -> TransferYellow
+        else       -> ExpenseRed   // EXPENSE
+    }
     val typeLabel = when (pending.type) {
         "INCOME"   -> "Income"
         "EXPENSE"  -> "Expense"
@@ -816,8 +853,8 @@ private fun PendingTransactionCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Unmatched Warning Banner
-            if (pending.fromAccountId == -1 && pending.status == "PENDING") {
+            // Unmatched Warning Banner — show on all tabs so history context is clear
+            if (pending.fromAccountId == -1) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -848,7 +885,36 @@ private fun PendingTransactionCard(
             val isInsufficient = (pending.type == "EXPENSE" || pending.type == "TRANSFER") &&
                     sourceAccount != null && pending.amount > sourceAccount.balance
 
-            if (pending.fromAccountId != -1 && isInsufficient && pending.status == "PENDING") {
+            // Orphaned Account Warning — fromAccountId is a stale ID pointing to a deleted account
+            val isOrphaned = pending.fromAccountId != -1 && matchedAccount == null
+            if (isOrphaned) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(ExpenseRed.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                        .border(1.dp, ExpenseRed.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
+                        .padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = ExpenseRed,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Linked account no longer exists. Please edit and re-assign an account.",
+                        color = ExpenseRed,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Insufficient Balance Warning Banner — shown on all tabs for full context
+            if (pending.fromAccountId != -1 && isInsufficient) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1022,7 +1088,7 @@ private fun PendingTransactionCard(
                         }
 
                         // Confirm button
-                        val canConfirm = pending.fromAccountId != -1 && !isInsufficient
+                        val canConfirm = pending.fromAccountId != -1 && !isInsufficient && !isOrphaned
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.weight(1f)
@@ -1182,7 +1248,7 @@ private fun PendingTransactionCard(
                         }
 
                         // Confirm Button
-                        val canConfirm = pending.fromAccountId != -1 && !isInsufficient
+                        val canConfirm = pending.fromAccountId != -1 && !isInsufficient && !isOrphaned
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.weight(1f)
