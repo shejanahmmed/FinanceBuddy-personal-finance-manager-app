@@ -199,8 +199,8 @@ fun HomeScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                // Spacer matching top bar height (64.dp) + status bar padding
-                Spacer(modifier = Modifier.statusBarsPadding().height(64.dp))
+                // Spacer matching top bar height (76.dp) + status bar padding
+                Spacer(modifier = Modifier.statusBarsPadding().height(76.dp))
 
                 val context = LocalContext.current
                 val preferencesManager = remember { com.shejan.financebuddy.data.PreferencesManager(context.applicationContext) }
@@ -222,7 +222,7 @@ fun HomeScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                        .padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 8.dp),
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = CardDark),
                     border = BorderStroke(1.dp, DividerColor)
@@ -583,6 +583,7 @@ fun HomeScreen(
                     if (hasTrendData) {
                         BalanceTrendLineChart(
                             balances = getActualBalanceTrend(totalBalance, allTransactions),
+                            dates    = getLast7DayNames(),
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(top = 16.dp, bottom = 8.dp)

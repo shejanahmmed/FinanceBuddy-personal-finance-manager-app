@@ -297,6 +297,7 @@ fun ExpenseBarChart(
 @Composable
 fun BalanceTrendLineChart(
     balances: List<Double>,
+    dates: List<String> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     var selectedIndex by remember { mutableStateOf(-1) }
@@ -340,7 +341,7 @@ fun BalanceTrendLineChart(
             val leftPadding = 48.dp.toPx()
             val rightPadding = 16.dp.toPx()
             val topPadding = 24.dp.toPx()
-            val bottomPadding = 16.dp.toPx()
+            val bottomPadding = 30.dp.toPx()
 
             val chartW = w - leftPadding - rightPadding
             val chartH = h - topPadding - bottomPadding
@@ -499,6 +500,43 @@ fun BalanceTrendLineChart(
                 drawCircle(color = AccentTeal.copy(alpha = 0.25f), radius = 8.dp.toPx(), center = lastPoint)
                 drawCircle(color = AccentTeal, radius = 4.dp.toPx(), center = lastPoint)
             }
+
+            // ── X-Axis Day/Date Labels ─────────────────────────────
+            balances.forEachIndexed { idx, _ ->
+                val dateLabel = dates.getOrNull(idx) ?: ""
+                if (dateLabel.isNotBlank()) {
+                    val isSelected = selectedIndex == idx
+                    val labelResult = textMeasurer.measure(
+                        text = dateLabel,
+                        style = TextStyle(
+                            color = if (isSelected) AccentTeal else ChartLabel,
+                            fontSize = 10.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    )
+                    drawText(
+                        textMeasurer = textMeasurer,
+                        text = dateLabel,
+                        topLeft = Offset(
+                            leftPadding + idx * xStep - labelResult.size.width / 2f,
+                            topPadding + chartH + 8.dp.toPx()
+                        ),
+                        style = TextStyle(
+                            color = if (isSelected) AccentTeal else ChartLabel,
+                            fontSize = 10.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    )
+                }
+            }
+
+            // ── X-Axis baseline ────────────────────────────────────
+            drawLine(
+                color = ChartGridLine,
+                start = Offset(leftPadding, topPadding + chartH),
+                end = Offset(w - rightPadding, topPadding + chartH),
+                strokeWidth = 1.dp.toPx()
+            )
         }
     }
 }

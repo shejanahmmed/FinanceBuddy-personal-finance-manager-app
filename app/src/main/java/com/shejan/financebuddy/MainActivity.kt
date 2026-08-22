@@ -538,8 +538,10 @@ fun AppNavigation(
                     onConfirm     = { pending, edited -> viewModel.confirm(pending, edited) },
                     onDismiss     = { viewModel.dismiss(it) },
                     onRestore     = { viewModel.restore(it) },
+                    onRestoreConfirmed = { viewModel.restoreConfirmed(it) },
                     onDeletePermanently = { viewModel.deletePermanently(it) },
                     onUpdate      = { viewModel.update(it) },
+                    onUpdateConfirmed = { old, updated -> viewModel.updateConfirmed(old, updated) },
                     onDismissAll  = { viewModel.dismissAll() },
                     onConfirmAll  = { viewModel.confirmAll() },
                     onBack        = { navController.popBackStack() }

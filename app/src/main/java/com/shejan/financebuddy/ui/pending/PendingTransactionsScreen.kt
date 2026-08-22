@@ -84,8 +84,10 @@ fun PendingTransactionsScreen(
     onConfirm: (PendingSmsTransactionEntity, PendingSmsTransactionEntity) -> Unit,
     onDismiss: (PendingSmsTransactionEntity) -> Unit,
     onRestore: (PendingSmsTransactionEntity) -> Unit = {},
+    onRestoreConfirmed: (PendingSmsTransactionEntity) -> Unit = {},
     onDeletePermanently: (PendingSmsTransactionEntity) -> Unit = {},
     onUpdate: (PendingSmsTransactionEntity) -> Unit,
+    onUpdateConfirmed: (old: PendingSmsTransactionEntity, updated: PendingSmsTransactionEntity) -> Unit = { _, _ -> },
     onDismissAll: () -> Unit,
     onConfirmAll: () -> Unit = {},
     onBack: () -> Unit
@@ -432,6 +434,7 @@ fun PendingTransactionsScreen(
                                 onConfirm = { onConfirm(pending, it) },
                                 onDismiss = { onDismiss(pending) },
                                 onRestore = { onRestore(pending) },
+                                onRestoreConfirmed = { onRestoreConfirmed(pending) },
                                 onDeletePermanently = { onDeletePermanently(pending) },
                                 onEdit = { editTarget = pending }
                             )
@@ -475,7 +478,12 @@ fun PendingTransactionsScreen(
 
                         if (selectedFilterTab == "PENDING") {
                             onConfirm(target, updatedPending)
+                        } else if (selectedFilterTab == "CONFIRMED") {
+                            // Edit on a CONFIRMED card: delete the old transaction and
+                            // re-insert with updated values so balances stay correct.
+                            onUpdateConfirmed(target, updatedPending)
                         } else {
+                            // DISMISSED — just update the pending record, no real transaction yet
                             onUpdate(updatedPending)
                         }
                     }
@@ -486,12 +494,16 @@ fun PendingTransactionsScreen(
 
         // ── Confirm All Dialog ─────────────────────────────────────────────
         if (showConfirmAllDialog) {
+            // fromAccountId is non-nullable Int; -1 is the sentinel for "no account mapped"
+            val readyCount = remember(pendingList) { pendingList.count { it.fromAccountId != -1 } }
+            val unassignedCount = remember(pendingList) { pendingList.size - readyCount }
+
             AlertDialog(
                 onDismissRequest = { showConfirmAllDialog = false },
                 containerColor   = CardDarker,
                 title = {
                     Text(
-                        "Accept All Pending Transactions?",
+                        text = if (readyCount > 0) "Accept Pending Transactions?" else "No Bank Accounts Assigned",
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp
@@ -499,26 +511,35 @@ fun PendingTransactionsScreen(
                 },
                 text = {
                     Text(
-                        "All ${pendingList.size} unconfirmed SMS detections will be accepted and added to your financial accounts.",
+                        text = when {
+                            readyCount > 0 && unassignedCount == 0 ->
+                                "All ${pendingList.size} pending transaction(s) have an assigned bank account and will be accepted into your financial records."
+                            readyCount > 0 && unassignedCount > 0 ->
+                                "$readyCount transaction(s) with an assigned bank account will be accepted.\n\n$unassignedCount transaction(s) without a bank account will be skipped so you can select an account manually."
+                            else ->
+                                "None of the ${pendingList.size} pending transaction(s) have a bank account assigned. Please edit each item individually to select an account before accepting."
+                        },
                         color = TextSecondary,
                         fontSize = 14.sp
                     )
                 },
                 confirmButton = {
-                    Button(
-                        onClick = {
-                            onConfirmAll()
-                            showConfirmAllDialog = false
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = IncomeGreen),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("Accept All", color = OnAccent, fontWeight = FontWeight.Bold)
+                    if (readyCount > 0) {
+                        Button(
+                            onClick = {
+                                onConfirmAll()
+                                showConfirmAllDialog = false
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = IncomeGreen),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Accept ($readyCount)", color = OnAccent, fontWeight = FontWeight.Bold)
+                        }
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showConfirmAllDialog = false }) {
-                        Text("Cancel", color = TextSecondary)
+                        Text(if (readyCount > 0) "Cancel" else "Got It", color = TextSecondary)
                     }
                 }
             )
@@ -665,6 +686,7 @@ private fun PendingTransactionCard(
     onConfirm: (PendingSmsTransactionEntity) -> Unit,
     onDismiss: () -> Unit,
     onRestore: () -> Unit = {},
+    onRestoreConfirmed: () -> Unit = {},
     onDeletePermanently: () -> Unit = {},
     onEdit: () -> Unit
 ) {
@@ -1036,7 +1058,7 @@ private fun PendingTransactionCard(
                     }
 
                     "CONFIRMED" -> {
-                        // Restore to Pending button
+                        // Restore to Pending button — calls restoreConfirmed to reverse balance
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.weight(1f)
@@ -1047,12 +1069,12 @@ private fun PendingTransactionCard(
                                     .clip(RoundedCornerShape(6.dp))
                                     .background(TransferYellow.copy(alpha = 0.12f))
                                     .border(1.dp, TransferYellow.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
-                                    .clickable { onRestore() },
+                                    .clickable { onRestoreConfirmed() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.History,
-                                    contentDescription = "Restore to Pending",
+                                    contentDescription = "Move to Pending",
                                     tint = TransferYellow,
                                     modifier = Modifier.size(20.dp)
                                 )

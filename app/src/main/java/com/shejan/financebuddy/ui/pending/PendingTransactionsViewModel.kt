@@ -119,10 +119,37 @@ class PendingTransactionsViewModel(private val database: FinanceDatabase) : View
     }
 
     /**
-     * Restores a dismissed or confirmed entry back to "PENDING".
+     * Restores a DISMISSED entry back to "PENDING".
+     * DISMISSED entries never had a real transaction inserted, so no balance reversal is needed.
      */
     fun restore(pending: PendingSmsTransactionEntity) {
         viewModelScope.launch(Dispatchers.IO) {
+            pendingSmsDao.updateStatus(pending.id, "PENDING")
+        }
+    }
+
+    /**
+     * Restores a CONFIRMED entry back to "PENDING" AND reverses its balance impact.
+     *
+     * When a pending entry was confirmed, a real TransactionEntity was inserted and
+     * account balances were adjusted. Moving it back to Pending must undo that:
+     * 1. Find the linked real transaction (by timestamp + fromAccountId + amount).
+     * 2. Delete it → reverses the balance effect on the account.
+     * 3. Reset the pending record status to "PENDING" so the user can re-review it.
+     *
+     * If no matching transaction is found (e.g. it was already manually deleted from
+     * the history), we still reset the pending status to avoid it being stuck on CONFIRMED.
+     */
+    fun restoreConfirmed(pending: PendingSmsTransactionEntity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val existing = transactionDao.findByTimestampAndAccount(
+                timestamp     = pending.timestamp,
+                fromAccountId = pending.fromAccountId,
+                amount        = pending.amount
+            )
+            if (existing != null) {
+                transactionDao.deleteTransaction(existing) // reverses account balance
+            }
             pendingSmsDao.updateStatus(pending.id, "PENDING")
         }
     }
@@ -138,10 +165,52 @@ class PendingTransactionsViewModel(private val database: FinanceDatabase) : View
 
     /**
      * Saves edits the user made to a pending entry.
+     * Only for PENDING/DISMISSED status — does NOT touch the transactions table.
      */
     fun update(updated: PendingSmsTransactionEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             pendingSmsDao.updatePending(updated)
+        }
+    }
+
+    /**
+     * Updates a CONFIRMED pending entry AND its linked real transaction.
+     *
+     * Strategy:
+     * 1. Find the original transaction by (timestamp + fromAccountId + amount).
+     * 2. Delete it → reverses the old balance effect on the account.
+     * 3. Insert an updated transaction → applies new balance effects.
+     * 4. Save the updated pending record so the card reflects the new values.
+     *
+     * If no matching transaction is found (e.g. the user manually deleted it),
+     * we fall back to a plain insert so the balance is at least corrected.
+     */
+    fun updateConfirmed(old: PendingSmsTransactionEntity, updated: PendingSmsTransactionEntity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // Step 1 – find and delete the old transaction to reverse its balance impact
+            val existing = transactionDao.findByTimestampAndAccount(
+                timestamp     = old.timestamp,
+                fromAccountId = old.fromAccountId,
+                amount        = old.amount
+            )
+            if (existing != null) {
+                transactionDao.deleteTransaction(existing) // also reverses account balance
+            }
+
+            // Step 2 – insert a fresh transaction with the corrected values
+            val newTx = TransactionEntity(
+                amount        = updated.amount,
+                type          = updated.type,
+                category      = updated.category,
+                timestamp     = updated.timestamp,
+                fromAccountId = updated.fromAccountId,
+                toAccountId   = updated.toAccountId,
+                note          = updated.note
+            )
+            transactionDao.insertTransaction(newTx) // also adjusts account balance
+
+            // Step 3 – persist the updated pending record
+            pendingSmsDao.updatePending(updated.copy(status = "CONFIRMED"))
         }
     }
 
@@ -155,12 +224,17 @@ class PendingTransactionsViewModel(private val database: FinanceDatabase) : View
     }
 
     /**
-     * Confirms all currently pending entries in batch.
+     * Confirms only pending entries that have an assigned bank account (fromAccountId != -1).
+     * fromAccountId is a non-nullable Int; -1 is the sentinel for "no account mapped".
+     * Returns counts via callback (acceptedCount, skippedCount).
      */
-    fun confirmAll() {
+    fun confirmAll(onComplete: (acceptedCount: Int, skippedCount: Int) -> Unit = { _, _ -> }) {
         viewModelScope.launch(Dispatchers.IO) {
             val items = pendingList.value
-            items.forEach { item ->
+            val readyItems = items.filter { it.fromAccountId != -1 }
+            val skippedCount = items.size - readyItems.size
+
+            readyItems.forEach { item ->
                 val updated = item.copy(status = "CONFIRMED")
                 val transaction = TransactionEntity(
                     amount        = updated.amount,
@@ -173,6 +247,10 @@ class PendingTransactionsViewModel(private val database: FinanceDatabase) : View
                 )
                 transactionDao.insertTransaction(transaction)
                 pendingSmsDao.updatePending(updated)
+            }
+
+            launch(Dispatchers.Main) {
+                onComplete(readyItems.size, skippedCount)
             }
         }
     }

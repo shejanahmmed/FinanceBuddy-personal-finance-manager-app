@@ -81,4 +81,13 @@ abstract class TransactionDao {
 
     @Query("DELETE FROM transactions")
     abstract suspend fun deleteAll()
+
+    /**
+     * Finds the real transaction linked to a confirmed pending-SMS entry.
+     * Matches on the SMS-parsed timestamp + source account + amount.
+     * Used when editing a CONFIRMED card so we can delete the stale entry
+     * and re-insert with updated values (keeping balances correct).
+     */
+    @Query("SELECT * FROM transactions WHERE timestamp = :timestamp AND fromAccountId = :fromAccountId AND amount = :amount LIMIT 1")
+    abstract suspend fun findByTimestampAndAccount(timestamp: Long, fromAccountId: Int, amount: Double): TransactionEntity?
 }
