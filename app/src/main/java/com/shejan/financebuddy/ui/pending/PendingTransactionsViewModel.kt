@@ -224,14 +224,19 @@ class PendingTransactionsViewModel(private val database: FinanceDatabase) : View
     }
 
     /**
-     * Confirms only pending entries that have an assigned bank account (fromAccountId != -1).
+     * Confirms only pending entries that:
+     * 1. Have an assigned account (fromAccountId != -1), AND
+     * 2. The account still exists in the DB (not orphaned/deleted).
      * fromAccountId is a non-nullable Int; -1 is the sentinel for "no account mapped".
      * Returns counts via callback (acceptedCount, skippedCount).
      */
     fun confirmAll(onComplete: (acceptedCount: Int, skippedCount: Int) -> Unit = { _, _ -> }) {
         viewModelScope.launch(Dispatchers.IO) {
             val items = pendingList.value
-            val readyItems = items.filter { it.fromAccountId != -1 }
+            val existingAccountIds = database.accountDao().getAllAccountsOnce().map { it.id }.toSet()
+
+            // Skip unassigned (-1) AND orphaned (stale ID pointing to deleted account)
+            val readyItems = items.filter { it.fromAccountId != -1 && it.fromAccountId in existingAccountIds }
             val skippedCount = items.size - readyItems.size
 
             readyItems.forEach { item ->

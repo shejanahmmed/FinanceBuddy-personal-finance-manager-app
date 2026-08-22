@@ -202,7 +202,11 @@ fun PendingTransactionsScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = if (pendingList.isEmpty()) "No unreviewed transactions" else "${pendingList.size} unreviewed transactions",
+                        text = when (selectedFilterTab) {
+                            "CONFIRMED" -> if (confirmedList.isEmpty()) "No confirmed transactions" else "${confirmedList.size} confirmed transaction(s)"
+                            "DISMISSED" -> if (dismissedList.isEmpty()) "No dismissed transactions" else "${dismissedList.size} dismissed transaction(s)"
+                            else        -> if (pendingList.isEmpty()) "No unreviewed transactions" else "${pendingList.size} unreviewed transaction(s)"
+                        },
                         color = TextMuted,
                         fontSize = 12.sp
                     )
@@ -733,6 +737,7 @@ private fun PendingTransactionCard(
     onDeletePermanently: () -> Unit = {},
     onEdit: () -> Unit
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
     val matchedAccount = accounts.firstOrNull { it.id == pending.fromAccountId }
     val typeColor = when (pending.type) {
         "INCOME"   -> IncomeGreen
@@ -1048,7 +1053,7 @@ private fun PendingTransactionCard(
                                     .clip(RoundedCornerShape(6.dp))
                                     .background(ExpenseRed.copy(alpha = 0.08f))
                                     .border(1.dp, ExpenseRed.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
-                                    .clickable { onDeletePermanently() },
+                                    .clickable { showDeleteDialog = true },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -1130,6 +1135,19 @@ private fun PendingTransactionCard(
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold
                             )
+                            if (!canConfirm) {
+                                Text(
+                                    text = when {
+                                        pending.fromAccountId == -1 -> "No account"
+                                        isOrphaned                 -> "Account deleted"
+                                        isInsufficient             -> "Low balance"
+                                        else                       -> ""
+                                    },
+                                    color = ExpenseRed,
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
                         }
                     }
 
@@ -1290,11 +1308,88 @@ private fun PendingTransactionCard(
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold
                             )
+                            if (!canConfirm) {
+                                Text(
+                                    text = when {
+                                        pending.fromAccountId == -1 -> "No account"
+                                        isOrphaned                 -> "Account deleted"
+                                        isInsufficient             -> "Low balance"
+                                        else                       -> ""
+                                    },
+                                    color = ExpenseRed,
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    // ── Delete Confirmation Dialog ──────────────────────────────────────────
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            containerColor   = CardDarker,
+            title = {
+                Text(
+                    "Delete Permanently?",
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(ExpenseRed.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
+                            .border(1.dp, ExpenseRed.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
+                            .padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = ExpenseRed,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "This action cannot be undone.",
+                            color = ExpenseRed,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Text(
+                        text = "\"${pending.detectedAccountName}\" (৳${String.format("%,.2f", pending.amount)}) will be permanently removed from the Dismissed tab.",
+                        color = TextSecondary,
+                        fontSize = 13.sp
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDeletePermanently()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Delete", color = OnAccent, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel", color = TextSecondary)
+                }
+            }
+        )
     }
 }
 
