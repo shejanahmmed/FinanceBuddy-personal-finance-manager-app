@@ -48,6 +48,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.Button
@@ -255,6 +257,7 @@ fun AddTransactionSheet(
             ((selectedFromAccount != null && parsedAmount > selectedBalance) || (isFromAccountNew && parsedAmount > 0.0))
 
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val sharedPreferences = remember { context.getSharedPreferences("finance_buddy_prefs", Context.MODE_PRIVATE) }
 
     val defaultIncomeCategories = listOf("Salary", "Freelance", "Investment", "Pocket Money", "Other")
@@ -1258,6 +1261,7 @@ fun AddTransactionSheet(
                             newFromAcc,
                             newToAcc
                         )
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onDismiss()
                     }
                 },

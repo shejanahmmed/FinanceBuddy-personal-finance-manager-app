@@ -68,6 +68,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1071,6 +1073,7 @@ fun MainDashboardContainer(
                         )
 
                         // ── 3. Central Add Button (+) ──────────
+                        val haptic = LocalHapticFeedback.current
                         Box(
                             modifier = Modifier
                                 .weight(1f)
@@ -1086,6 +1089,7 @@ fun MainDashboardContainer(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null
                                     ) { 
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                         when (currentTab) {
                                             "budget" -> showAddBudgetFromNav = true
                                             "goals"  -> showAddGoalFromNav = true
@@ -1249,13 +1253,17 @@ private fun NavBarItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptic = LocalHapticFeedback.current
     Box(
         modifier = modifier
             .fillMaxHeight()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
-            ) { onClick() },
+            ) {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            },
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -1273,13 +1281,17 @@ private fun NavBarInboxItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptic = LocalHapticFeedback.current
     Box(
         modifier = modifier
             .fillMaxHeight()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
-            ) { onClick() },
+            ) {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            },
         contentAlignment = Alignment.Center
     ) {
         BadgedBox(
