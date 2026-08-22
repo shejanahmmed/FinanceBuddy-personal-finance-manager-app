@@ -477,7 +477,17 @@ fun PendingTransactionsScreen(
                         )
 
                         if (selectedFilterTab == "PENDING") {
-                            onConfirm(target, updatedPending)
+                            // Save edits back to the pending draft — do NOT confirm yet.
+                            // The user taps the Confirm (✓) button on the card when ready.
+                            // This prevents accidental immediate confirmation on every edit.
+                            onUpdate(updatedPending)
+                            launch(Dispatchers.Main) {
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "Changes saved. Tap ✓ Confirm on the card when ready.",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         } else if (selectedFilterTab == "CONFIRMED") {
                             // Edit on a CONFIRMED card: delete the old transaction and
                             // re-insert with updated values so balances stay correct.
