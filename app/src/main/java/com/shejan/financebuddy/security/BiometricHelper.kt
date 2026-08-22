@@ -14,6 +14,12 @@ object BiometricHelper {
         return biometricManager.canAuthenticate(authenticators) == BiometricManager.BIOMETRIC_SUCCESS
     }
 
+    fun canAuthenticateWithDeviceSecurity(context: Context): Boolean {
+        val biometricManager = BiometricManager.from(context)
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        return biometricManager.canAuthenticate(authenticators) == BiometricManager.BIOMETRIC_SUCCESS
+    }
+
     fun showBiometricPrompt(
         activity: FragmentActivity,
         title: String = "Unlock FinanceBuddy",
@@ -48,6 +54,46 @@ object BiometricHelper {
             override fun onAuthenticationFailed() {
                 super.onAuthenticationFailed()
                 onError("Fingerprint not recognized. Try again.")
+            }
+        })
+
+        biometricPrompt.authenticate(promptInfo)
+    }
+
+    fun showDeviceSecurityPrompt(
+        activity: FragmentActivity,
+        title: String = "Unlock FinanceBuddy",
+        subtitle: String = "Authenticate using your device security",
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val executor = ContextCompat.getMainExecutor(activity)
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(title)
+            .setSubtitle(subtitle)
+            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+            .build()
+
+        val biometricPrompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                super.onAuthenticationSucceeded(result)
+                onSuccess()
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                super.onAuthenticationError(errorCode, errString)
+                if (errorCode != BiometricPrompt.ERROR_USER_CANCELED &&
+                    errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON &&
+                    errorCode != BiometricPrompt.ERROR_CANCELED) {
+                    onError(errString.toString())
+                } else {
+                    onError("CANCELLED")
+                }
+            }
+
+            override fun onAuthenticationFailed() {
+                super.onAuthenticationFailed()
+                onError("Authentication failed. Try again.")
             }
         })
 

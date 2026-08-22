@@ -89,11 +89,11 @@ fun LockScreen(
     }
 
     fun promptBiometric() {
-        if (activity != null && BiometricHelper.isBiometricAvailable(context)) {
-            BiometricHelper.showBiometricPrompt(
+        if (activity != null && BiometricHelper.canAuthenticateWithDeviceSecurity(context)) {
+            BiometricHelper.showDeviceSecurityPrompt(
                 activity = activity,
                 title = "Unlock FinanceBuddy",
-                subtitle = "Scan your fingerprint to access your vault",
+                subtitle = "Authenticate using fingerprint or device lock",
                 onSuccess = onUnlocked,
                 onError = { err ->
                     if (err != "CANCELLED") {
@@ -195,7 +195,7 @@ fun LockScreen(
                     color = TextSecondary
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
                 // 6-Digit Indicator Dots
                 Row(
@@ -219,7 +219,7 @@ fun LockScreen(
                 }
 
                 if (errorMessage.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     Text(
                         text = errorMessage,
                         style = MaterialTheme.typography.bodySmall,
@@ -227,7 +227,7 @@ fun LockScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                 } else {
-                    Spacer(modifier = Modifier.height(28.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
 
                 // Numeric Keypad
@@ -248,7 +248,7 @@ fun LockScreen(
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
                             for (key in row) {
-                                if (key == "BIO" && (activity == null || !BiometricHelper.isBiometricAvailable(context))) {
+                                if (key == "BIO" && (activity == null || !BiometricHelper.canAuthenticateWithDeviceSecurity(context))) {
                                     Spacer(modifier = Modifier.size(68.dp))
                                 } else {
                                     Box(
@@ -268,7 +268,7 @@ fun LockScreen(
                                             )
                                             "BIO" -> Icon(
                                                 imageVector = Icons.Default.Fingerprint,
-                                                contentDescription = "Fingerprint Scan",
+                                                contentDescription = "Device Security / Fingerprint",
                                                 tint = AccentTeal,
                                                 modifier = Modifier.size(28.dp)
                                             )
@@ -284,6 +284,21 @@ fun LockScreen(
                             }
                         }
                     }
+                }
+
+                // Forgot PIN / Biometric Recovery Action
+                if (activity != null && BiometricHelper.canAuthenticateWithDeviceSecurity(context)) {
+                    Spacer(modifier = Modifier.height(18.dp))
+                    Text(
+                        text = "Forgot PIN? Unlock with Device Security",
+                        color = AccentTeal,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { promptBiometric() }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
                 }
             }
         }
