@@ -1,5 +1,6 @@
 package com.shejan.financebuddy.ui.goals
 
+import com.shejan.financebuddy.data.db.AccountEntity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -11,6 +12,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -113,8 +115,9 @@ private val goalColorOptions = listOf(
 @Composable
 fun GoalsScreen(
     goals: List<GoalEntity>,
+    accounts: List<AccountEntity> = emptyList(),
     onAddGoal: (GoalEntity) -> Unit,
-    onDeposit: (goalId: Int, amount: Double) -> Unit,
+    onDeposit: (goalId: Int, amount: Double, fromAccountId: Int?) -> Unit,
     onDeleteGoal: (GoalEntity) -> Unit,
     triggerAddSheet: Boolean = false,
     onResetTriggerAddSheet: () -> Unit = {}
@@ -264,10 +267,11 @@ fun GoalsScreen(
             DepositSheet(
                 sheetState     = depositSheetState,
                 goal           = goal,
+                accounts       = accounts,
                 currencyFormat = currencyFormat,
                 onDismiss      = { depositGoal = null },
-                onConfirm      = { amount ->
-                    onDeposit(goal.id, amount)
+                onConfirm      = { amount, fromAccountId ->
+                    onDeposit(goal.id, amount, fromAccountId)
                     depositGoal = null
                 }
             )
@@ -918,11 +922,13 @@ fun AddGoalSheet(
 fun DepositSheet(
     sheetState: androidx.compose.material3.SheetState,
     goal: GoalEntity,
+    accounts: List<AccountEntity> = emptyList(),
     currencyFormat: DecimalFormat,
     onDismiss: () -> Unit,
-    onConfirm: (Double) -> Unit
+    onConfirm: (Double, Int?) -> Unit
 ) {
     var amount by remember { mutableStateOf("") }
+    var selectedAccountId by remember { mutableStateOf<Int?>(accounts.firstOrNull()?.id) }
     var error  by remember { mutableStateOf<String?>(null) }
 
     val accentColor = remember(goal.colorHex) {
@@ -962,7 +968,7 @@ fun DepositSheet(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             // Progress summary
             Box(
@@ -1003,7 +1009,7 @@ fun DepositSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Amount input
             Text(
@@ -1030,22 +1036,84 @@ fun DepositSheet(
                 )
             )
 
-            if (error != null) {
+            // Optional Account Selector
+            if (accounts.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(
+                    "Deduct From Account",
+                    style    = MaterialTheme.typography.labelMedium,
+                    color    = TextSecondary,
+                    modifier = Modifier.align(Alignment.Start)
+                )
                 Spacer(modifier = Modifier.height(6.dp))
+                androidx.compose.foundation.layout.FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // "None / Record Only" Chip
+                    val isNoneSelected = selectedAccountId == null
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isNoneSelected) AccentTeal.copy(alpha = 0.2f) else CardDark)
+                            .border(1.dp, if (isNoneSelected) AccentTeal else DividerColor, RoundedCornerShape(10.dp))
+                            .clickable { selectedAccountId = null; error = null }
+                            .padding(horizontal = 12.dp, vertical = 7.dp)
+                    ) {
+                        Text(
+                            text = "Manual (No Account)",
+                            color = if (isNoneSelected) AccentTeal else TextSecondary,
+                            fontSize = 11.sp,
+                            fontWeight = if (isNoneSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+
+                    accounts.forEach { acc ->
+                        val isSelected = selectedAccountId == acc.id
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelected) AccentTeal.copy(alpha = 0.2f) else CardDark)
+                                .border(1.dp, if (isSelected) AccentTeal else DividerColor, RoundedCornerShape(10.dp))
+                                .clickable { selectedAccountId = acc.id; error = null }
+                                .padding(horizontal = 12.dp, vertical = 7.dp)
+                        ) {
+                            Text(
+                                text = "${acc.name} (৳${currencyFormat.format(acc.balance)})",
+                                color = if (isSelected) AccentTeal else TextSecondary,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (error != null) {
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(text = error!!, color = ExpenseRed, fontSize = 12.sp, modifier = Modifier.align(Alignment.Start))
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(22.dp))
 
             Button(
                 onClick = {
                     val dep = amount.toDoubleOrNull()
-                    if (dep == null || dep <= 0) error = "Please enter a valid amount"
-                    else onConfirm(dep)
+                    if (dep == null || dep <= 0) {
+                        error = "Please enter a valid amount"
+                        return@Button
+                    }
+                    val chosenAcc = accounts.find { it.id == selectedAccountId }
+                    if (chosenAcc != null && dep > chosenAcc.balance) {
+                        error = "Insufficient balance in ${chosenAcc.name} (Available: ৳${currencyFormat.format(chosenAcc.balance)})"
+                        return@Button
+                    }
+                    onConfirm(dep, selectedAccountId)
                 },
                 modifier       = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(54.dp),
                 shape          = RoundedCornerShape(16.dp),
                 colors         = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                 contentPadding = PaddingValues(0.dp)

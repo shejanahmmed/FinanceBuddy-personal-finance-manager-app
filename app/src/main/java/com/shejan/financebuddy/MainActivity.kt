@@ -614,7 +614,7 @@ fun MainDashboardContainer(
     // Pending SMS badge count
     val pendingSmsDao   = remember { database.pendingSmsDao() }
     val pendingCount    by pendingSmsDao.getPendingCount().collectAsState(initial = 0)
-
+    val accountDao      = remember { database.accountDao() }
     val transactionDao = remember { database.transactionDao() }
     val budgetDao      = remember { database.budgetDao() }
     val goalDao        = remember { database.goalDao() }
@@ -999,11 +999,28 @@ fun MainDashboardContainer(
                     )
                     "goals"  -> GoalsScreen(
                         goals        = goals,
+                        accounts     = accounts,
                         onAddGoal    = { goal ->
                             scope.launch(Dispatchers.IO) { goalDao.insertGoal(goal) }
                         },
-                        onDeposit    = { goalId, amount ->
-                            scope.launch(Dispatchers.IO) { goalDao.depositToGoal(goalId, amount) }
+                        onDeposit    = { goalId, amount, fromAccountId ->
+                            scope.launch(Dispatchers.IO) {
+                                goalDao.depositToGoal(goalId, amount)
+                                if (fromAccountId != null && fromAccountId != -1) {
+                                    accountDao.adjustBalance(fromAccountId, -amount)
+                                    val targetGoal = goals.find { it.id == goalId }
+                                    val tx = com.shejan.financebuddy.data.db.TransactionEntity(
+                                        amount        = amount,
+                                        type          = "EXPENSE",
+                                        category      = "Investment",
+                                        timestamp     = System.currentTimeMillis(),
+                                        fromAccountId = fromAccountId,
+                                        toAccountId   = null,
+                                        note          = "Savings: ${targetGoal?.title ?: "Goal"}"
+                                    )
+                                    transactionDao.insertTransaction(tx)
+                                }
+                            }
                         },
                         onDeleteGoal = { goal ->
                             scope.launch(Dispatchers.IO) { goalDao.deleteGoal(goal) }
