@@ -87,6 +87,7 @@ import com.shejan.financebuddy.data.db.AccountEntity
 import com.shejan.financebuddy.data.db.PayeeEntity
 import com.shejan.financebuddy.data.db.PayeeAccountEntity
 import com.shejan.financebuddy.data.db.TransactionEntity
+import com.shejan.financebuddy.data.repository.FinanceRepository
 import com.shejan.financebuddy.ui.budget.BudgetScreen
 import com.shejan.financebuddy.ui.goals.GoalsScreen
 import com.shejan.financebuddy.ui.home.HomeScreen
@@ -221,13 +222,14 @@ fun AppNavigation(
     preferencesManager: PreferencesManager,
     database: FinanceDatabase
 ) {
+    val repository = remember(database) { FinanceRepository(database) }
     val onboardingCompleted by preferencesManager.isOnboardingCompleted.collectAsState(initial = null)
 
-    // Lift database flows to parent level to prevent reload screen flashing on transitions
-    val accounts by database.accountDao().getAllAccounts().collectAsState(initial = emptyList())
-    val allTransactions by database.transactionDao().getAllTransactions().collectAsState(initial = emptyList())
-    val payees by database.payeeDao().getAllPayees().collectAsState(initial = emptyList())
-    val payeeAccounts by database.payeeDao().getAllPayeeAccounts().collectAsState(initial = emptyList())
+    // Lift database flows to parent level via repository to prevent reload screen flashing on transitions
+    val accounts by repository.allAccounts.collectAsState(initial = emptyList())
+    val allTransactions by repository.allTransactions.collectAsState(initial = emptyList())
+    val payees by repository.allPayees.collectAsState(initial = emptyList())
+    val payeeAccounts by repository.allPayeeAccounts.collectAsState(initial = emptyList())
 
     if (onboardingCompleted == null) {
         // Render a dark screen matching the splash screen while loading preference state

@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -13,17 +14,29 @@ abstract class TransactionDao {
     @Insert
     abstract suspend fun insertRawTransaction(transaction: TransactionEntity): Long
 
+    @Update
+    abstract suspend fun updateRawTransaction(transaction: TransactionEntity)
+
     @Query("SELECT * FROM transactions ORDER BY timestamp DESC")
     abstract fun getAllTransactions(): Flow<List<TransactionEntity>>
 
     @Query("SELECT * FROM transactions ORDER BY timestamp DESC LIMIT :limit")
     abstract fun getRecentTransactions(limit: Int): Flow<List<TransactionEntity>>
 
+    @Query("SELECT * FROM transactions WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp DESC")
+    abstract fun getTransactionsByPeriod(from: Long, to: Long): Flow<List<TransactionEntity>>
+
     @Query("SELECT SUM(amount) FROM transactions WHERE type = 'EXPENSE' AND timestamp >= :start")
     abstract fun getMonthlyExpenses(start: Long): Flow<Double?>
 
     @Query("SELECT SUM(amount) FROM transactions WHERE type = 'INCOME' AND timestamp >= :start")
     abstract fun getMonthlyIncome(start: Long): Flow<Double?>
+
+    @Query("SELECT SUM(amount) FROM transactions WHERE type = 'INCOME' AND timestamp BETWEEN :from AND :to")
+    abstract fun getIncomeSumByPeriod(from: Long, to: Long): Flow<Double?>
+
+    @Query("SELECT SUM(amount) FROM transactions WHERE type = 'EXPENSE' AND timestamp BETWEEN :from AND :to")
+    abstract fun getExpenseSumByPeriod(from: Long, to: Long): Flow<Double?>
 
     // Returns total expense per category for current month — used by BudgetScreen
     @Query("SELECT category, SUM(amount) as total FROM transactions WHERE type = 'EXPENSE' AND timestamp >= :start GROUP BY category")
@@ -53,6 +66,30 @@ abstract class TransactionDao {
             }
         }
         return id
+    }
+
+    @Transaction
+    open suspend fun updateTransaction(oldTx: TransactionEntity, newTx: TransactionEntity) {
+        // 1. Revert old balance adjustment
+        when (oldTx.type) {
+            "INCOME" -> adjustAccountBalance(oldTx.fromAccountId, -oldTx.amount)
+            "EXPENSE" -> adjustAccountBalance(oldTx.fromAccountId, oldTx.amount)
+            "TRANSFER" -> {
+                adjustAccountBalance(oldTx.fromAccountId, oldTx.amount)
+                oldTx.toAccountId?.let { toId -> adjustAccountBalance(toId, -oldTx.amount) }
+            }
+        }
+        // 2. Update transaction row in SQLite
+        updateRawTransaction(newTx)
+        // 3. Apply new balance adjustment
+        when (newTx.type) {
+            "INCOME" -> adjustAccountBalance(newTx.fromAccountId, newTx.amount)
+            "EXPENSE" -> adjustAccountBalance(newTx.fromAccountId, -newTx.amount)
+            "TRANSFER" -> {
+                adjustAccountBalance(newTx.fromAccountId, -newTx.amount)
+                newTx.toAccountId?.let { toId -> adjustAccountBalance(toId, newTx.amount) }
+            }
+        }
     }
 
     @Transaction

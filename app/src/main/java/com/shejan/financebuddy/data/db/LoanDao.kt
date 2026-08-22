@@ -16,6 +16,9 @@ interface LoanDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLoan(loan: LoanEntity): Long
 
+    @androidx.room.Update
+    suspend fun updateLoan(loan: LoanEntity)
+
     @Delete
     suspend fun deleteLoan(loan: LoanEntity)
 
