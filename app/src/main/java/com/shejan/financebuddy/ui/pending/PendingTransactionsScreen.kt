@@ -621,7 +621,7 @@ fun PendingTransactionsScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("Dismiss All (${pendingList.size})", color = OnAccent, fontWeight = FontWeight.Bold)
+                        Text("Dismiss All (${pendingList.size})", color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {
@@ -1381,7 +1381,7 @@ private fun PendingTransactionCard(
                     colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Delete", color = OnAccent, fontWeight = FontWeight.Bold)
+                    Text("Delete", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {

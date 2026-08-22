@@ -25,23 +25,24 @@ private object NoIndication : IndicationNodeFactory {
     override fun hashCode(): Int = System.identityHashCode(this)
 }
 
-private val FinanceBuddyDarkColorScheme = darkColorScheme(
-    primary          = AccentTeal,
-    onPrimary        = Color(0xFF0B0E1A),
-    primaryContainer = Color(0xFF1C2235),
-    secondary        = AccentBlue,
-    onSecondary      = Color(0xFF0B0E1A),
-    tertiary         = AccentPurple,
-    background       = Color(0xFF0B0E1A),
-    onBackground     = Color(0xFFFFFFFF),
-    surface          = Color(0xFF141827),
-    onSurface        = Color(0xFFFFFFFF),
-    surfaceVariant   = Color(0xFF1C2235),
-    onSurfaceVariant = Color(0xFF8A94B2),
-    outline          = Color(0xFF1E2540),
-    error            = Color(0xFFFF5C7C),
-    onError          = Color(0xFFFFFFFF),
-)
+private val FinanceBuddyDarkColorScheme: androidx.compose.material3.ColorScheme
+    @Composable get() = darkColorScheme(
+        primary          = AccentTeal,
+        onPrimary        = OnAccent,
+        primaryContainer = CardDark,
+        secondary        = AccentBlue,
+        onSecondary      = OnAccent,
+        tertiary         = AccentPurple,
+        background       = BackgroundDark,
+        onBackground     = TextPrimary,
+        surface          = SurfaceDark,
+        onSurface        = TextPrimary,
+        surfaceVariant   = CardDark,
+        onSurfaceVariant = TextSecondary,
+        outline          = DividerColor,
+        error            = ExpenseRed,
+        onError          = Color.White,
+    )
 
 private val FinanceBuddyLightColorScheme = lightColorScheme(
     primary              = Color(0xFF0D9488), // Matte Teal 600

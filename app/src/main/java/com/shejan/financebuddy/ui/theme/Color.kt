@@ -13,97 +13,97 @@ var isDarkModeGlobal: Boolean
         currentThemeModeState = if (value) "DARK" else "LIGHT"
     }
 
-// === Dynamic Background & Surface ===
+// === Dynamic Background & Surface (Deep Charcoal/Black & Surface Gray Palette) ===
 val BackgroundDark: Color get() = when (currentThemeModeState) {
     "AMOLED" -> Color(0xFF000000)
     "LIGHT"  -> Color(0xFFF1F5F9)
-    else     -> Color(0xFF0B0E1A)
+    else     -> Color(0xFF0A0D14) // Deep Charcoal / Black Background
 }
 
 val SurfaceDark: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0xFF000000)
+    "AMOLED" -> Color(0xFF05070A)
     "LIGHT"  -> Color(0xFFFFFFFF)
-    else     -> Color(0xFF141827)
+    else     -> Color(0xFF121620) // Surface Gray (slightly lighter than background)
 }
 
 val CardDark: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0xFF000000)
+    "AMOLED" -> Color(0xFF0A0A0A)
     "LIGHT"  -> Color(0xFFFFFFFF)
-    else     -> Color(0xFF1C2235)
+    else     -> Color(0xFF171B26) // Widget Card Gray (creates subtle depth & separation)
 }
 
 val CardDarker: Color get() = when (currentThemeModeState) {
     "AMOLED" -> Color(0xFF000000)
     "LIGHT"  -> Color(0xFFE2E8F0)
-    else     -> Color(0xFF111525)
+    else     -> Color(0xFF0E111A) // Recessed Card / Input Background
 }
 
 // === Accent Colors ===
 val AccentTeal: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0xFFFFFFFF)
+    "AMOLED" -> Color(0xFF00E5B3)
     "LIGHT"  -> Color(0xFF0D9488)
     else     -> Color(0xFF00D4AA)
 }
 
 val AccentBlue: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0xFFFFFFFF)
+    "AMOLED" -> Color(0xFF389BFF)
     "LIGHT"  -> Color(0xFF2563EB)
     else     -> Color(0xFF0096FF)
 }
 
 val AccentPurple: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0xFFFFFFFF)
+    "AMOLED" -> Color(0xFF906BFF)
     "LIGHT"  -> Color(0xFF7C3AED)
     else     -> Color(0xFF7C5CFC)
 }
 
 // === Dynamic Text ===
 val TextPrimary: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0xFFFFFFFF) // 100%
+    "AMOLED" -> Color(0xFFFFFFFF) // 100% High Contrast
     "LIGHT"  -> Color(0xFF0F172A)
-    else     -> Color(0xFFFFFFFF)
+    else     -> Color(0xFFF3F5F9) // Crisp High Contrast Off-White
 }
 
 val TextSecondary: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0xB3FFFFFF) // 70%
+    "AMOLED" -> Color(0xD9FFFFFF) // 85%
     "LIGHT"  -> Color(0xFF475569)
-    else     -> Color(0xFF8A94B2)
+    else     -> Color(0xFF949EB8) // Legible Secondary Text
 }
 
 val TextMuted: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0x80FFFFFF) // 50%
+    "AMOLED" -> Color(0x99FFFFFF) // 60%
     "LIGHT"  -> Color(0xFF64748B)
-    else     -> Color(0xFF4A5270)
+    else     -> Color(0xFF767F9D) // Improved Contrast Ratio (> 4.5:1 WCAG AA)
 }
 
-// === Semantic ===
+// === Semantic (Income, Expense, Transfer) ===
 val IncomeGreen: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0xFFFFFFFF) // 100%
+    "AMOLED" -> Color(0xFF00E5B3) // Preserved Semantic Green for AMOLED
     "LIGHT"  -> Color(0xFF059669)
     else     -> Color(0xFF00C897)
 }
 
 val ExpenseRed: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0xB3FFFFFF) // 70%
+    "AMOLED" -> Color(0xFFFF5272) // Preserved Semantic Red for AMOLED
     "LIGHT"  -> Color(0xFFE11D48)
     else     -> Color(0xFFFF5C7C)
 }
 
 val TransferYellow: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0x80FFFFFF) // 50%
+    "AMOLED" -> Color(0xFFFFC033) // Preserved Semantic Yellow for AMOLED
     "LIGHT"  -> Color(0xFFD97706)
     else     -> Color(0xFFFFBD2E)
 }
 
 // === Gradient Stops ===
 val GradientStart: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0xFFFFFFFF)
+    "AMOLED" -> Color(0xFF00E5B3)
     "LIGHT"  -> Color(0xFF0D9488)
     else     -> Color(0xFF00D4AA)
 }
 
 val GradientEnd: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0xFFFFFFFF)
+    "AMOLED" -> Color(0xFF389BFF)
     "LIGHT"  -> Color(0xFF2563EB)
     else     -> Color(0xFF0096FF)
 }
@@ -112,14 +112,14 @@ val GradientEnd: Color get() = when (currentThemeModeState) {
 val DividerColor: Color get() = when (currentThemeModeState) {
     "AMOLED" -> Color(0x33FFFFFF) // 20% opacity border
     "LIGHT"  -> Color(0xFFCBD5E1)
-    else     -> Color(0xFF1E2540)
+    else     -> Color(0xFF242A3E) // Distinct Visible Border Outline
 }
 
 // === On-Accent ===
 val OnAccent: Color get() = when (currentThemeModeState) {
     "AMOLED" -> Color(0xFF000000)
     "LIGHT"  -> Color(0xFFFFFFFF)
-    else     -> Color(0xFF0B0E1A)
+    else     -> Color(0xFF0A0D14)
 }
 
 // === Chart Tokens ===
@@ -132,7 +132,7 @@ val ChartGridLine: Color get() = when (currentThemeModeState) {
 val ChartLabel: Color get() = when (currentThemeModeState) {
     "AMOLED" -> Color(0x80FFFFFF) // 50%
     "LIGHT"  -> Color(0xFF64748B)
-    else     -> Color(0x59FFFFFF)
+    else     -> Color(0x80FFFFFF)
 }
 
 val ChartSurface: Color get() = when (currentThemeModeState) {
@@ -152,17 +152,17 @@ val ScrimColor: Color get() = when (currentThemeModeState) {
 val SwitchTrackUnchecked: Color get() = when (currentThemeModeState) {
     "AMOLED" -> Color(0x33FFFFFF)
     "LIGHT"  -> Color(0xFFCBD5E1)
-    else     -> Color(0xFF1E2538)
+    else     -> Color(0xFF22283A)
 }
 
 val SwitchThumbUnchecked: Color get() = when (currentThemeModeState) {
     "AMOLED" -> Color(0x80FFFFFF)
     "LIGHT"  -> Color(0xFF64748B)
-    else     -> Color(0xFF9AA3B8)
+    else     -> Color(0xFF8C96B0)
 }
 
 val SwitchBorderUnchecked: Color get() = when (currentThemeModeState) {
     "AMOLED" -> Color(0x40FFFFFF)
     "LIGHT"  -> Color(0xFF94A3B8)
-    else     -> Color(0xFF333B54)
+    else     -> Color(0xFF2F3750)
 }
