@@ -14,6 +14,8 @@
     <uses-permission
         android:name="android.permission.READ_SMS"
         tools:ignore="ProtectedPermissions" />
+    <!-- Notification permission for Android 13+ background transaction alerts -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"

@@ -214,7 +214,11 @@ fun SmsPermissionHandler(
                                         onDismiss()
                                     }
                                 } else {
-                                    launcher.launch(arrayOf(receivePermission, readPermission))
+                                    val perms = mutableListOf(receivePermission, readPermission)
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        perms.add(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                    launcher.launch(perms.toTypedArray())
                                 }
                             }
                         )
@@ -236,7 +240,11 @@ fun SmsPermissionHandler(
                                         onDismiss()
                                     }
                                 } else {
-                                    launcher.launch(arrayOf(receivePermission))
+                                    val perms = mutableListOf(receivePermission)
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        perms.add(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                    launcher.launch(perms.toTypedArray())
                                 }
                             }
                         )

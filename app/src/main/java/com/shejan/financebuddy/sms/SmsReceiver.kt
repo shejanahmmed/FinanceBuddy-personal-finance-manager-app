@@ -100,6 +100,18 @@ class SmsReceiver : BroadcastReceiver() {
 
                 pendingSmsDao.insertPending(pending)
                 Log.d(TAG, "Inserted pending transaction for ${parsed.detectedAccountName}")
+
+                // Post system notification to alert user of detected transaction
+                try {
+                    SmsNotificationHelper.notifyNewTransaction(
+                        context = context.applicationContext,
+                        amount = parsed.amount,
+                        accountName = parsed.detectedAccountName,
+                        type = parsed.type
+                    )
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to post SMS transaction notification", e)
+                }
             }
         }
     }

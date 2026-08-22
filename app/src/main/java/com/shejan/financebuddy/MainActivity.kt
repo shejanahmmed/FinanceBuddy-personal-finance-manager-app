@@ -145,6 +145,7 @@ class MainActivity : FragmentActivity() {
 
         preferencesManager = PreferencesManager(applicationContext)
         database = FinanceDatabase.getDatabase(applicationContext)
+        com.shejan.financebuddy.sms.SmsNotificationHelper.createNotificationChannel(applicationContext)
 
         setContent {
             val themeMode by preferencesManager.themeMode.collectAsState(initial = "SYSTEM")
@@ -239,6 +240,15 @@ fun AppNavigation(
     } else {
         val navController = rememberNavController()
         val startDestination = if (onboardingCompleted == true) "main_dashboard" else "onboarding"
+
+        val currentContext = androidx.compose.ui.platform.LocalContext.current
+        val currentActivity = currentContext as? android.app.Activity
+        LaunchedEffect(onboardingCompleted) {
+            if (onboardingCompleted == true && currentActivity?.intent?.getBooleanExtra("OPEN_PENDING_INBOX", false) == true) {
+                currentActivity.intent.removeExtra("OPEN_PENDING_INBOX")
+                navController.navigate("pending_transactions")
+            }
+        }
 
         NavHost(
             navController    = navController,
