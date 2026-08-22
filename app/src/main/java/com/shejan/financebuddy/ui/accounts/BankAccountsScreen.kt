@@ -400,7 +400,7 @@ fun BankAccountsScreen(
                     if (mfs.isNotEmpty()) {
                         item {
                             Spacer(Modifier.height(4.dp))
-                            SectionGroupHeader(title = "Mobile Financial Services", count = mfs.size)
+                            SectionGroupHeader(title = "MFS", count = mfs.size)
                         }
                         items(mfs, key = { it.id }) { account ->
                             AccountManageCard(
@@ -619,7 +619,7 @@ private fun AccountsHeroCard(
                             AccountCategorySummaryBox(
                                 icon = Icons.Default.PhoneAndroid,
                                 iconColor = ExpenseRed,
-                                title = "Mobile Financial Services",
+                                title = "MFS",
                                 subtitle = "$mfsCount ${if (mfsCount == 1) "account" else "accounts"}",
                                 balanceStr = "৳${currencyFormat.format(mfsBalance)}"
                             )

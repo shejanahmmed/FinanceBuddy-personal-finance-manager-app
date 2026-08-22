@@ -12,9 +12,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.FilterList
@@ -170,6 +172,8 @@ fun TransactionListScreen(
         } else "Select Date"
     )
 
+    var showFilterMenu by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -190,98 +194,133 @@ fun TransactionListScreen(
 
         Column(modifier = Modifier.fillMaxSize()) {
             // ─── Header Top Bar ──────────────────────────────────────────
-            Box(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(top = 16.dp, start = 20.dp, end = 20.dp, bottom = 12.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+                // Left side: Back Button & Page Title
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = { onBack() },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(CardDarker)
+                            .border(1.dp, DividerColor, CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
                     Column {
                         Text(
                             text = if (type == "INCOME") "Income Ledger" else "Expense Ledger",
                             color = TextPrimary,
-                            fontSize = 22.sp,
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = (-0.5).sp
+                            letterSpacing = (-0.4).sp
                         )
                         Text(
                             text = "Historical transaction records",
                             color = TextSecondary,
-                            fontSize = 12.sp,
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.Medium
                         )
                     }
-
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(CardDark)
-                            .border(1.dp, DividerColor, RoundedCornerShape(8.dp))
-                            .clickable { onBack() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Go Back",
-                            tint = TextPrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
                 }
-            }
 
-            // ─── Filter Bar ───────────────────────────────────────────────
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                contentPadding = PaddingValues(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                items(filterOptions) { (key, label) ->
-                    val isSelected = selectedFilter == key
-                    val chipBg = if (isSelected) glowColor.copy(alpha = 0.18f) else CardDark
-                    val chipBorder = if (isSelected) glowColor else DividerColor
-                    val chipTextColor = if (isSelected) glowColor else TextSecondary
+                // Right side: Filter Button & Dropdown Menu
+                Box {
+                    val isFiltered = selectedFilter != "ALL"
+                    val activeLabel = filterOptions.firstOrNull { it.first == selectedFilter }?.second ?: "Filter"
 
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(chipBg)
-                            .border(1.dp, chipBorder, RoundedCornerShape(20.dp))
-                            .clickable {
-                                if (key == "CUSTOM") {
-                                    showDatePicker = true
-                                } else {
-                                    selectedFilter = key
-                                }
-                            }
-                            .padding(horizontal = 14.dp, vertical = 7.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isFiltered) glowColor.copy(alpha = 0.16f) else CardDarker)
+                            .border(1.dp, if (isFiltered) glowColor else DividerColor, RoundedCornerShape(12.dp))
+                            .clickable { showFilterMenu = true }
+                            .padding(horizontal = 10.dp, vertical = 7.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            if (key == "CUSTOM") {
-                                Icon(
-                                    imageVector = Icons.Default.CalendarMonth,
-                                    contentDescription = null,
-                                    tint = chipTextColor,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Default.FilterList,
+                                contentDescription = "Filter",
+                                tint = if (isFiltered) glowColor else TextPrimary,
+                                modifier = Modifier.size(16.dp)
+                            )
                             Text(
-                                text = label,
-                                color = chipTextColor,
+                                text = if (isFiltered) activeLabel else "Filter",
+                                color = if (isFiltered) glowColor else TextPrimary,
                                 fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = showFilterMenu,
+                        onDismissRequest = { showFilterMenu = false },
+                        modifier = Modifier
+                            .background(CardDarker)
+                            .border(1.dp, DividerColor, RoundedCornerShape(14.dp))
+                    ) {
+                        filterOptions.forEach { (key, label) ->
+                            val isSelected = selectedFilter == key
+                            DropdownMenuItem(
+                                text = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        if (key == "CUSTOM") {
+                                            Icon(
+                                                imageVector = Icons.Default.CalendarMonth,
+                                                contentDescription = null,
+                                                tint = if (isSelected) glowColor else TextSecondary,
+                                                modifier = Modifier.size(15.dp)
+                                            )
+                                        }
+                                        Text(
+                                            text = label,
+                                            color = if (isSelected) glowColor else TextPrimary,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                },
+                                trailingIcon = {
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            tint = glowColor,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    showFilterMenu = false
+                                    if (key == "CUSTOM") {
+                                        showDatePicker = true
+                                    } else {
+                                        selectedFilter = key
+                                    }
+                                }
                             )
                         }
                     }
