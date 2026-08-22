@@ -36,10 +36,13 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -339,36 +342,40 @@ fun AddTransactionSheet(
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
 
-    var fromAccountY by remember { mutableStateOf(0) }
-    var toAccountY by remember { mutableStateOf(0) }
-    var payeeY by remember { mutableStateOf(0) }
+    var fromAccountAbsoluteY by remember { mutableStateOf(0f) }
+    var toAccountAbsoluteY by remember { mutableStateOf(0f) }
+    var payeeAbsoluteY by remember { mutableStateOf(0f) }
+    var noteAbsoluteY by remember { mutableStateOf(0f) }
 
     val dynamicBottomSpacer by animateDpAsState(
-        targetValue = if (fromAccountExpanded || toAccountExpanded || payeeExpanded) 360.dp else 24.dp,
+        targetValue = if (fromAccountExpanded || toAccountExpanded || payeeExpanded) 350.dp else 24.dp,
         label = "dynamicBottomSpacer"
     )
 
     LaunchedEffect(fromAccountExpanded) {
-        if (fromAccountExpanded && fromAccountY > 0) {
-            delay(120)
-            val absoluteY = scrollState.value + fromAccountY
-            scrollState.animateScrollTo((absoluteY - 4).coerceAtLeast(0))
+        if (fromAccountExpanded) {
+            delay(60)
+            if (fromAccountAbsoluteY > 0f) {
+                scrollState.animateScrollTo((fromAccountAbsoluteY - 16f).coerceAtLeast(0f).toInt())
+            }
         }
     }
 
     LaunchedEffect(toAccountExpanded) {
-        if (toAccountExpanded && toAccountY > 0) {
-            delay(120)
-            val absoluteY = scrollState.value + toAccountY
-            scrollState.animateScrollTo((absoluteY - 4).coerceAtLeast(0))
+        if (toAccountExpanded) {
+            delay(60)
+            if (toAccountAbsoluteY > 0f) {
+                scrollState.animateScrollTo((toAccountAbsoluteY - 16f).coerceAtLeast(0f).toInt())
+            }
         }
     }
 
     LaunchedEffect(payeeExpanded) {
-        if (payeeExpanded && payeeY > 0) {
-            delay(120)
-            val absoluteY = scrollState.value + payeeY
-            scrollState.animateScrollTo((absoluteY - 4).coerceAtLeast(0))
+        if (payeeExpanded) {
+            delay(60)
+            if (payeeAbsoluteY > 0f) {
+                scrollState.animateScrollTo((payeeAbsoluteY - 16f).coerceAtLeast(0f).toInt())
+            }
         }
     }
 
@@ -636,9 +643,10 @@ fun AddTransactionSheet(
                     fromAccountExpanded = isExpanded
                     if (isExpanded) {
                         fromAccountSearchText = TextFieldValue("")
-                        if (fromAccountY > 0 && selectedType != "TRANSFER") {
-                            coroutineScope.launch {
-                                scrollState.animateScrollTo((fromAccountY - 30).coerceAtLeast(0))
+                        coroutineScope.launch {
+                            delay(60)
+                            if (fromAccountAbsoluteY > 0f) {
+                                scrollState.animateScrollTo((fromAccountAbsoluteY - 16f).coerceAtLeast(0f).toInt())
                             }
                         }
                     }
@@ -646,7 +654,7 @@ fun AddTransactionSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .onGloballyPositioned { coordinates ->
-                        fromAccountY = coordinates.positionInParent().y.toInt()
+                        fromAccountAbsoluteY = coordinates.positionInParent().y + scrollState.value
                     }
             ) {
                 OutlinedTextField(
@@ -659,6 +667,14 @@ fun AddTransactionSheet(
                     textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                     label = { Text(if (selectedType == "TRANSFER") "From Account" else "Account", color = TextSecondary) },
                     placeholder = { Text("Select account", color = TextMuted) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = if (fromAccountExpanded) AccentTeal else TextMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
                     trailingIcon = {
                         val hasContent = selectedFromAccount != null || fromAccountSearchText.text.isNotEmpty()
                         if (hasContent && !fromAccountExpanded) {
@@ -687,9 +703,13 @@ fun AddTransactionSheet(
                         .fillMaxWidth()
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
                         .onFocusChanged { focusState ->
-                            if (focusState.isFocused && fromAccountY > 0 && selectedType != "TRANSFER") {
+                            if (focusState.isFocused) {
+                                fromAccountExpanded = true
                                 coroutineScope.launch {
-                                    scrollState.animateScrollTo((fromAccountY - 30).coerceAtLeast(0))
+                                    delay(60)
+                                    if (fromAccountAbsoluteY > 0f) {
+                                        scrollState.animateScrollTo((fromAccountAbsoluteY - 16f).coerceAtLeast(0f).toInt())
+                                    }
                                 }
                             }
                         }
@@ -704,11 +724,15 @@ fun AddTransactionSheet(
                             selection = TextRange((selectedFromAccount?.name ?: "").length)
                         )
                     },
-                    modifier = Modifier.background(CardDarker)
+                    modifier = Modifier
+                        .background(CardDarker)
+                        .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
+                        .heightIn(max = 250.dp)
                 ) {
                     AccountDropdownItems(
                         searchText = fromAccountSearchText.text,
                         accountsList = accounts,
+                        selectedAccount = selectedFromAccount,
                         allowPresetLinking = selectedType != "EXPENSE",
                         allowCashOption = true,
                         cashTagText = if (selectedType == "TRANSFER" && isOwnAccount) "Deposit" else "In Hand",
@@ -785,18 +809,19 @@ fun AddTransactionSheet(
                     expanded = toAccountExpanded,
                     onExpandedChange = { isExpanded ->
                         toAccountExpanded = isExpanded
-                        if (isExpanded && toAccountY > 0) {
+                        if (isExpanded) {
                             coroutineScope.launch {
-                                delay(80)
-                                val absoluteY = scrollState.value + toAccountY
-                                scrollState.animateScrollTo((absoluteY - 4).coerceAtLeast(0))
+                                delay(60)
+                                if (toAccountAbsoluteY > 0f) {
+                                    scrollState.animateScrollTo((toAccountAbsoluteY - 16f).coerceAtLeast(0f).toInt())
+                                }
                             }
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onGloballyPositioned { coordinates ->
-                            toAccountY = coordinates.positionInParent().y.toInt()
+                            toAccountAbsoluteY = coordinates.positionInParent().y + scrollState.value
                         }
                 ) {
                     OutlinedTextField(
@@ -804,17 +829,19 @@ fun AddTransactionSheet(
                         onValueChange = {
                             toAccountSearchText = it
                             toAccountExpanded = true
-                            if (toAccountY > 0) {
-                                coroutineScope.launch {
-                                    val absoluteY = scrollState.value + toAccountY
-                                    scrollState.animateScrollTo((absoluteY - 4).coerceAtLeast(0))
-                                }
-                            }
                         },
                         readOnly = selectedToAccount != null,
                         textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                         label = { Text(if (isOwnAccount) "To Account" else "To Bank/MFS", color = TextSecondary) },
                         placeholder = { Text(if (isOwnAccount) "Select destination" else "Select bank", color = TextMuted) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = if (toAccountExpanded) AccentTeal else TextMuted,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
                         trailingIcon = {
                             val hasContent = selectedToAccount != null || toAccountSearchText.text.isNotEmpty()
                             if (hasContent && !toAccountExpanded) {
@@ -843,11 +870,13 @@ fun AddTransactionSheet(
                             .fillMaxWidth()
                             .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
                             .onFocusChanged { focusState ->
-                                if (focusState.isFocused && toAccountY > 0) {
+                                if (focusState.isFocused) {
+                                    toAccountExpanded = true
                                     coroutineScope.launch {
-                                        delay(120)
-                                        val absoluteY = scrollState.value + toAccountY
-                                        scrollState.animateScrollTo((absoluteY - 4).coerceAtLeast(0))
+                                        delay(60)
+                                        if (toAccountAbsoluteY > 0f) {
+                                            scrollState.animateScrollTo((toAccountAbsoluteY - 16f).coerceAtLeast(0f).toInt())
+                                        }
                                     }
                                 }
                             }
@@ -862,11 +891,15 @@ fun AddTransactionSheet(
                                 selection = TextRange((selectedToAccount?.name ?: "").length)
                             )
                         },
-                        modifier = Modifier.background(CardDarker)
+                        modifier = Modifier
+                            .background(CardDarker)
+                            .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
+                            .heightIn(max = 250.dp)
                     ) {
                         AccountDropdownItems(
                             searchText = toAccountSearchText.text,
                             accountsList = destAccounts,
+                            selectedAccount = selectedToAccount,
                             allowPresetLinking = true,
                             allowCashOption = !isFromAccountCash,
                             cashTagText = "Withdrawal",
@@ -956,16 +989,19 @@ fun AddTransactionSheet(
                     expanded = payeeExpanded,
                     onExpandedChange = { isExpanded ->
                         payeeExpanded = isExpanded
-                        if (isExpanded && payeeY > 0) {
+                        if (isExpanded) {
                             coroutineScope.launch {
-                                scrollState.animateScrollTo((payeeY - 30).coerceAtLeast(0))
+                                delay(60)
+                                if (payeeAbsoluteY > 0f) {
+                                    scrollState.animateScrollTo((payeeAbsoluteY - 16f).coerceAtLeast(0f).toInt())
+                                }
                             }
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onGloballyPositioned { coordinates ->
-                            payeeY = coordinates.positionInParent().y.toInt()
+                            payeeAbsoluteY = coordinates.positionInParent().y + scrollState.value
                         }
                 ) {
                     OutlinedTextField(
@@ -977,6 +1013,14 @@ fun AddTransactionSheet(
                         textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                         label = { Text("Recipient Name *", color = TextSecondary) },
                         placeholder = { Text("Enter or select recipient name", color = TextMuted) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = if (payeeExpanded) AccentTeal else TextMuted,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
                         shape = RoundedCornerShape(12.dp),
                         colors = TextFieldColors(),
                         singleLine = true,
@@ -984,9 +1028,13 @@ fun AddTransactionSheet(
                             .fillMaxWidth()
                             .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
                             .onFocusChanged { focusState ->
-                                if (focusState.isFocused && payeeY > 0) {
+                                if (focusState.isFocused) {
+                                    payeeExpanded = true
                                     coroutineScope.launch {
-                                        scrollState.animateScrollTo((payeeY - 30).coerceAtLeast(0))
+                                        delay(60)
+                                        if (payeeAbsoluteY > 0f) {
+                                            scrollState.animateScrollTo((payeeAbsoluteY - 16f).coerceAtLeast(0f).toInt())
+                                        }
                                     }
                                 }
                             }
@@ -996,7 +1044,10 @@ fun AddTransactionSheet(
                         ExposedDropdownMenu(
                             expanded = payeeExpanded,
                             onDismissRequest = { payeeExpanded = false },
-                            modifier = Modifier.background(CardDarker)
+                            modifier = Modifier
+                                .background(CardDarker)
+                                .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
+                                .heightIn(max = 240.dp)
                         ) {
                             filteredPayeeAccounts.forEach { acc ->
                                 val parentPayee = payees.firstOrNull { it.id == acc.payeeId }
@@ -1116,8 +1167,6 @@ fun AddTransactionSheet(
                 }
             }
 
-            var noteY by remember { mutableStateOf(0) }
-
             // ── Notes ──────────────────────────────────────────
             OutlinedTextField(
                 value         = note,
@@ -1129,14 +1178,15 @@ fun AddTransactionSheet(
                 modifier      = Modifier
                     .fillMaxWidth()
                     .onGloballyPositioned { coordinates ->
-                        noteY = coordinates.positionInParent().y.toInt()
+                        noteAbsoluteY = coordinates.positionInParent().y + scrollState.value
                     }
                     .onFocusChanged { focusState ->
-                        if (focusState.isFocused && noteY > 0) {
+                        if (focusState.isFocused) {
                             coroutineScope.launch {
-                                delay(150)
-                                val absoluteY = scrollState.value + noteY
-                                scrollState.animateScrollTo((absoluteY - 15).coerceAtLeast(0))
+                                delay(60)
+                                if (noteAbsoluteY > 0f) {
+                                    scrollState.animateScrollTo((noteAbsoluteY - 16f).coerceAtLeast(0f).toInt())
+                                }
                             }
                         }
                     },
@@ -1785,7 +1835,10 @@ private fun OptionalNewAccountSection(
             ExposedDropdownMenu(
                 expanded = subtypeExpanded,
                 onDismissRequest = { subtypeExpanded = false },
-                modifier = Modifier.background(CardDarker)
+                modifier = Modifier
+                    .background(CardDarker)
+                    .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
+                    .heightIn(max = 200.dp)
             ) {
                 subtypes.forEach { st ->
                     DropdownMenuItem(
@@ -1856,6 +1909,7 @@ private fun OptionalNewAccountSection(
 private fun androidx.compose.foundation.layout.ColumnScope.AccountDropdownItems(
     searchText: String,
     accountsList: List<AccountEntity>,
+    selectedAccount: AccountEntity? = null,
     allowPresetLinking: Boolean = true,
     allowCashOption: Boolean = true,
     cashTagText: String = "Deposit",
@@ -1887,11 +1941,13 @@ private fun androidx.compose.foundation.layout.ColumnScope.AccountDropdownItems(
     } else emptyList()
 
     if (!allowPresetLinking && matchingExistingCash.isEmpty() && matchingExistingBanks.isEmpty() && matchingExistingMfs.isEmpty()) {
-        DropdownMenuItem(
-            text = { Text("No created accounts match search", color = TextMuted, fontSize = 12.sp) },
-            onClick = {},
-            enabled = false
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Text("No created accounts match search", color = TextMuted, fontSize = 12.sp)
+        }
     }
 
     // 1. Cash Section
@@ -1901,34 +1957,62 @@ private fun androidx.compose.foundation.layout.ColumnScope.AccountDropdownItems(
             "Withdrawal" -> "Hand Cash (Withdrawal)"
             else -> "Hand Cash"
         }
-        DropdownMenuItem(
-            text = { Text(headerTitle, color = IncomeGreen, fontWeight = FontWeight.Bold, fontSize = 11.sp) },
-            onClick = {},
-            enabled = false
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CardDark.copy(alpha = 0.6f))
+                .padding(horizontal = 14.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = headerTitle.uppercase(),
+                color = IncomeGreen,
+                fontWeight = FontWeight.Bold,
+                fontSize = 10.5.sp,
+                letterSpacing = 0.5.sp
+            )
+        }
         matchingExistingCash.forEach { account ->
+            val isSelected = selectedAccount?.id == account.id
             DropdownMenuItem(
                 text = {
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(account.name, color = TextPrimary, fontWeight = FontWeight.Medium)
-                        if (cashTagText == "Deposit" || cashTagText == "Withdrawal") {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(IncomeGreen.copy(alpha = 0.12f))
-                                    .border(1.dp, IncomeGreen.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = cashTagText,
-                                    color = IncomeGreen,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = account.name,
+                                color = if (isSelected) AccentTeal else TextPrimary,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                            )
+                            if (cashTagText == "Deposit" || cashTagText == "Withdrawal") {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(IncomeGreen.copy(alpha = 0.12f))
+                                        .border(1.dp, IncomeGreen.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = cashTagText,
+                                        color = IncomeGreen,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
+                        }
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = AccentTeal,
+                                modifier = Modifier.size(16.dp)
+                            )
                         }
                     }
                 },
@@ -1942,7 +2026,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.AccountDropdownItems(
                 else -> "+ Link $preset"
             }
             DropdownMenuItem(
-                text = { Text(linkText, color = TextPrimary) },
+                text = { Text(linkText, color = TextSecondary, fontSize = 13.sp) },
                 onClick = {
                     val newName = when (cashTagText) {
                         "Deposit" -> "$preset (Deposit)"
@@ -1958,37 +2042,65 @@ private fun androidx.compose.foundation.layout.ColumnScope.AccountDropdownItems(
     // 2. Banks Section
     if (matchingExistingBanks.isNotEmpty() || matchingPresetBanks.isNotEmpty()) {
         if (matchingExistingCash.isNotEmpty() || matchingPresetCash.isNotEmpty()) {
-            androidx.compose.material3.HorizontalDivider(color = DividerColor.copy(alpha = 0.5f))
+            HorizontalDivider(color = DividerColor.copy(alpha = 0.5f))
         }
-        DropdownMenuItem(
-            text = { Text("Your Banks", color = AccentTeal, fontWeight = FontWeight.Bold, fontSize = 11.sp) },
-            onClick = {},
-            enabled = false
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CardDark.copy(alpha = 0.6f))
+                .padding(horizontal = 14.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = "YOUR BANKS",
+                color = AccentTeal,
+                fontWeight = FontWeight.Bold,
+                fontSize = 10.5.sp,
+                letterSpacing = 0.5.sp
+            )
+        }
         matchingExistingBanks.forEach { account ->
+            val isSelected = selectedAccount?.id == account.id
             DropdownMenuItem(
                 text = {
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(account.name, color = TextPrimary, fontWeight = FontWeight.Medium)
-                        if (account.accountNumber.isNotBlank()) {
-                            val accLast4 = account.accountNumber.takeLast(4)
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(DividerColor.copy(alpha = 0.3f))
-                                    .border(1.dp, DividerColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "*******$accLast4",
-                                    color = TextSecondary,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = account.name,
+                                color = if (isSelected) AccentTeal else TextPrimary,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                            )
+                            if (account.accountNumber.isNotBlank()) {
+                                val accLast4 = account.accountNumber.takeLast(4)
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(DividerColor.copy(alpha = 0.3f))
+                                        .border(1.dp, DividerColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "*******$accLast4",
+                                        color = TextSecondary,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
+                        }
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = AccentTeal,
+                                modifier = Modifier.size(16.dp)
+                            )
                         }
                     }
                 },
@@ -1997,7 +2109,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.AccountDropdownItems(
         }
         matchingPresetBanks.forEach { preset ->
             DropdownMenuItem(
-                text = { Text("+ Link $preset", color = TextPrimary) },
+                text = { Text("+ Link $preset", color = TextSecondary, fontSize = 13.sp) },
                 onClick = { onSelectNew(preset) }
             )
         }
@@ -2006,37 +2118,65 @@ private fun androidx.compose.foundation.layout.ColumnScope.AccountDropdownItems(
     // 3. MFS Section
     if (matchingExistingMfs.isNotEmpty() || matchingPresetMfs.isNotEmpty()) {
         if (matchingExistingCash.isNotEmpty() || matchingPresetCash.isNotEmpty() || matchingExistingBanks.isNotEmpty() || matchingPresetBanks.isNotEmpty()) {
-            androidx.compose.material3.HorizontalDivider(color = DividerColor.copy(alpha = 0.5f))
+            HorizontalDivider(color = DividerColor.copy(alpha = 0.5f))
         }
-        DropdownMenuItem(
-            text = { Text("Your Mobile Wallets", color = AccentTeal, fontWeight = FontWeight.Bold, fontSize = 11.sp) },
-            onClick = {},
-            enabled = false
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CardDark.copy(alpha = 0.6f))
+                .padding(horizontal = 14.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = "YOUR MOBILE WALLETS",
+                color = AccentTeal,
+                fontWeight = FontWeight.Bold,
+                fontSize = 10.5.sp,
+                letterSpacing = 0.5.sp
+            )
+        }
         matchingExistingMfs.forEach { account ->
+            val isSelected = selectedAccount?.id == account.id
             DropdownMenuItem(
                 text = {
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(account.name, color = TextPrimary, fontWeight = FontWeight.Medium)
-                        if (account.accountNumber.isNotBlank()) {
-                            val accLast4 = account.accountNumber.takeLast(4)
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(DividerColor.copy(alpha = 0.3f))
-                                    .border(1.dp, DividerColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "*******$accLast4",
-                                    color = TextSecondary,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = account.name,
+                                color = if (isSelected) AccentTeal else TextPrimary,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                            )
+                            if (account.accountNumber.isNotBlank()) {
+                                val accLast4 = account.accountNumber.takeLast(4)
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(DividerColor.copy(alpha = 0.3f))
+                                        .border(1.dp, DividerColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "*******$accLast4",
+                                        color = TextSecondary,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
+                        }
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = AccentTeal,
+                                modifier = Modifier.size(16.dp)
+                            )
                         }
                     }
                 },
@@ -2045,7 +2185,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.AccountDropdownItems(
         }
         matchingPresetMfs.forEach { preset ->
             DropdownMenuItem(
-                text = { Text("+ Link $preset", color = TextPrimary) },
+                text = { Text("+ Link $preset", color = TextSecondary, fontSize = 13.sp) },
                 onClick = { onSelectNew(preset) }
             )
         }
