@@ -269,14 +269,18 @@ fun HomeScreen(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        // Amount Display Row with Instant Privacy Eye Toggle
+                        // Amount Display Row
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             val balanceStr = "৳${currencyFormat.format(totalBalance)}"
-                            val displayText = if (hideTotalBalance) "৳ ••••••" else balanceStr
+                            val displayText = if (hideTotalBalance && !showTemporarily) {
+                                "৳" + balanceStr.substring(1).filter { it != ',' && it != '.' }.map { '*' }.joinToString("")
+                            } else {
+                                balanceStr
+                            }
 
                             Text(
                                 text = displayText,
@@ -285,21 +289,21 @@ fun HomeScreen(
                                 color = TextPrimary
                             )
 
-                            IconButton(
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    scope.launch {
-                                        preferencesManager.setHideTotalBalance(!hideTotalBalance)
-                                    }
-                                },
-                                modifier = Modifier.size(36.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (hideTotalBalance) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = "Toggle Privacy Balance Masking",
-                                    tint = if (hideTotalBalance) AccentTeal else TextSecondary,
-                                    modifier = Modifier.size(22.dp)
-                                )
+                            if (hideTotalBalance) {
+                                IconButton(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        showTemporarily = true
+                                    },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (showTemporarily) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = "Show/Hide Balance",
+                                        tint = TextSecondary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
                         }
 
