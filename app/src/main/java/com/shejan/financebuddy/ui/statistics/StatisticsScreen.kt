@@ -941,7 +941,7 @@ private fun IncomeExpenseComparisonRow(
                         .fillMaxWidth()
                         .height(10.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF1E293B))
+                        .background(CardDarker)
                 ) {
                     if (total > 0) {
                         Row(modifier = Modifier.fillMaxSize()) {

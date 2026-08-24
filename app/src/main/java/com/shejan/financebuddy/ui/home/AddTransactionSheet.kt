@@ -1411,7 +1411,7 @@ fun AddTransactionSheet(
                         .wrapContentHeight(),
                     shape = RoundedCornerShape(20.dp),
                     color = CardDark,
-                    border = BorderStroke(1.dp, Color(0xFF334155))
+                    border = BorderStroke(1.dp, DividerColor)
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
@@ -1494,8 +1494,8 @@ fun AddTransactionSheet(
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = AccentTeal,
                                     contentColor = BackgroundDark,
-                                    disabledContainerColor = Color(0xFF1E293B),
-                                    disabledContentColor = Color(0xFF64748B)
+                                    disabledContainerColor = CardDarker,
+                                    disabledContentColor = TextMuted
                                 ),
                                 modifier = Modifier
                                     .weight(1f)
@@ -1524,7 +1524,7 @@ fun AddTransactionSheet(
                         .wrapContentHeight(),
                     shape = RoundedCornerShape(20.dp),
                     color = CardDark,
-                    border = BorderStroke(1.dp, Color(0xFF334155))
+                    border = BorderStroke(1.dp, DividerColor)
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
@@ -1555,8 +1555,8 @@ fun AddTransactionSheet(
                                 shape = RoundedCornerShape(12.dp),
                                 border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF334155),
-                                    contentColor = Color.White
+                                    containerColor = CardDarker,
+                                    contentColor = TextPrimary
                                 ),
                                 modifier = Modifier
                                     .weight(1f)

@@ -1043,7 +1043,7 @@ fun MainDashboardContainer(
                     color = CardDark,
                     tonalElevation = 0.dp,
                     shadowElevation = 16.dp,
-                    border = BorderStroke(1.dp, Color(0xFF334155).copy(alpha = 0.6f))
+                    border = BorderStroke(1.dp, DividerColor)
                 ) {
                     Row(
                         modifier = Modifier

@@ -15,27 +15,27 @@ var isDarkModeGlobal: Boolean
 
 // === Dynamic Background & Surface (Deep Charcoal/Black & Surface Gray Palette) ===
 val BackgroundDark: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0xFF000000)
+    "AMOLED" -> Color(0xFF000000) // Pure OLED Pitch Black
     "LIGHT"  -> Color(0xFFF1F5F9)
-    else     -> Color(0xFF0A0D14) // Deep Charcoal / Black Background
+    else     -> Color(0xFF0A0D14) // Deep Charcoal / Dark Canvas
 }
 
 val SurfaceDark: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0xFF05070A)
+    "AMOLED" -> Color(0xFF080808) // Refined AMOLED Surface for Drawers & Sheets
     "LIGHT"  -> Color(0xFFFFFFFF)
-    else     -> Color(0xFF121620) // Surface Gray (slightly lighter than background)
+    else     -> Color(0xFF121620)
 }
 
 val CardDark: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0xFF0A0A0A)
+    "AMOLED" -> Color(0xFF121212) // Material Elevation Level 1 for AMOLED Cards
     "LIGHT"  -> Color(0xFFFFFFFF)
-    else     -> Color(0xFF171B26) // Widget Card Gray (creates subtle depth & separation)
+    else     -> Color(0xFF171B26)
 }
 
 val CardDarker: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0xFF000000)
+    "AMOLED" -> Color(0xFF0A0A0A) // Recessed Card / Input Container for AMOLED
     "LIGHT"  -> Color(0xFFE2E8F0)
-    else     -> Color(0xFF0E111A) // Recessed Card / Input Background
+    else     -> Color(0xFF0E111A)
 }
 
 // === Accent Colors ===

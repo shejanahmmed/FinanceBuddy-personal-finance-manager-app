@@ -1287,12 +1287,12 @@ fun ThemeOptionRow(
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(
                         modifier = Modifier
-                            .background(Color(0xFF334155), RoundedCornerShape(6.dp))
+                            .background(CardDarker, RoundedCornerShape(6.dp))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = badgeText,
-                            color = Color(0xFF94A3B8),
+                            color = TextMuted,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold
                         )
