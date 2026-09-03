@@ -22,6 +22,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.activity.compose.BackHandler
+import com.shejan.financebuddy.ui.common.DiscardChangesDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.PickVisualMediaRequest
@@ -945,6 +947,33 @@ private fun PayeeAccountFormSheet(
     var nickname by remember(existingAccount) { mutableStateOf(existingAccount?.nickname ?: "") }
 
     var nameExpanded by remember { mutableStateOf(false) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val isFormDirty = remember(bankName, accountNumber, nickname, isEditing) {
+        if (isEditing) {
+            bankName.trim() != (existingAccount?.bankName ?: "") ||
+            accountNumber.trim() != (existingAccount?.accountNumber ?: "") ||
+            nickname.trim() != (existingAccount?.nickname ?: "")
+        } else {
+            bankName.trim().isNotEmpty() || accountNumber.trim().isNotEmpty() || nickname.trim().isNotEmpty()
+        }
+    }
+
+    BackHandler(enabled = isFormDirty) {
+        showDiscardDialog = true
+    }
+
+    if (showDiscardDialog) {
+        DiscardChangesDialog(
+            title = if (isEditing) "Discard Account Changes?" else "Discard Account?",
+            message = "Are you sure you want to discard? Any entered account details will be lost.",
+            onDismissRequest = { showDiscardDialog = false },
+            onConfirmDiscard = {
+                showDiscardDialog = false
+                onDismiss()
+            }
+        )
+    }
 
     val presetList = if (type == "BANK") PRESET_BANKS else PRESET_MFS
     val filteredPresets = if (bankName.isBlank()) presetList else presetList.filter { it.contains(bankName, ignoreCase = true) }
@@ -952,7 +981,13 @@ private fun PayeeAccountFormSheet(
     val isValid = bankName.trim().isNotBlank() && accountNumber.trim().isNotBlank()
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            if (isFormDirty) {
+                showDiscardDialog = true
+            } else {
+                onDismiss()
+            }
+        },
         sheetState = sheetState,
         containerColor = CardDark,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),

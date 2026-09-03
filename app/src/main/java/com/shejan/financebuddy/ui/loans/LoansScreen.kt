@@ -29,6 +29,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.activity.compose.BackHandler
+import com.shejan.financebuddy.ui.common.DiscardChangesDialog
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -2092,6 +2094,27 @@ fun AddLoanFormSheet(
     }
 
     var expandedDropdown by remember { mutableStateOf(false) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val isFormDirty = remember(amountInput, monthsInput, rateInput) {
+        amountInput.trim().isNotEmpty() || monthsInput.trim().isNotEmpty() || rateInput.trim().isNotEmpty()
+    }
+
+    BackHandler(enabled = isFormDirty) {
+        showDiscardDialog = true
+    }
+
+    if (showDiscardDialog) {
+        DiscardChangesDialog(
+            title = "Discard Loan Changes?",
+            message = "Are you sure you want to discard this loan entry? Any entered loan details will be lost.",
+            onDismissRequest = { showDiscardDialog = false },
+            onConfirmDiscard = {
+                showDiscardDialog = false
+                onDismiss()
+            }
+        )
+    }
 
     // Parsed states for calculations
     val parsedAmount = remember(amountInput) { amountInput.toDoubleOrNull() ?: 0.0 }
@@ -2307,7 +2330,13 @@ fun AddLoanFormSheet(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
-                    onClick = onDismiss,
+                    onClick = {
+                        if (isFormDirty) {
+                            showDiscardDialog = true
+                        } else {
+                            onDismiss()
+                        }
+                    },
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
                     border = BorderStroke(1.dp, DividerColor),
                     modifier = Modifier.weight(1f),
@@ -2375,6 +2404,27 @@ fun RepayLoanFormSheet(
     }
     var selectedAccount by remember { mutableStateOf(account ?: accounts.firstOrNull()) }
     var expandedDropdown by remember { mutableStateOf(false) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val isFormDirty = remember(repayAmountInput.text, initialAmount) {
+        repayAmountInput.text.trim() != initialAmount.trim() && repayAmountInput.text.trim().isNotEmpty()
+    }
+
+    BackHandler(enabled = isFormDirty) {
+        showDiscardDialog = true
+    }
+
+    if (showDiscardDialog) {
+        DiscardChangesDialog(
+            title = "Discard Repayment?",
+            message = "Are you sure you want to discard this repayment? Entered repayment amount will be lost.",
+            onDismissRequest = { showDiscardDialog = false },
+            onConfirmDiscard = {
+                showDiscardDialog = false
+                onDismiss()
+            }
+        )
+    }
 
     val parsedAmount = remember(repayAmountInput.text) { repayAmountInput.text.toDoubleOrNull() ?: 0.0 }
     val accountBalance = remember(selectedAccount) { selectedAccount?.balance ?: 0.0 }
@@ -2550,7 +2600,13 @@ fun RepayLoanFormSheet(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             OutlinedButton(
-                onClick = onDismiss,
+                onClick = {
+                    if (isFormDirty) {
+                        showDiscardDialog = true
+                    } else {
+                        onDismiss()
+                    }
+                },
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
                 border = BorderStroke(1.dp, DividerColor),
                 modifier = Modifier.weight(1f),
@@ -2604,6 +2660,27 @@ fun AddPersonalLoanFormSheet(
     }
 
     var expandedDropdown by remember { mutableStateOf(false) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val isFormDirty = remember(lenderInput, amountInput) {
+        lenderInput.trim().isNotEmpty() || amountInput.trim().isNotEmpty()
+    }
+
+    BackHandler(enabled = isFormDirty) {
+        showDiscardDialog = true
+    }
+
+    if (showDiscardDialog) {
+        DiscardChangesDialog(
+            title = if (isLent) "Discard Lent Entry?" else "Discard Borrowed Entry?",
+            message = "Are you sure you want to discard? Any entered personal loan details will be lost.",
+            onDismissRequest = { showDiscardDialog = false },
+            onConfirmDiscard = {
+                showDiscardDialog = false
+                onDismiss()
+            }
+        )
+    }
 
     // Parsed states for calculations
     val parsedAmount = remember(amountInput) { amountInput.toDoubleOrNull() ?: 0.0 }
@@ -2832,7 +2909,13 @@ fun AddPersonalLoanFormSheet(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
-                    onClick = onDismiss,
+                    onClick = {
+                        if (isFormDirty) {
+                            showDiscardDialog = true
+                        } else {
+                            onDismiss()
+                        }
+                    },
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
                     border = BorderStroke(1.dp, DividerColor),
                     modifier = Modifier.weight(1f),

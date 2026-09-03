@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import android.content.Context
+import androidx.activity.compose.BackHandler
+import com.shejan.financebuddy.ui.common.DiscardChangesDialog
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -305,6 +307,14 @@ fun AddTransactionSheet(
     var newCategoryName by remember { mutableStateOf("") }
     var showCancelConfirmation by remember { mutableStateOf(false) }
 
+    val isFormDirty = remember(amount, note, recipientName.text, recipientAccountNumber.text) {
+        amount.trim().isNotEmpty() || note.trim().isNotEmpty() || recipientName.text.trim().isNotEmpty()
+    }
+
+    BackHandler(enabled = isFormDirty) {
+        showCancelConfirmation = true
+    }
+
     // Reset default category if type changes and current category is invalid
     androidx.compose.runtime.LaunchedEffect(selectedType) {
         if (selectedType == "TRANSFER") {
@@ -383,7 +393,13 @@ fun AddTransactionSheet(
     }
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            if (isFormDirty) {
+                showCancelConfirmation = true
+            } else {
+                onDismiss()
+            }
+        },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             decorFitsSystemWindows = false
@@ -1338,65 +1354,15 @@ fun AddTransactionSheet(
 
         // ── Cancel Confirmation Dialog ──────────────────────────
         if (showCancelConfirmation) {
-            androidx.compose.ui.window.Dialog(onDismissRequest = { showCancelConfirmation = false }) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight()
-                        .padding(20.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    color = CardDark
-                ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = "⚠️", fontSize = 36.sp)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Discard Changes?",
-                            style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Are you sure you want to cancel? Any entered transaction details will be lost.",
-                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                            color = TextSecondary,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            TextButton(
-                                onClick = { showCancelConfirmation = false },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(44.dp)
-                                    .background(CardDarker, RoundedCornerShape(12.dp))
-                            ) {
-                                Text("Keep Editing", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                            }
-                            Button(
-                                onClick = {
-                                    showCancelConfirmation = false
-                                    onDismiss()
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(44.dp),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text("Discard", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            }
-                        }
-                    }
+            DiscardChangesDialog(
+                title = "Discard Transaction?",
+                message = "Are you sure you want to discard this transaction? Any entered details will be lost.",
+                onDismissRequest = { showCancelConfirmation = false },
+                onConfirmDiscard = {
+                    showCancelConfirmation = false
+                    onDismiss()
                 }
-            }
+            )
         }
 
         // ── Custom Category Dialogs ──────────────────────────────

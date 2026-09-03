@@ -38,6 +38,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.activity.compose.BackHandler
+import com.shejan.financebuddy.ui.common.DiscardChangesDialog
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -974,6 +976,33 @@ private fun AccountFormSheet(
     var showAs         by remember(existingAccount) { mutableStateOf(existingAccount?.showAs ?: "") }
     var nameExpanded    by remember { mutableStateOf(false) }
     var subtypeExpanded by remember { mutableStateOf(false) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val isFormDirty = remember(accountName.text, initialBalance, accountNumber, isEditing) {
+        if (isEditing) {
+            accountName.text.trim() != (existingAccount?.name ?: "") ||
+            initialBalance.trim() != (existingAccount?.balance?.toString() ?: "") ||
+            accountNumber.trim() != (existingAccount?.accountNumber ?: "")
+        } else {
+            accountName.text.trim().isNotEmpty() || initialBalance.trim().isNotEmpty() || accountNumber.trim().isNotEmpty()
+        }
+    }
+
+    BackHandler(enabled = isFormDirty) {
+        showDiscardDialog = true
+    }
+
+    if (showDiscardDialog) {
+        DiscardChangesDialog(
+            title = if (isEditing) "Discard Account Changes?" else "Discard Account?",
+            message = "Are you sure you want to discard? Any entered account details will be lost.",
+            onDismissRequest = { showDiscardDialog = false },
+            onConfirmDiscard = {
+                showDiscardDialog = false
+                onDismiss()
+            }
+        )
+    }
 
     val presetList = if (accountType == "BANK") PRESET_BANKS else PRESET_MFS
     val filteredPresets = if (accountName.text.isBlank()) presetList else presetList.filter { it.contains(accountName.text, ignoreCase = true) }
@@ -983,7 +1012,13 @@ private fun AccountFormSheet(
             (isEditing || initialBalance.trim().isNotBlank())
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            if (isFormDirty) {
+                showDiscardDialog = true
+            } else {
+                onDismiss()
+            }
+        },
         sheetState = sheetState,
         containerColor = CardDark,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),

@@ -9,6 +9,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.activity.compose.BackHandler
+import com.shejan.financebuddy.ui.common.DiscardChangesDialog
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.background
@@ -740,9 +742,36 @@ fun AddGoalSheet(
     var selectedEmoji  by remember { mutableStateOf(goalEmojis.first()) }
     var selectedColor  by remember { mutableStateOf(goalColorOptions.first()) }
     var error          by remember { mutableStateOf<String?>(null) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val isFormDirty = remember(title, targetAmount) {
+        title.trim().isNotEmpty() || targetAmount.trim().isNotEmpty()
+    }
+
+    BackHandler(enabled = isFormDirty) {
+        showDiscardDialog = true
+    }
+
+    if (showDiscardDialog) {
+        DiscardChangesDialog(
+            title = "Discard Goal?",
+            message = "Are you sure you want to discard this savings goal? Any entered goal details will be lost.",
+            onDismissRequest = { showDiscardDialog = false },
+            onConfirmDiscard = {
+                showDiscardDialog = false
+                onDismiss()
+            }
+        )
+    }
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            if (isFormDirty) {
+                showDiscardDialog = true
+            } else {
+                onDismiss()
+            }
+        },
         sheetState       = sheetState,
         containerColor   = CardDarker,
         shape            = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
@@ -930,6 +959,27 @@ fun DepositSheet(
     var amount by remember { mutableStateOf("") }
     var selectedAccountId by remember { mutableStateOf<Int?>(accounts.firstOrNull()?.id) }
     var error  by remember { mutableStateOf<String?>(null) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val isFormDirty = remember(amount) {
+        amount.trim().isNotEmpty()
+    }
+
+    BackHandler(enabled = isFormDirty) {
+        showDiscardDialog = true
+    }
+
+    if (showDiscardDialog) {
+        DiscardChangesDialog(
+            title = "Discard Deposit?",
+            message = "Are you sure you want to discard this deposit? Entered amount will be lost.",
+            onDismissRequest = { showDiscardDialog = false },
+            onConfirmDiscard = {
+                showDiscardDialog = false
+                onDismiss()
+            }
+        )
+    }
 
     val accentColor = remember(goal.colorHex) {
         try { Color(android.graphics.Color.parseColor(goal.colorHex)) }
@@ -941,7 +991,13 @@ fun DepositSheet(
     else 0
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            if (isFormDirty) {
+                showDiscardDialog = true
+            } else {
+                onDismiss()
+            }
+        },
         sheetState       = sheetState,
         containerColor   = CardDarker,
         shape            = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)

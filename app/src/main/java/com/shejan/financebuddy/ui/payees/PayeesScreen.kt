@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.sp
 import com.shejan.financebuddy.data.db.PayeeAccountEntity
 import com.shejan.financebuddy.data.db.PayeeEntity
 import com.shejan.financebuddy.ui.theme.*
+import androidx.activity.compose.BackHandler
+import com.shejan.financebuddy.ui.common.DiscardChangesDialog
 import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.UUID
@@ -293,13 +295,40 @@ private fun AddPayeeSheet(
 ) {
     var name by remember { mutableStateOf("") }
     var accountsList by remember { mutableStateOf(listOf<PayeeAccountDraft>()) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val isFormDirty = remember(name, accountsList) {
+        name.trim().isNotEmpty() || accountsList.isNotEmpty()
+    }
+
+    BackHandler(enabled = isFormDirty) {
+        showDiscardDialog = true
+    }
+
+    if (showDiscardDialog) {
+        DiscardChangesDialog(
+            title = "Discard Recipient?",
+            message = "Are you sure you want to discard this recipient profile? Any entered details will be lost.",
+            onDismissRequest = { showDiscardDialog = false },
+            onConfirmDiscard = {
+                showDiscardDialog = false
+                onDismiss()
+            }
+        )
+    }
 
     val isMainNameValid = name.trim().isNotBlank()
     val areAccountsValid = accountsList.all { it.bankName.trim().isNotBlank() && it.accountNumber.trim().isNotBlank() }
     val isValid = isMainNameValid && areAccountsValid
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            if (isFormDirty) {
+                showDiscardDialog = true
+            } else {
+                onDismiss()
+            }
+        },
         sheetState = sheetState,
         containerColor = CardDark,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),

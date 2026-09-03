@@ -28,6 +28,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.activity.compose.BackHandler
+import com.shejan.financebuddy.ui.common.DiscardChangesDialog
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.geometry.Offset
@@ -665,6 +667,27 @@ fun AddBudgetSheet(
     }
     var limitAmount      by remember { mutableStateOf("") }
     var error            by remember { mutableStateOf<String?>(null) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val isFormDirty = remember(limitAmount) {
+        limitAmount.trim().isNotEmpty()
+    }
+
+    BackHandler(enabled = isFormDirty) {
+        showDiscardDialog = true
+    }
+
+    if (showDiscardDialog) {
+        DiscardChangesDialog(
+            title = "Discard Budget Changes?",
+            message = "Are you sure you want to discard this budget entry? Entered amount will be lost.",
+            onDismissRequest = { showDiscardDialog = false },
+            onConfirmDiscard = {
+                showDiscardDialog = false
+                onDismiss()
+            }
+        )
+    }
 
     // Available categories = those not already budgeted
     val available = remember(allExpenseCategories, existingCategories) {
@@ -678,7 +701,13 @@ fun AddBudgetSheet(
     }
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            if (isFormDirty) {
+                showDiscardDialog = true
+            } else {
+                onDismiss()
+            }
+        },
         sheetState       = sheetState,
         containerColor   = CardDarker,
         shape            = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
