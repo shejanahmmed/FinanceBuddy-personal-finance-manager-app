@@ -48,8 +48,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.lazy.LazyRow
 import com.shejan.financebuddy.data.db.LoanEntity
 import com.shejan.financebuddy.data.db.AccountEntity
+import com.shejan.financebuddy.data.db.PayeeEntity
 import com.shejan.financebuddy.ui.theme.*
 import java.text.DecimalFormat
 import java.util.Locale
@@ -118,6 +120,7 @@ private fun calculateEmi(principal: Double, annualRate: Double, months: Int): Do
 fun LoansScreen(
     loans: List<LoanEntity>,
     accounts: List<AccountEntity>,
+    payees: List<PayeeEntity> = emptyList(),
     onBack: () -> Unit,
     onAddLoan: (LoanEntity, accountId: Int) -> Unit,
     onDeleteLoan: (LoanEntity) -> Unit,
@@ -685,6 +688,7 @@ fun LoansScreen(
         ) {
             AddPersonalLoanFormSheet(
                 accounts = accounts,
+                payees = payees,
                 isLent = isAddingPersonalLoanLent,
                 onDismiss = { showAddPersonalLoanSheet = false },
                 onAddLoan = { lender, amount, accountId ->
@@ -751,6 +755,7 @@ fun LoansScreen(
             val loanToEdit = editingLoan!!
             AddPersonalLoanFormSheet(
                 accounts = accounts,
+                payees = payees,
                 isLent = loanToEdit.isLent,
                 initialLoan = loanToEdit,
                 onDismiss = { editingLoan = null },
@@ -2580,6 +2585,7 @@ fun RepayLoanFormSheet(
 @Composable
 fun AddPersonalLoanFormSheet(
     accounts: List<AccountEntity>,
+    payees: List<PayeeEntity> = emptyList(),
     isLent: Boolean = false,
     initialLoan: LoanEntity? = null,
     onDismiss: () -> Unit,
@@ -2725,6 +2731,52 @@ fun AddPersonalLoanFormSheet(
                 colors = loanTextFieldColors(),
                 modifier = Modifier.fillMaxWidth()
             )
+
+            // Saved Recipient / Friend Suggestions
+            if (payees.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "SAVED RECIPIENTS / FRIENDS",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextMuted
+                    )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(payees) { payee ->
+                            val isSelected = lenderInput.equals(payee.name, ignoreCase = true)
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { lenderInput = payee.name },
+                                label = { Text(payee.name, fontSize = 12.sp) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Person,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = if (isSelected) AccentTeal else TextSecondary
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AccentTeal.copy(alpha = 0.2f),
+                                    selectedLabelColor = AccentTeal,
+                                    containerColor = CardDarker,
+                                    labelColor = TextPrimary
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    borderColor = if (isSelected) AccentTeal else DividerColor,
+                                    selectedBorderColor = AccentTeal,
+                                    enabled = true,
+                                    selected = isSelected
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                        }
+                    }
+                }
+            }
 
             // Amount Input (৳)
             OutlinedTextField(

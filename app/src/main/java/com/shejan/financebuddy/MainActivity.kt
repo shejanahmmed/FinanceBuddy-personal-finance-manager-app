@@ -83,6 +83,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Brush
+import java.util.Locale
 import com.shejan.financebuddy.data.PreferencesManager
 import com.shejan.financebuddy.data.db.FinanceDatabase
 import com.shejan.financebuddy.data.db.AccountEntity
@@ -357,15 +358,27 @@ fun AppNavigation(
             composable("loans") {
                 val loanDao = remember { database.loanDao() }
                 val transactionDao = remember { database.transactionDao() }
+                val payeeDao = remember { database.payeeDao() }
                 val loans by loanDao.getAllLoans().collectAsState(initial = emptyList())
+                val payees by payeeDao.getAllPayees().collectAsState(initial = emptyList())
                 val scope = rememberCoroutineScope()
                 LoansScreen(
                     loans = loans,
                     accounts = accounts,
+                    payees = payees,
                     onBack = { navController.popBackStack() },
                     onAddLoan = { loan, accountId ->
                         scope.launch(Dispatchers.IO) {
                             loanDao.insertLoan(loan)
+                            // Auto-create Recipient Profile for personal loans if not existing
+                            if (loan.loanType == "PERSONAL" && loan.lenderName.isNotBlank()) {
+                                val cleanName = loan.lenderName.trim()
+                                val existingPayees = payeeDao.getAllPayeesOnce()
+                                if (existingPayees.none { it.name.equals(cleanName, ignoreCase = true) }) {
+                                    val uniqueId = "PAY-" + java.util.UUID.randomUUID().toString().take(4).uppercase(Locale.ROOT)
+                                    payeeDao.insertPayee(PayeeEntity(name = cleanName, uniqueId = uniqueId))
+                                }
+                            }
                             val (txType, txNote) = if (loan.isLent) {
                                 Pair("EXPENSE", "Lent money to ${loan.lenderName}")
                             } else {
@@ -390,6 +403,14 @@ fun AppNavigation(
                         scope.launch(Dispatchers.IO) {
                             val updatedLoan = loan.copy(repaidAmount = loan.repaidAmount + repayAmount)
                             loanDao.insertLoan(updatedLoan)
+                            if (loan.loanType == "PERSONAL" && loan.lenderName.isNotBlank()) {
+                                val cleanName = loan.lenderName.trim()
+                                val existingPayees = payeeDao.getAllPayeesOnce()
+                                if (existingPayees.none { it.name.equals(cleanName, ignoreCase = true) }) {
+                                    val uniqueId = "PAY-" + java.util.UUID.randomUUID().toString().take(4).uppercase(Locale.ROOT)
+                                    payeeDao.insertPayee(PayeeEntity(name = cleanName, uniqueId = uniqueId))
+                                }
+                            }
                             val (txType, txNote) = if (loan.isLent) {
                                 Pair("INCOME", "Repayment from ${loan.lenderName}")
                             } else {
