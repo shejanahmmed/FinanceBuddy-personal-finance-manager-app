@@ -458,7 +458,7 @@ fun AddTransactionSheet(
                     .height(48.dp)
                     .clip(CircleShape)
                     .background(Color.Black)
-                    .border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape)
+                    .border(1.dp, DividerColor, CircleShape)
                     .padding(4.dp)
             ) {
                 val segmentWidth = maxWidth / 3
@@ -554,7 +554,7 @@ fun AddTransactionSheet(
                                 .background(if (isSelected) indicatorColor else CardDark)
                                 .border(
                                     width = 1.dp,
-                                    color = if (isSelected) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.25f),
+                                    color = if (isSelected) Color.White.copy(alpha = 0.35f) else DividerColor,
                                     shape = RoundedCornerShape(20.dp)
                                 )
                                 .combinedClickable(
@@ -1283,7 +1283,7 @@ fun AddTransactionSheet(
                 },
                 enabled  = isValid,
                 shape    = RoundedCornerShape(12.dp),
-                border   = BorderStroke(1.dp, if (isValid) AccentTeal.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.15f)),
+                border   = BorderStroke(1.dp, if (isValid) AccentTeal.copy(alpha = 0.6f) else DividerColor),
                 colors   = ButtonDefaults.buttonColors(
                     containerColor = Color.Transparent,
                     disabledContainerColor = CardDarker
@@ -1328,7 +1328,7 @@ fun AddTransactionSheet(
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
+                border = BorderStroke(1.dp, DividerColor),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = ExpenseRed
                 ),
@@ -1413,7 +1413,7 @@ fun AddTransactionSheet(
                                     newCategoryName = ""
                                 },
                                 shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
+                                border = BorderStroke(1.dp, DividerColor),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = ExpenseRed,
                                     contentColor = Color.White
@@ -1455,7 +1455,7 @@ fun AddTransactionSheet(
                                 shape = RoundedCornerShape(12.dp),
                                 border = BorderStroke(
                                     1.dp,
-                                    if (newCategoryName.trim().isNotEmpty()) AccentTeal.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.15f)
+                                    if (newCategoryName.trim().isNotEmpty()) AccentTeal.copy(alpha = 0.6f) else DividerColor
                                 ),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = AccentTeal,
@@ -1519,7 +1519,7 @@ fun AddTransactionSheet(
                             Button(
                                 onClick = { showDeleteDialog = false },
                                 shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
+                                border = BorderStroke(1.dp, DividerColor),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = CardDarker,
                                     contentColor = TextPrimary
@@ -1554,7 +1554,7 @@ fun AddTransactionSheet(
                                     showDeleteDialog = false
                                 },
                                 shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)),
+                                border = BorderStroke(1.dp, DividerColor),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = ExpenseRed,
                                     contentColor = Color.White
@@ -1596,7 +1596,7 @@ private fun TextFieldColors() = OutlinedTextFieldDefaults.colors(
     unfocusedTextColor      = TextPrimary,
     disabledTextColor       = TextPrimary,
     focusedBorderColor      = AccentTeal,
-    unfocusedBorderColor    = Color.White.copy(alpha = 0.35f),
+    unfocusedBorderColor    = DividerColor,
     focusedContainerColor   = CardDark,
     unfocusedContainerColor = CardDark,
     disabledContainerColor  = CardDark,
