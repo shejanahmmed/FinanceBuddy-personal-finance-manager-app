@@ -110,9 +110,9 @@ val GradientEnd: Color get() = when (currentThemeModeState) {
 
 // === Dynamic Divider / Border ===
 val DividerColor: Color get() = when (currentThemeModeState) {
-    "AMOLED" -> Color(0x33FFFFFF) // 20% opacity border
+    "AMOLED" -> Color(0x26FFFFFF) // Thin crisp light white border (15% white)
     "LIGHT"  -> Color(0xFFCBD5E1)
-    else     -> Color(0xFF242A3E) // Distinct Visible Border Outline
+    else     -> Color(0x26FFFFFF) // Thin crisp light white border for Dark Mode (15% white)
 }
 
 // === On-Accent ===

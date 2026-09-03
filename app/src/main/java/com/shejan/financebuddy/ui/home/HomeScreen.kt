@@ -325,7 +325,7 @@ fun HomeScreen(
                                     ) { onIncomeClick() },
                                 shape = RoundedCornerShape(16.dp),
                                 color = CardDarker,
-                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f))
+                                border = BorderStroke(1.dp, DividerColor)
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -381,7 +381,7 @@ fun HomeScreen(
                                     ) { onExpenseClick() },
                                 shape = RoundedCornerShape(16.dp),
                                 color = CardDarker,
-                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f))
+                                border = BorderStroke(1.dp, DividerColor)
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -502,7 +502,9 @@ fun HomeScreen(
                 // ── 3. Expense Graph (Weekly Chart) ───────────────────
                 SectionHeader(title = "Weekly Spending", onViewAllClick = onNavigateToHistory)
                 Card(
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = CardDark),
+                    border = BorderStroke(1.dp, DividerColor),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 8.dp)
@@ -541,8 +543,9 @@ fun HomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp, vertical = 16.dp)
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(RoundedCornerShape(20.dp))
                             .background(CardDark)
+                            .border(1.dp, DividerColor, RoundedCornerShape(20.dp))
                             .padding(32.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -553,8 +556,9 @@ fun HomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp, vertical = 8.dp)
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(RoundedCornerShape(20.dp))
                             .background(CardDark)
+                            .border(1.dp, DividerColor, RoundedCornerShape(20.dp))
                     ) {
                         recentTransactions.forEachIndexed { index, tx ->
                             TransactionRowItem(
@@ -579,7 +583,9 @@ fun HomeScreen(
                 // ── 5. Balance Trend (Line Chart) ─────────────────────
                 SectionHeader(title = "Balance Trend")
                 Card(
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = CardDark),
+                    border = BorderStroke(1.dp, DividerColor),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 8.dp)
@@ -616,8 +622,9 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 8.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(20.dp))
                         .background(CardDark)
+                        .border(1.dp, DividerColor, RoundedCornerShape(20.dp))
                         .padding(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -661,8 +668,9 @@ fun HomeScreen(
                 }
 
                 Card(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = CardDark),
+                    border = BorderStroke(1.dp, DividerColor),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 8.dp)
@@ -1150,6 +1158,7 @@ fun SummaryCard(
     Card(
         shape    = RoundedCornerShape(16.dp),
         colors   = CardDefaults.cardColors(containerColor = CardDark),
+        border   = BorderStroke(1.dp, DividerColor),
         modifier = modifier
             .height(84.dp)
             .clickable(
