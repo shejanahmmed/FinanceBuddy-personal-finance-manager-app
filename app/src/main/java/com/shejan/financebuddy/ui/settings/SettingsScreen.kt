@@ -1,9 +1,19 @@
 package com.shejan.financebuddy.ui.settings
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,24 +24,25 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Contrast
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.SyncDisabled
@@ -50,23 +61,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.fragment.app.FragmentActivity
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Gavel
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.PrivacyTip
 import com.shejan.financebuddy.data.BackupManager
 import com.shejan.financebuddy.data.PreferencesManager
 import com.shejan.financebuddy.data.db.FinanceDatabase
+import com.shejan.financebuddy.reminder.DailyReminderManager
 import com.shejan.financebuddy.security.BiometricHelper
 import com.shejan.financebuddy.ui.security.PinSetupDialog
 import com.shejan.financebuddy.ui.theme.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun SettingsScreen(
@@ -93,13 +105,15 @@ fun SettingsScreen(
     val appLockPin by preferencesManager.appLockPin.collectAsState(initial = "")
     val autoLockTimeout by preferencesManager.autoLockTimeout.collectAsState(initial = "IMMEDIATELY")
 
+    // ─── Daily Reminder State ───────────────────────────────────
+    val isDailyReminderEnabled by preferencesManager.isDailyReminderEnabled.collectAsState(initial = false)
+    val dailyReminderHour by preferencesManager.dailyReminderHour.collectAsState(initial = 20)
+    val dailyReminderMinute by preferencesManager.dailyReminderMinute.collectAsState(initial = 0)
+    var showTimePickerDialog by remember { mutableStateOf(false) }
+
     var showPinSetupDialog by remember { mutableStateOf(false) }
     var showVerifyDialog by remember { mutableStateOf(false) }
     var pendingSecurityAction by remember { mutableStateOf<(() -> Unit)?>(null) }
-
-    // ─── Backup & Restore State ─────────────────────────────────
-    var isExporting by remember { mutableStateOf(false) }
-    var isImporting by remember { mutableStateOf(false) }
 
     var toastMessage by remember { mutableStateOf<String?>(null) }
     fun showToast(msg: String) {
@@ -108,16 +122,35 @@ fun SettingsScreen(
 
     LaunchedEffect(toastMessage) {
         if (toastMessage != null) {
-            kotlinx.coroutines.delay(2500)
+            delay(2500.milliseconds)
             toastMessage = null
         }
     }
+
+    // ─── Notification Permission Launcher (Android 13+) ────────
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            scope.launch {
+                preferencesManager.setDailyReminderEnabled(true)
+                DailyReminderManager.scheduleDailyReminder(context, dailyReminderHour, dailyReminderMinute)
+            }
+            showToast("Daily reminder enabled ⏰")
+        } else {
+            showToast("Notification permission required for daily reminders")
+        }
+    }
+
+    // ─── Backup & Restore State ─────────────────────────────────
+    var isExporting by remember { mutableStateOf(false) }
+    var isImporting by remember { mutableStateOf(false) }
     var showImportConfirmDialog by remember { mutableStateOf(false) }
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
 
     // SAF launcher for creating a backup file
     // Using "*/*" MIME type to avoid ActivityNotFoundException on devices
-    // that don't recognize custom file extensions like .financebuddy
+    // that do not recognize custom file extensions
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("*/*")
     ) { uri ->
@@ -467,7 +500,253 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // ─── SECTION 4: APP SECURITY & LOCK ───────────────────────
+                // ─── SECTION 4: DAILY REMINDER ────────────────────────────
+                Text(
+                    text = "Daily Reminder",
+                    color = AccentTeal,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(CardDark)
+                        .border(1.dp, DividerColor, RoundedCornerShape(16.dp))
+                        .padding(4.dp)
+                        .animateContentSize()
+                ) {
+                    // Daily Reminder Toggle Switch Row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isDailyReminderEnabled) AccentTeal.copy(alpha = 0.15f) else DividerColor.copy(alpha = 0.5f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isDailyReminderEnabled) Icons.Default.NotificationsActive else Icons.Default.NotificationsOff,
+                                    contentDescription = null,
+                                    tint = if (isDailyReminderEnabled) AccentTeal else TextSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = "Daily Finance Reminder",
+                                    color = TextPrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Get notified everyday to record and check your finances",
+                                    color = TextSecondary,
+                                    fontSize = 11.sp,
+                                    lineHeight = 14.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Switch(
+                            checked = isDailyReminderEnabled,
+                            onCheckedChange = { enable ->
+                                if (enable) {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                                    ) {
+                                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    } else {
+                                        scope.launch {
+                                            preferencesManager.setDailyReminderEnabled(true)
+                                            DailyReminderManager.scheduleDailyReminder(context, dailyReminderHour, dailyReminderMinute)
+                                        }
+                                        showToast("Daily reminder enabled ⏰")
+                                    }
+                                } else {
+                                    scope.launch {
+                                        preferencesManager.setDailyReminderEnabled(false)
+                                        DailyReminderManager.cancelDailyReminder(context)
+                                    }
+                                    showToast("Daily reminder disabled")
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = OnAccent,
+                                checkedTrackColor = AccentTeal,
+                                checkedBorderColor = Color.Transparent,
+                                uncheckedThumbColor = SwitchThumbUnchecked,
+                                uncheckedTrackColor = SwitchTrackUnchecked,
+                                uncheckedBorderColor = SwitchBorderUnchecked
+                            )
+                        )
+                    }
+
+                    // Expanded reminder controls shown ONLY when toggle is ON
+                    if (isDailyReminderEnabled) {
+                        // Reminder Time Row (Clickable to open Time Picker)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showTimePickerDialog = true }
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(AccentTeal.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AccessTime,
+                                    contentDescription = null,
+                                    tint = AccentTeal,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Reminder Time",
+                                    color = TextPrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "Tap to choose a custom notification time",
+                                    color = TextSecondary,
+                                    fontSize = 11.sp,
+                                    lineHeight = 14.sp
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            // Formatted Time Badge Pill
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = CardDarker,
+                                border = BorderStroke(1.dp, AccentTeal.copy(alpha = 0.4f)),
+                                modifier = Modifier.clickable { showTimePickerDialog = true }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = DailyReminderManager.formatTime(dailyReminderHour, dailyReminderMinute),
+                                        color = AccentTeal,
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit Time",
+                                        tint = AccentTeal.copy(alpha = 0.8f),
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Quick Presets Row
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Quick Presets",
+                                color = TextMuted,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(bottom = 6.dp)
+                            )
+
+                            val presetTimes = listOf(
+                                Triple(20, 0, "08:00 PM"),
+                                Triple(21, 0, "09:00 PM"),
+                                Triple(22, 0, "10:00 PM"),
+                                Triple(8, 0, "08:00 AM")
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                presetTimes.forEach { (h, m, label) ->
+                                    val isSelected = dailyReminderHour == h && dailyReminderMinute == m
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) AccentTeal else CardDarker)
+                                            .border(1.dp, if (isSelected) AccentTeal else DividerColor, RoundedCornerShape(8.dp))
+                                            .clickable {
+                                                if (!isSelected) {
+                                                    scope.launch {
+                                                        preferencesManager.setDailyReminderTime(h, m)
+                                                        DailyReminderManager.scheduleDailyReminder(context, h, m)
+                                                    }
+                                                    showToast("Reminder set to $label ⏰")
+                                                }
+                                            }
+                                            .padding(vertical = 7.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            fontSize = 10.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) OnAccent else TextSecondary,
+                                            maxLines = 1,
+                                            softWrap = false
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Info hint note
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "💡 Tapping the reminder notification opens FinanceBuddy directly to update your expenses.",
+                                color = TextMuted,
+                                fontSize = 10.5.sp,
+                                lineHeight = 14.sp
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // ─── SECTION 5: APP SECURITY & LOCK ───────────────────────
                 Text(
                     text = "App Security & Lock",
                     color = AccentTeal,
@@ -929,7 +1208,7 @@ fun SettingsScreen(
                                 try {
                                     val intent = android.content.Intent(
                                         android.content.Intent.ACTION_VIEW,
-                                        android.net.Uri.parse("https://www.farjan.me/FinanceBuddyPrivacyPolicy/")
+                                        "https://www.farjan.me/FinanceBuddyPrivacyPolicy/".toUri()
                                     )
                                     context.startActivity(intent)
                                 } catch (e: Exception) {
@@ -986,7 +1265,7 @@ fun SettingsScreen(
                                 try {
                                     val intent = android.content.Intent(
                                         android.content.Intent.ACTION_VIEW,
-                                        android.net.Uri.parse("https://github.com/shejanahmmed/personal-finance-manager-app?tab=GPL-3.0-1-ov-file")
+                                        "https://github.com/shejanahmmed/personal-finance-manager-app?tab=GPL-3.0-1-ov-file".toUri()
                                     )
                                     context.startActivity(intent)
                                 } catch (e: Exception) {
@@ -1099,6 +1378,26 @@ fun SettingsScreen(
                     }
                     showPinSetupDialog = false
                     Toast.makeText(context, "6-digit PIN saved successfully.", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+
+        // Dialog for picking daily reminder time
+        if (showTimePickerDialog) {
+            ReminderTimePickerDialog(
+                initialHour = dailyReminderHour,
+                initialMinute = dailyReminderMinute,
+                onDismiss = { showTimePickerDialog = false },
+                onConfirm = { hour, minute ->
+                    showTimePickerDialog = false
+                    scope.launch {
+                        preferencesManager.setDailyReminderTime(hour, minute)
+                        if (isDailyReminderEnabled) {
+                            DailyReminderManager.scheduleDailyReminder(context, hour, minute)
+                        }
+                    }
+                    val formatted = DailyReminderManager.formatTime(hour, minute)
+                    showToast("Daily reminder set to $formatted ⏰")
                 }
             )
         }

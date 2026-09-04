@@ -32,6 +32,9 @@ class PreferencesManager(private val context: Context) {
         private val READ_NOTIFICATION_IDS = stringSetPreferencesKey("read_notification_ids")
         private val DISMISSED_NOTIFICATION_IDS = stringSetPreferencesKey("dismissed_notification_ids")
         private val PINNED_ACCOUNT_ID = intPreferencesKey("pinned_account_id")
+        private val DAILY_REMINDER_ENABLED = booleanPreferencesKey("daily_reminder_enabled")
+        private val DAILY_REMINDER_HOUR = intPreferencesKey("daily_reminder_hour")
+        private val DAILY_REMINDER_MINUTE = intPreferencesKey("daily_reminder_minute")
     }
 
     /** Emits whether total balance should be masked with asterisks. Defaults to false. */
@@ -222,6 +225,45 @@ class PreferencesManager(private val context: Context) {
             } else {
                 prefs.remove(PINNED_ACCOUNT_ID)
             }
+        }
+    }
+
+    /** Emits whether daily finance reminder is enabled. Defaults to false. */
+    val isDailyReminderEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[DAILY_REMINDER_ENABLED] ?: false
+    }
+
+    /** Emits the daily reminder hour (0-23). Defaults to 20 (8:00 PM). */
+    val dailyReminderHour: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[DAILY_REMINDER_HOUR] ?: 20
+    }
+
+    /** Emits the daily reminder minute (0-59). Defaults to 0. */
+    val dailyReminderMinute: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[DAILY_REMINDER_MINUTE] ?: 0
+    }
+
+    /** Sets daily reminder preferences (enabled status, hour, minute). */
+    suspend fun setDailyReminder(enabled: Boolean, hour: Int, minute: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[DAILY_REMINDER_ENABLED] = enabled
+            prefs[DAILY_REMINDER_HOUR] = hour
+            prefs[DAILY_REMINDER_MINUTE] = minute
+        }
+    }
+
+    /** Sets only whether daily reminder is enabled. */
+    suspend fun setDailyReminderEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[DAILY_REMINDER_ENABLED] = enabled
+        }
+    }
+
+    /** Sets the daily reminder time. */
+    suspend fun setDailyReminderTime(hour: Int, minute: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[DAILY_REMINDER_HOUR] = hour
+            prefs[DAILY_REMINDER_MINUTE] = minute
         }
     }
 }

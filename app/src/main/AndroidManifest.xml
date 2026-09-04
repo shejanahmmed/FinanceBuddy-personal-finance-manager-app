@@ -16,6 +16,9 @@
         tools:ignore="ProtectedPermissions" />
     <!-- Notification permission for Android 13+ background transaction alerts -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Boot and Alarm permissions for Daily Finance Reminders -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:allowBackup="true"
@@ -53,6 +56,21 @@
             android:permission="android.permission.BROADCAST_SMS">
             <intent-filter android:priority="999">
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+            DailyReminderReceiver: handles daily scheduled reminders and re-arms after device reboot.
+        -->
+        <receiver
+            android:name=".reminder.DailyReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.shejan.financebuddy.action.FIRE_DAILY_REMINDER" />
             </intent-filter>
         </receiver>
     </application>
