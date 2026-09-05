@@ -1184,54 +1184,6 @@ private fun PendingTransactionCard(
                                 fontWeight = FontWeight.Bold
                             )
                         }
-
-                        // Confirm button
-                        val canConfirm = pending.fromAccountId != -1 && !isInsufficient && !isOrphaned
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(46.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(if (canConfirm) IncomeGreen else IncomeGreen.copy(alpha = 0.12f))
-                                    .border(
-                                        width = 1.dp,
-                                        color = if (canConfirm) IncomeGreen else DividerColor.copy(alpha = 0.5f),
-                                        shape = RoundedCornerShape(6.dp)
-                                    )
-                                    .clickable(enabled = canConfirm) { onConfirm(pending) },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Confirm",
-                                    tint = if (canConfirm) BackgroundDark else TextMuted,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(5.dp))
-                            Text(
-                                text = "Confirm",
-                                color = if (canConfirm) IncomeGreen else TextMuted,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            if (!canConfirm) {
-                                Text(
-                                    text = when {
-                                        pending.fromAccountId == -1 -> "No account"
-                                        isOrphaned                 -> "Account deleted"
-                                        isInsufficient             -> "Low balance"
-                                        else                       -> ""
-                                    },
-                                    color = ExpenseRed,
-                                    fontSize = 8.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
                     }
 
                     "CONFIRMED" -> {
