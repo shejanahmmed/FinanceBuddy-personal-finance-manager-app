@@ -676,7 +676,7 @@ fun LoansScreen(
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("🏦 Bank Loan (Borrowed)", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 15.sp)
+                            Text("Bank Loan (Borrowed)", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 15.sp)
                             Text("Formal EMI-based bank loan with interest rates & tenure.", color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp)
                         }
                     }
@@ -709,7 +709,7 @@ fun LoansScreen(
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("🤝 Borrow from Friend / Family", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 15.sp)
+                            Text("Borrow from Friend / Family", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 15.sp)
                             Text("Informal loan from individuals with no interest.", color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp)
                         }
                     }
@@ -742,7 +742,7 @@ fun LoansScreen(
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("📥 Lend to Friend / Family", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 15.sp)
+                            Text("Lend to Friend / Family", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 15.sp)
                             Text("Track money you lend to others and their repayments.", color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp)
                         }
                     }
