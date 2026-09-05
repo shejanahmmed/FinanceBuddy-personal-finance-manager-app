@@ -275,50 +275,12 @@ fun PendingTransactionsScreen(
                     DropdownMenu(
                         expanded = showMoreMenu,
                         onDismissRequest = { showMoreMenu = false },
+                        containerColor = CardDark,
+                        shape = RoundedCornerShape(14.dp),
                         modifier = Modifier
-                            .background(CardDarker)
-                            .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(14.dp))
+                            .border(1.dp, DividerColor, RoundedCornerShape(14.dp))
                     ) {
-                        if (pendingList.isNotEmpty()) {
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.DoneAll,
-                                            contentDescription = null,
-                                            tint = IncomeGreen,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Text("Accept All Pending (${pendingList.size})", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                    }
-                                },
-                                onClick = {
-                                    showMoreMenu = false
-                                    showConfirmAllDialog = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = null,
-                                            tint = ExpenseRed,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Text("Dismiss All Pending (${pendingList.size})", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                    }
-                                },
-                                onClick = {
-                                    showMoreMenu = false
-                                    showDismissAllDialog = true
-                                }
-                            )
-                            HorizontalDivider(color = DividerColor, modifier = Modifier.padding(vertical = 4.dp))
-                        }
-
                         DropdownMenuItem(
                             text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -374,6 +336,46 @@ fun PendingTransactionsScreen(
                                 showMappingConfigSheet = true
                             }
                         )
+
+                        if (pendingList.isNotEmpty()) {
+                            HorizontalDivider(color = DividerColor, modifier = Modifier.padding(vertical = 4.dp))
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.DoneAll,
+                                            contentDescription = null,
+                                            tint = IncomeGreen,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text("Accept All Pending (${pendingList.size})", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                },
+                                onClick = {
+                                    showMoreMenu = false
+                                    showConfirmAllDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = null,
+                                            tint = ExpenseRed,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text("Dismiss All Pending (${pendingList.size})", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                },
+                                onClick = {
+                                    showMoreMenu = false
+                                    showDismissAllDialog = true
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -597,7 +599,9 @@ fun PendingTransactionsScreen(
 
             AlertDialog(
                 onDismissRequest = { showConfirmAllDialog = false },
-                containerColor   = CardDarker,
+                containerColor   = CardDark,
+                shape            = RoundedCornerShape(20.dp),
+                modifier         = Modifier.border(1.dp, DividerColor.copy(alpha = 0.7f), RoundedCornerShape(20.dp)),
                 title = {
                     Text(
                         text = if (readyCount > 0) "Accept Pending Transactions?" else "No Bank Accounts Assigned",
@@ -649,7 +653,9 @@ fun PendingTransactionsScreen(
 
             AlertDialog(
                 onDismissRequest = { showDismissAllDialog = false },
-                containerColor   = CardDarker,
+                containerColor   = CardDark,
+                shape            = RoundedCornerShape(20.dp),
+                modifier         = Modifier.border(1.dp, DividerColor.copy(alpha = 0.7f), RoundedCornerShape(20.dp)),
                 title = {
                     Text(
                         "Dismiss All Pending?",
@@ -718,7 +724,9 @@ fun PendingTransactionsScreen(
         if (showSyncOptionsDialog) {
             AlertDialog(
                 onDismissRequest = { showSyncOptionsDialog = false },
-                containerColor   = CardDarker,
+                containerColor   = CardDark,
+                shape            = RoundedCornerShape(20.dp),
+                modifier         = Modifier.border(1.dp, DividerColor.copy(alpha = 0.7f), RoundedCornerShape(20.dp)),
                 title = {
                     Text(
                         "Sync SMS History",
@@ -750,7 +758,8 @@ fun PendingTransactionsScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(CardDark)
+                                    .background(CardDarker)
+                                    .border(1.dp, DividerColor.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                                     .clickable {
                                         showSyncOptionsDialog = false
                                         startSyncProcess(days)
@@ -1367,7 +1376,9 @@ private fun PendingTransactionCard(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            containerColor   = CardDarker,
+            containerColor   = CardDark,
+            shape            = RoundedCornerShape(20.dp),
+            modifier         = Modifier.border(1.dp, DividerColor.copy(alpha = 0.7f), RoundedCornerShape(20.dp)),
             title = {
                 Text(
                     "Delete Permanently?",
