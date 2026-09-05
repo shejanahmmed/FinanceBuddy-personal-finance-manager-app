@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.shejan.financebuddy.ui.common.AccountDropdownItemView
@@ -197,10 +198,21 @@ fun PendingTransactionsScreen(
     // Filter tab selection: "PENDING", "CONFIRMED", "DISMISSED"
     var selectedFilterTab by remember { mutableStateOf("PENDING") }
 
-    val activeList = when (selectedFilterTab) {
+    // Date sort order: false = Newest First (Descending, default), true = Oldest First (Ascending)
+    var isSortAscending by remember { mutableStateOf(false) }
+
+    val rawList = when (selectedFilterTab) {
         "CONFIRMED" -> confirmedList
         "DISMISSED" -> dismissedList
         else        -> pendingList
+    }
+
+    val activeList = remember(rawList, isSortAscending) {
+        if (isSortAscending) {
+            rawList.sortedBy { it.receivedAt }
+        } else {
+            rawList.sortedByDescending { it.receivedAt }
+        }
     }
 
     // Edit bottom sheet state
@@ -323,6 +335,33 @@ fun PendingTransactionsScreen(
                             text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
+                                        imageVector = Icons.Default.SwapVert,
+                                        contentDescription = null,
+                                        tint = AccentTeal,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = if (isSortAscending) "Sort: Oldest First (Ascending)" else "Sort: Newest First (Descending)",
+                                        color = TextPrimary,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            },
+                            onClick = {
+                                isSortAscending = !isSortAscending
+                                showMoreMenu = false
+                                android.widget.Toast.makeText(
+                                    context,
+                                    if (isSortAscending) "Sorted: Oldest first" else "Sorted: Newest first",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
                                         imageVector = Icons.Default.History,
                                         contentDescription = null,
                                         tint = AccentTeal,
@@ -358,7 +397,6 @@ fun PendingTransactionsScreen(
                         )
 
                         if (pendingList.isNotEmpty()) {
-                            HorizontalDivider(color = DividerColor, modifier = Modifier.padding(vertical = 4.dp))
                             DropdownMenuItem(
                                 text = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
