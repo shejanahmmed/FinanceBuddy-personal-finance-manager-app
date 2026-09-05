@@ -1152,10 +1152,11 @@ private fun EditAccountSelectDialog(
                             acc.showAs.isNotBlank() -> acc.showAs
                             else -> "${acc.accountSubtype.ifBlank { "Account" }} #${index + 1}"
                         }
+                        val isCashAcc = acc.type == "CASH" || acc.name.contains("Cash", ignoreCase = true)
                         val accNum = if (acc.accountNumber.isNotBlank()) {
                             val raw = acc.accountNumber.trim()
                             if (raw.length > 4) "•••• ${raw.takeLast(4)}" else raw
-                        } else "•••• ----"
+                        } else ""
 
                         Surface(
                             onClick = {
@@ -1186,14 +1187,22 @@ private fun EditAccountSelectDialog(
                                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
-                                            text = accNum,
-                                            fontSize = 11.sp,
-                                            color = TextSecondary
-                                        )
+                                        if (!isCashAcc && accNum.isNotBlank()) {
+                                            Text(
+                                                text = accNum,
+                                                fontSize = 11.sp,
+                                                color = TextSecondary
+                                            )
+                                        }
                                         if (acc.accountSubtype.isNotBlank()) {
                                             Text(
-                                                text = "• ${acc.accountSubtype}",
+                                                text = if (!isCashAcc && accNum.isNotBlank()) "• ${acc.accountSubtype}" else acc.accountSubtype,
+                                                fontSize = 11.sp,
+                                                color = cardColor
+                                            )
+                                        } else if (isCashAcc) {
+                                            Text(
+                                                text = "Physical Cash",
                                                 fontSize = 11.sp,
                                                 color = cardColor
                                             )
@@ -1335,10 +1344,11 @@ private fun DeleteAccountSelectDialog(
                             acc.showAs.isNotBlank() -> acc.showAs
                             else -> "${acc.accountSubtype.ifBlank { "Account" }} #${index + 1}"
                         }
+                        val isCashAcc = acc.type == "CASH" || acc.name.contains("Cash", ignoreCase = true)
                         val accNum = if (acc.accountNumber.isNotBlank()) {
                             val raw = acc.accountNumber.trim()
                             if (raw.length > 4) "•••• ${raw.takeLast(4)}" else raw
-                        } else "•••• ----"
+                        } else ""
 
                         Surface(
                             onClick = {
@@ -1360,7 +1370,7 @@ private fun DeleteAccountSelectDialog(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = displayName,
-                                        fontSize = 13.sp,
+                                        fontSize = 13.5.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = TextPrimary
                                     )
@@ -1369,14 +1379,22 @@ private fun DeleteAccountSelectDialog(
                                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
-                                            text = accNum,
-                                            fontSize = 11.sp,
-                                            color = TextSecondary
-                                        )
+                                        if (!isCashAcc && accNum.isNotBlank()) {
+                                            Text(
+                                                text = accNum,
+                                                fontSize = 11.sp,
+                                                color = TextSecondary
+                                            )
+                                        }
                                         if (acc.accountSubtype.isNotBlank()) {
                                             Text(
-                                                text = "• ${acc.accountSubtype}",
+                                                text = if (!isCashAcc && accNum.isNotBlank()) "• ${acc.accountSubtype}" else acc.accountSubtype,
+                                                fontSize = 11.sp,
+                                                color = cardColor
+                                            )
+                                        } else if (isCashAcc) {
+                                            Text(
+                                                text = "Physical Cash",
                                                 fontSize = 11.sp,
                                                 color = cardColor
                                             )
@@ -1499,6 +1517,8 @@ private fun SingleAccountInnerCard(
     accountIndex: Int = 1,
     isOnlyAccount: Boolean = false
 ) {
+    val isCash = account.type == "CASH" || account.name.contains("Cash", ignoreCase = true)
+
     // Resolve display name / nickname
     val displayName = when {
         account.showAs.isNotBlank() -> account.showAs
@@ -1511,7 +1531,7 @@ private fun SingleAccountInnerCard(
         val raw = account.accountNumber.trim()
         if (raw.length > 4) "•••• ${raw.takeLast(4)}" else raw
     } else {
-        "•••• ----"
+        ""
     }
 
     // Resolve account type
@@ -1519,7 +1539,7 @@ private fun SingleAccountInnerCard(
         account.accountSubtype.isNotBlank() -> account.accountSubtype
         account.type == "BANK" -> "Bank Account"
         account.type == "MFS" -> "MFS Wallet"
-        else -> "Cash Wallet"
+        else -> "Physical Cash"
     }
 
     Surface(
@@ -1571,31 +1591,33 @@ private fun SingleAccountInnerCard(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // 1. Account Number Box
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(CardDark)
-                        .border(1.dp, DividerColor, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 7.dp, vertical = 3.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                // 1. Account Number Box (Only for non-cash accounts that have an account number)
+                if (!isCash && accNumberDisplay.isNotBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(CardDark)
+                            .border(1.dp, DividerColor, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.CreditCard,
-                            contentDescription = null,
-                            tint = TextSecondary,
-                            modifier = Modifier.size(11.dp)
-                        )
-                        Text(
-                            text = accNumberDisplay,
-                            color = if (account.accountNumber.isNotBlank()) TextPrimary else TextMuted,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            letterSpacing = 0.5.sp
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CreditCard,
+                                contentDescription = null,
+                                tint = TextSecondary,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Text(
+                                text = accNumberDisplay,
+                                color = TextPrimary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
                     }
                 }
 
@@ -1676,13 +1698,14 @@ private fun AccountFormSheet(
     var subtypeExpanded by remember { mutableStateOf(false) }
     var showDiscardDialog by remember { mutableStateOf(false) }
 
-    val isFormDirty = remember(accountName.text, initialBalance, accountNumber, isEditing) {
+    val isFormDirty = remember(accountName.text, initialBalance, accountNumber, showAs, isEditing) {
         if (isEditing) {
             accountName.text.trim() != (existingAccount?.name ?: "") ||
             initialBalance.trim() != (existingAccount?.balance?.toString() ?: "") ||
-            accountNumber.trim() != (existingAccount?.accountNumber ?: "")
+            accountNumber.trim() != (existingAccount?.accountNumber ?: "") ||
+            showAs.trim() != (existingAccount?.showAs ?: "")
         } else {
-            accountName.text.trim().isNotEmpty() || initialBalance.trim().isNotEmpty() || accountNumber.trim().isNotEmpty()
+            accountName.text.trim().isNotEmpty() || initialBalance.trim().isNotEmpty() || accountNumber.trim().isNotEmpty() || showAs.trim().isNotEmpty()
         }
     }
 
@@ -1705,9 +1728,12 @@ private fun AccountFormSheet(
     val presetList = if (accountType == "BANK") PRESET_BANKS else PRESET_MFS
     val filteredPresets = if (accountName.text.isBlank()) presetList else presetList.filter { it.contains(accountName.text, ignoreCase = true) }
 
-    val isValid = accountName.text.trim().isNotBlank() &&
-            (accountType != "BANK" || accountSubtype.isNotBlank()) &&
-            (isEditing || initialBalance.trim().isNotBlank())
+    val isNameValid = accountName.text.trim().isNotBlank()
+    val isAccountTypeValid = accountType != "BANK" || accountSubtype.isNotBlank()
+    val isInitialBalanceValid = isEditing || (initialBalance.trim().isNotBlank() && initialBalance.trim().toDoubleOrNull() != null)
+    val isAccountNumberValid = accountType == "CASH" || accountNumber.trim().isNotBlank()
+
+    val isValid = isNameValid && isAccountTypeValid && isInitialBalanceValid && isAccountNumberValid
 
     ModalBottomSheet(
         onDismissRequest = {
@@ -1843,7 +1869,7 @@ private fun AccountFormSheet(
                             accountName = it
                             nameExpanded = true
                         },
-                        label = { Text(if (accountType == "BANK") "Bank Name" else "MFS Name") },
+                        label = { Text(if (accountType == "BANK") "Bank Name *" else "MFS Name *") },
                         placeholder = { Text("Type or select\u2026", color = TextMuted) },
                         leadingIcon = {
                             Icon(
@@ -1901,7 +1927,7 @@ private fun AccountFormSheet(
                     OutlinedTextField(
                         value = accountSubtype,
                         onValueChange = {},
-                        label = { Text("Account Type") },
+                        label = { Text("Account Type *") },
                         placeholder = { Text("e.g. Savings, Current\u2026", color = TextMuted) },
                         leadingIcon = {
                             Icon(
@@ -1943,7 +1969,8 @@ private fun AccountFormSheet(
                 OutlinedTextField(
                     value = initialBalance,
                     onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) initialBalance = it },
-                    label = { Text("Initial Balance (\u09f3)") },
+                    label = { Text("Initial Balance (\u09f3) *") },
+                    placeholder = { Text("0.00", color = TextMuted) },
                     prefix = { Text("\u09f3 ", color = AccentTeal, fontWeight = FontWeight.Bold) },
                     leadingIcon = {
                         Icon(
@@ -1971,7 +1998,7 @@ private fun AccountFormSheet(
                             accountNumber = input
                         }
                     },
-                    label = { Text("Account Number") },
+                    label = { Text("Account Number *") },
                     placeholder = { Text("Digits only", color = TextMuted) },
                     leadingIcon = {
                         Icon(
@@ -1990,7 +2017,7 @@ private fun AccountFormSheet(
                 Spacer(Modifier.height(14.dp))
             }
 
-            // Nickname / Location label (max 20 chars)
+            // Nickname / Location label (max 20 chars - optional)
             OutlinedTextField(
                 value = showAs,
                 onValueChange = { input ->
@@ -1998,8 +2025,8 @@ private fun AccountFormSheet(
                         showAs = input
                     }
                 },
-                label = { Text(if (accountType == "CASH") "Location / Tag (Optional)" else "Nickname") },
-                placeholder = { Text(if (accountType == "CASH") "e.g. Wallet, Safe..." else "Nickname (max 20 letters)", color = TextMuted) },
+                label = { Text(if (accountType == "CASH") "Location / Tag (Optional)" else "Nickname (Optional)") },
+                placeholder = { Text(if (accountType == "CASH") "e.g. Wallet, Safe (Optional)" else "e.g. Salary, Personal (Optional)", color = TextMuted) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Badge,
