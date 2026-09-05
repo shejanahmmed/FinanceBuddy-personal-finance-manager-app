@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import android.content.Context
 import androidx.activity.compose.BackHandler
+import com.shejan.financebuddy.ui.common.AccountDropdownItemView
 import com.shejan.financebuddy.ui.common.DiscardChangesDialog
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -1953,46 +1954,13 @@ private fun androidx.compose.foundation.layout.ColumnScope.AccountDropdownItems(
             val isSelected = selectedAccount?.id == account.id
             DropdownMenuItem(
                 text = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = account.name,
-                                color = if (isSelected) AccentTeal else TextPrimary,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                            )
-                            if (cashTagText == "Deposit" || cashTagText == "Withdrawal") {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(IncomeGreen.copy(alpha = 0.12f))
-                                        .border(1.dp, IncomeGreen.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = cashTagText,
-                                        color = IncomeGreen,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-                        if (isSelected) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Selected",
-                                tint = AccentTeal,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
+                    AccountDropdownItemView(
+                        account = account,
+                        isSelected = isSelected,
+                        showBalance = true,
+                        extraTag = if (cashTagText == "Deposit" || cashTagText == "Withdrawal") cashTagText else "",
+                        extraTagColor = IncomeGreen
+                    )
                 },
                 onClick = { onSelectExisting(account) }
             )
@@ -2040,47 +2008,11 @@ private fun androidx.compose.foundation.layout.ColumnScope.AccountDropdownItems(
             val isSelected = selectedAccount?.id == account.id
             DropdownMenuItem(
                 text = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = account.name,
-                                color = if (isSelected) AccentTeal else TextPrimary,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                            )
-                            if (account.accountNumber.isNotBlank()) {
-                                val accLast4 = account.accountNumber.takeLast(4)
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(DividerColor.copy(alpha = 0.3f))
-                                        .border(1.dp, DividerColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = "*******$accLast4",
-                                        color = TextSecondary,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-                        if (isSelected) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Selected",
-                                tint = AccentTeal,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
+                    AccountDropdownItemView(
+                        account = account,
+                        isSelected = isSelected,
+                        showBalance = true
+                    )
                 },
                 onClick = { onSelectExisting(account) }
             )
@@ -2116,47 +2048,11 @@ private fun androidx.compose.foundation.layout.ColumnScope.AccountDropdownItems(
             val isSelected = selectedAccount?.id == account.id
             DropdownMenuItem(
                 text = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = account.name,
-                                color = if (isSelected) AccentTeal else TextPrimary,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                            )
-                            if (account.accountNumber.isNotBlank()) {
-                                val accLast4 = account.accountNumber.takeLast(4)
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(DividerColor.copy(alpha = 0.3f))
-                                        .border(1.dp, DividerColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = "*******$accLast4",
-                                        color = TextSecondary,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-                        if (isSelected) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Selected",
-                                tint = AccentTeal,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
+                    AccountDropdownItemView(
+                        account = account,
+                        isSelected = isSelected,
+                        showBalance = true
+                    )
                 },
                 onClick = { onSelectExisting(account) }
             )

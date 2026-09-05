@@ -121,6 +121,37 @@ fun BankAccountsScreen(
     val totalBankBalance = remember(banks) { banks.sumOf { it.balance } }
     val totalMfsBalance = remember(mfs) { mfs.sumOf { it.balance } }
 
+    val groupedCash = remember(cash) {
+        cash.groupBy { it.name }.map { (name, accList) ->
+            GroupedAccount(
+                name = name,
+                type = "CASH",
+                colorHex = accList.firstOrNull()?.colorHex ?: BANK_COLOR_MAP[name] ?: "#10B981",
+                accounts = accList
+            )
+        }
+    }
+    val groupedBanks = remember(banks) {
+        banks.groupBy { it.name }.map { (name, accList) ->
+            GroupedAccount(
+                name = name,
+                type = "BANK",
+                colorHex = accList.firstOrNull()?.colorHex ?: BANK_COLOR_MAP[name] ?: "#0096FF",
+                accounts = accList
+            )
+        }
+    }
+    val groupedMfs = remember(mfs) {
+        mfs.groupBy { it.name }.map { (name, accList) ->
+            GroupedAccount(
+                name = name,
+                type = "MFS",
+                colorHex = accList.firstOrNull()?.colorHex ?: BANK_COLOR_MAP[name] ?: "#FF5C7C",
+                accounts = accList
+            )
+        }
+    }
+
     var showAddSheet by remember { mutableStateOf(false) }
     var editingAccount by remember { mutableStateOf<AccountEntity?>(null) }
     var deletingAccount by remember { mutableStateOf<AccountEntity?>(null) }
@@ -369,12 +400,22 @@ fun BankAccountsScreen(
 
                     if (cash.isNotEmpty()) {
                         item { SectionGroupHeader(title = "Hand Cash", showCount = false) }
-                        items(cash, key = { it.id }) { account ->
-                            AccountManageCard(
-                                account = account,
+                        items(groupedCash, key = { it.name }) { group ->
+                            GroupedAccountManageCard(
+                                group = group,
                                 currencyFormat = currencyFormat,
-                                onEdit = { editingAccount = account; showAddSheet = true },
-                                onDelete = { deletingAccount = account }
+                                onEdit = { account -> editingAccount = account; showAddSheet = true },
+                                onDelete = { account -> deletingAccount = account },
+                                onAddAnother = { name, type ->
+                                    editingAccount = AccountEntity(
+                                        id = 0,
+                                        name = name,
+                                        type = type,
+                                        balance = 0.0,
+                                        colorHex = BANK_COLOR_MAP[name] ?: "#10B981"
+                                    )
+                                    showAddSheet = true
+                                }
                             )
                         }
                     }
@@ -384,12 +425,22 @@ fun BankAccountsScreen(
                             if (cash.isNotEmpty()) Spacer(Modifier.height(4.dp))
                             SectionGroupHeader(title = "Banks", count = banks.size)
                         }
-                        items(banks, key = { it.id }) { account ->
-                            AccountManageCard(
-                                account = account,
+                        items(groupedBanks, key = { it.name }) { group ->
+                            GroupedAccountManageCard(
+                                group = group,
                                 currencyFormat = currencyFormat,
-                                onEdit = { editingAccount = account; showAddSheet = true },
-                                onDelete = { deletingAccount = account }
+                                onEdit = { account -> editingAccount = account; showAddSheet = true },
+                                onDelete = { account -> deletingAccount = account },
+                                onAddAnother = { name, type ->
+                                    editingAccount = AccountEntity(
+                                        id = 0,
+                                        name = name,
+                                        type = type,
+                                        balance = 0.0,
+                                        colorHex = BANK_COLOR_MAP[name] ?: "#0096FF"
+                                    )
+                                    showAddSheet = true
+                                }
                             )
                         }
                     }
@@ -399,12 +450,22 @@ fun BankAccountsScreen(
                             Spacer(Modifier.height(4.dp))
                             SectionGroupHeader(title = "MFS", count = mfs.size)
                         }
-                        items(mfs, key = { it.id }) { account ->
-                            AccountManageCard(
-                                account = account,
+                        items(groupedMfs, key = { it.name }) { group ->
+                            GroupedAccountManageCard(
+                                group = group,
                                 currencyFormat = currencyFormat,
-                                onEdit = { editingAccount = account; showAddSheet = true },
-                                onDelete = { deletingAccount = account }
+                                onEdit = { account -> editingAccount = account; showAddSheet = true },
+                                onDelete = { account -> deletingAccount = account },
+                                onAddAnother = { name, type ->
+                                    editingAccount = AccountEntity(
+                                        id = 0,
+                                        name = name,
+                                        type = type,
+                                        balance = 0.0,
+                                        colorHex = BANK_COLOR_MAP[name] ?: "#FF5C7C"
+                                    )
+                                    showAddSheet = true
+                                }
                             )
                         }
                     }
@@ -421,7 +482,7 @@ fun BankAccountsScreen(
             existingAccount = editingAccount,
             onDismiss = { scope.launch { sheetState.hide() }.invokeOnCompletion { showAddSheet = false; editingAccount = null } },
             onSave = { account ->
-                if (editingAccount != null) onUpdateAccount(account) else onAddAccount(account)
+                if (editingAccount != null && editingAccount!!.id != 0) onUpdateAccount(account) else onAddAccount(account)
                 scope.launch { sheetState.hide() }.invokeOnCompletion { showAddSheet = false; editingAccount = null }
             }
         )
@@ -749,201 +810,439 @@ private fun SectionGroupHeader(title: String, count: Int = 0, showCount: Boolean
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun AccountManageCard(
-    account: AccountEntity,
-    currencyFormat: DecimalFormat,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
+private data class GroupedAccount(
+    val name: String,
+    val type: String,
+    val colorHex: String,
+    val accounts: List<AccountEntity>
 ) {
-    val cardColor = remember(account.colorHex) {
-        try { Color(android.graphics.Color.parseColor(account.colorHex)) } catch (e: Exception) { AccentTeal }
-    }
-    var showActions by remember { mutableStateOf(false) }
+    val totalBalance: Double get() = accounts.sumOf { it.balance }
+    val count: Int get() = accounts.size
+}
 
-    Box(
+@Composable
+private fun GroupedAccountManageCard(
+    group: GroupedAccount,
+    currencyFormat: DecimalFormat,
+    onEdit: (AccountEntity) -> Unit,
+    onDelete: (AccountEntity) -> Unit,
+    onAddAnother: (String, String) -> Unit
+) {
+    val cardColor = remember(group.colorHex, group.name) {
+        try { Color(android.graphics.Color.parseColor(group.colorHex)) } catch (e: Exception) {
+            BANK_COLOR_MAP[group.name]?.let { Color(android.graphics.Color.parseColor(it)) } ?: AccentTeal
+        }
+    }
+    var expanded by remember { mutableStateOf(true) }
+    var showMenu by remember { mutableStateOf(false) }
+    val rotationState by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "ExpandRotation")
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardDark),
+        border = BorderStroke(1.dp, cardColor.copy(alpha = 0.25f)),
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .clip(RoundedCornerShape(16.dp))
-            .background(CardDark)
-            .border(1.dp, cardColor.copy(alpha = 0.20f), RoundedCornerShape(16.dp))
-            .combinedClickable(
-                onClick = { if (showActions) showActions = false },
-                onLongClick = { showActions = true }
-            )
+            .animateContentSize()
     ) {
-        val blurRadius = if (showActions) 8.dp else 0.dp
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .blur(blurRadius)
-                .padding(start = 14.dp, top = 14.dp, end = 12.dp, bottom = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
+        Column(modifier = Modifier.padding(14.dp)) {
+            // Header: Icon + Name + Count Badge + Total Balance + Menu/Expand
+            Row(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(cardColor.copy(alpha = 0.12f))
-                    .border(1.dp, cardColor.copy(alpha = 0.25f), CircleShape),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .then(if (group.count > 1) Modifier.clickable { expanded = !expanded } else Modifier),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = if (account.type == "CASH" || account.name.contains("Cash", ignoreCase = true)) Icons.Default.Payments else if (account.type == "MFS") Icons.Default.PhoneAndroid else Icons.Default.AccountBalance,
-                    contentDescription = null,
-                    tint = cardColor,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
+                // Institution Icon Badge
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(cardColor.copy(alpha = 0.12f))
+                        .border(1.dp, cardColor.copy(alpha = 0.25f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (group.type == "CASH" || group.name.contains("Cash", ignoreCase = true)) Icons.Default.Payments
+                        else if (group.type == "MFS") Icons.Default.PhoneAndroid
+                        else Icons.Default.AccountBalance,
+                        contentDescription = null,
+                        tint = cardColor,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
 
-            Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(12.dp))
 
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = account.name,
-                    color = TextPrimary,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Text(
-                    text = "৳${currencyFormat.format(account.balance)}",
-                    color = TextPrimary,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                if (account.accountNumber.isNotBlank() || account.accountSubtype.isNotBlank() || account.showAs.isNotBlank()) {
+                // Title & Count Info
+                Column(modifier = Modifier.weight(1f)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        if (account.accountNumber.isNotBlank()) {
-                            val displayNum = if (account.accountNumber.length > 4) {
-                                "•••• ${account.accountNumber.takeLast(4)}"
-                            } else {
-                                account.accountNumber
+                        Text(
+                            text = group.name,
+                            color = TextPrimary,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (group.count > 1) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(cardColor.copy(alpha = 0.15f))
+                                    .border(1.dp, cardColor.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "${group.count} Accounts",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = cardColor
+                                )
                             }
-                            Text(
-                                text = "Acc: $displayNum",
-                                color = TextSecondary,
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Normal
+                        }
+                    }
+                    Text(
+                        text = if (group.count > 1) "Combined: ৳${currencyFormat.format(group.totalBalance)}"
+                        else if (group.type == "CASH") "Physical Cash"
+                        else if (group.type == "MFS") "Mobile Financial Service"
+                        else "Bank Account",
+                        color = TextSecondary,
+                        fontSize = 11.5.sp
+                    )
+                }
+
+                // Trailing: If single account -> Balance & Menu; If multi account -> Expand arrow & Menu
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (group.count > 1) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(CardDarker)
+                                .border(1.dp, DividerColor, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = if (expanded) "Collapse" else "Expand",
+                                tint = TextPrimary,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .rotate(rotationState)
                             )
                         }
-                        if (account.accountNumber.isNotBlank() && account.accountSubtype.isNotBlank()) {
-                            Text(
-                                text = "•",
-                                color = TextMuted,
-                                fontSize = 11.5.sp
+                    }
+
+                    // 3-dots Menu
+                    Box {
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.size(30.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "Options",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
-                        if (account.accountSubtype.isNotBlank()) {
-                            Text(
-                                text = "Type: ${account.accountSubtype}",
-                                color = TextSecondary,
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Normal
+
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            shape = RoundedCornerShape(14.dp),
+                            containerColor = CardDarker,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(14.dp))
+                                .border(1.dp, DividerColor, RoundedCornerShape(14.dp))
+                        ) {
+                            if (group.count == 1) {
+                                val single = group.accounts.first()
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Edit, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(16.dp))
+                                            Spacer(Modifier.width(10.dp))
+                                            Text("Edit Account", color = TextPrimary, fontSize = 13.sp)
+                                        }
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        onEdit(single)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Delete, contentDescription = null, tint = ExpenseRed, modifier = Modifier.size(16.dp))
+                                            Spacer(Modifier.width(10.dp))
+                                            Text("Delete Account", color = ExpenseRed, fontSize = 13.sp)
+                                        }
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        onDelete(single)
+                                    }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Add, contentDescription = null, tint = cardColor, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(10.dp))
+                                        Text("Add Another at ${group.name}", color = cardColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    onAddAnother(group.name, group.type)
+                                }
                             )
                         }
                     }
                 }
             }
 
-            Spacer(Modifier.width(8.dp))
-
-            // Quick Menu Button (Clean High Contrast Icon)
-            IconButton(
-                onClick = { showActions = true },
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Account Options",
-                    tint = TextPrimary,
-                    modifier = Modifier.size(20.dp)
+            // Single Account Card or Multi-Account Cards Inside
+            if (group.count == 1) {
+                val account = group.accounts.first()
+                Spacer(Modifier.height(10.dp))
+                SingleAccountInnerCard(
+                    account = account,
+                    cardColor = cardColor,
+                    currencyFormat = currencyFormat,
+                    accountIndex = 1,
+                    isOnlyAccount = true,
+                    onEdit = { onEdit(account) },
+                    onDelete = { onDelete(account) }
                 )
+            } else if (expanded) {
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider(color = DividerColor.copy(alpha = 0.5f), modifier = Modifier.padding(bottom = 10.dp))
+
+                Text(
+                    text = "INDIVIDUAL ACCOUNTS (${group.count})",
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextMuted,
+                    letterSpacing = 0.5.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    group.accounts.forEachIndexed { index, account ->
+                        SingleAccountInnerCard(
+                            account = account,
+                            cardColor = cardColor,
+                            currencyFormat = currencyFormat,
+                            accountIndex = index + 1,
+                            isOnlyAccount = false,
+                            onEdit = { onEdit(account) },
+                            onDelete = { onDelete(account) }
+                        )
+                    }
+                }
             }
         }
+    }
+}
 
-        // Animated action overlay for Edit & Delete
-        AnimatedVisibility(
-            visible = showActions,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.fillMaxSize()
+@Composable
+private fun SingleAccountInnerCard(
+    account: AccountEntity,
+    cardColor: Color,
+    currencyFormat: DecimalFormat,
+    accountIndex: Int = 1,
+    isOnlyAccount: Boolean = false,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    // Resolve display name / nickname
+    val displayName = when {
+        account.showAs.isNotBlank() -> account.showAs
+        !isOnlyAccount -> "${account.accountSubtype.ifBlank { "Account" }} #$accountIndex"
+        else -> account.name
+    }
+
+    // Resolve account number
+    val accNumberDisplay = if (account.accountNumber.isNotBlank()) {
+        val raw = account.accountNumber.trim()
+        if (raw.length > 4) "•••• ${raw.takeLast(4)}" else raw
+    } else {
+        "•••• ----"
+    }
+
+    // Resolve account type
+    val accTypeDisplay = when {
+        account.accountSubtype.isNotBlank() -> account.accountSubtype
+        account.type == "BANK" -> "Bank Account"
+        account.type == "MFS" -> "MFS Wallet"
+        else -> "Cash Wallet"
+    }
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = CardDarker,
+        border = BorderStroke(1.dp, DividerColor),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(BackgroundDark.copy(alpha = 0.90f))
-                    .clickable { showActions = false },
-                contentAlignment = Alignment.Center
+            // Row 1: Account Name / Nickname + Balance + Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                // Account Name / Nickname
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.weight(1f, fill = false)
                 ) {
-                    // Edit Button (Teal Theme, Equal Size)
-                    Surface(
-                        onClick = {
-                            showActions = false
-                            onEdit()
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        color = AccentTeal.copy(alpha = 0.22f),
-                        border = BorderStroke(1.dp, AccentTeal.copy(alpha = 0.6f)),
-                        modifier = Modifier
-                            .width(115.dp)
-                            .height(42.dp)
+                    Text(
+                        text = displayName,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.5.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(Modifier.width(8.dp))
+
+                // Balance & Quick Actions
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "৳${currencyFormat.format(account.balance)}",
+                        color = AccentTeal,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                        IconButton(
+                            onClick = onEdit,
+                            modifier = Modifier.size(26.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Edit,
                                 contentDescription = "Edit",
                                 tint = AccentTeal,
-                                modifier = Modifier.size(17.dp)
+                                modifier = Modifier.size(15.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Edit", color = AccentTeal, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
-                    }
-
-                    // Delete Button (Red Theme, Equal Size)
-                    Surface(
-                        onClick = {
-                            showActions = false
-                            onDelete()
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        color = ExpenseRed.copy(alpha = 0.22f),
-                        border = BorderStroke(1.dp, ExpenseRed.copy(alpha = 0.6f)),
-                        modifier = Modifier
-                            .width(115.dp)
-                            .height(42.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(26.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "Delete",
                                 tint = ExpenseRed,
-                                modifier = Modifier.size(17.dp)
+                                modifier = Modifier.size(15.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Delete", color = ExpenseRed, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            // Row 2: Distinct Boxes for Account Number, Type of Account, and Holder
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // 1. Account Number Box
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(CardDark)
+                        .border(1.dp, DividerColor, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CreditCard,
+                            contentDescription = null,
+                            tint = TextSecondary,
+                            modifier = Modifier.size(11.dp)
+                        )
+                        Text(
+                            text = accNumberDisplay,
+                            color = if (account.accountNumber.isNotBlank()) TextPrimary else TextMuted,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+
+                // 2. Type of Account Box
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(cardColor.copy(alpha = 0.12f))
+                        .border(1.dp, cardColor.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = accTypeDisplay,
+                        color = cardColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                // 3. Holder Name (if managed account)
+                if (account.isManaged && account.holderName.isNotBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(AccentPurple.copy(alpha = 0.12f))
+                            .border(1.dp, AccentPurple.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = AccentPurple,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Text(
+                                text = account.holderName,
+                                color = AccentPurple,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
                 }
@@ -960,7 +1259,7 @@ private fun AccountFormSheet(
     onDismiss: () -> Unit,
     onSave: (AccountEntity) -> Unit
 ) {
-    val isEditing = existingAccount != null
+    val isEditing = existingAccount != null && existingAccount.id != 0
     var accountType    by remember(existingAccount) { mutableStateOf(existingAccount?.type ?: "BANK") }
     var accountName    by remember(existingAccount) {
         mutableStateOf(

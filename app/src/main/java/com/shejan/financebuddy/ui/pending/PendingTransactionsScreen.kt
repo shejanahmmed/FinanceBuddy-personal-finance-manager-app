@@ -30,11 +30,17 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.shejan.financebuddy.ui.common.AccountDropdownItemView
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -87,21 +93,9 @@ fun PendingTransactionsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var isScanning by remember { mutableStateOf(false) }
-
+    var isPullRefreshing by remember { mutableStateOf(false) }
+    val pullToRefreshState = rememberPullToRefreshState()
     var showSyncOptionsDialog by remember { mutableStateOf(false) }
-
-    fun startSyncProcess(daysLimit: Int?) {
-        isScanning = true
-        scope.launch {
-            val count = com.shejan.financebuddy.sms.SmsSyncHelper.syncPreviousSms(context, database, daysLimit)
-            isScanning = false
-            android.widget.Toast.makeText(
-                context,
-                if (count > 0) "Imported $count transaction messages!" else "No new transaction messages found.",
-                android.widget.Toast.LENGTH_LONG
-            ).show()
-        }
-    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -126,6 +120,66 @@ fun PendingTransactionsScreen(
             showSyncOptionsDialog = true
         } else {
             permissionLauncher.launch(android.Manifest.permission.READ_SMS)
+        }
+    }
+
+    fun refreshInbox() {
+        val hasReadPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.READ_SMS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+        if (!hasReadPermission) {
+            permissionLauncher.launch(android.Manifest.permission.READ_SMS)
+            android.widget.Toast.makeText(
+                context,
+                "SMS permission required to sync latest messages.",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        isPullRefreshing = true
+        scope.launch {
+            try {
+                val startTime = System.currentTimeMillis()
+                val count = com.shejan.financebuddy.sms.SmsSyncHelper.syncPreviousSms(context, database, 30)
+                val elapsed = System.currentTimeMillis() - startTime
+                if (elapsed < 800) {
+                    delay(800 - elapsed)
+                }
+                android.widget.Toast.makeText(
+                    context,
+                    if (count > 0) "Refreshed! Found and imported $count new message(s)." else "Inbox refreshed. No new SMS found.",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(
+                    context,
+                    "Sync failed: ${e.localizedMessage ?: "Unknown error"}",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            } finally {
+                isPullRefreshing = false
+            }
+        }
+    }
+
+    fun startSyncProcess(daysLimit: Int?) {
+        isScanning = true
+        scope.launch {
+            val startTime = System.currentTimeMillis()
+            val count = com.shejan.financebuddy.sms.SmsSyncHelper.syncPreviousSms(context, database, daysLimit)
+            val elapsed = System.currentTimeMillis() - startTime
+            if (elapsed < 800) {
+                delay(800 - elapsed)
+            }
+            isScanning = false
+            android.widget.Toast.makeText(
+                context,
+                if (count > 0) "Imported $count transaction messages!" else "No new transaction messages found.",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
         }
     }
 
@@ -269,6 +323,24 @@ fun PendingTransactionsScreen(
                             text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = null,
+                                        tint = AccentTeal,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text("Refresh Inbox", color = TextPrimary, fontSize = 14.sp)
+                                }
+                            },
+                            onClick = {
+                                showMoreMenu = false
+                                refreshInbox()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
                                         imageVector = Icons.Default.History,
                                         contentDescription = null,
                                         tint = AccentTeal,
@@ -374,51 +446,75 @@ fun PendingTransactionsScreen(
                 }
             }
 
-            // ── Scrollable list with entrance animations ──────────────────────
-            if (activeList.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = when (selectedFilterTab) {
-                                "CONFIRMED" -> Icons.Default.CheckCircle
-                                "DISMISSED" -> Icons.Default.Close
-                                else        -> Icons.Default.Sms
-                            },
-                            contentDescription = null,
-                            tint = TextMuted,
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = when (selectedFilterTab) {
-                                "CONFIRMED" -> "No confirmed SMS transactions yet."
-                                "DISMISSED" -> "No dismissed SMS transactions."
-                                else        -> "No pending SMS transactions to review!"
-                            },
-                            color = TextSecondary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(activeList, key = { it.id }) { pending ->
-                        AnimatedVisibility(
-                            visible = true,
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
+            // ── Pull-to-Refresh Container ─────────────────────────────────────
+            PullToRefreshBox(
+                isRefreshing = isPullRefreshing || isScanning,
+                onRefresh = { refreshInbox() },
+                state = pullToRefreshState,
+                indicator = {
+                    PullToRefreshDefaults.Indicator(
+                        state = pullToRefreshState,
+                        isRefreshing = isPullRefreshing || isScanning,
+                        containerColor = CardDarker,
+                        color = AccentTeal,
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                if (activeList.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
+                            Icon(
+                                imageVector = when (selectedFilterTab) {
+                                    "CONFIRMED" -> Icons.Default.CheckCircle
+                                    "DISMISSED" -> Icons.Default.Close
+                                    else        -> Icons.Default.Sms
+                                },
+                                contentDescription = null,
+                                tint = TextMuted,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = when (selectedFilterTab) {
+                                    "CONFIRMED" -> "No confirmed SMS transactions yet."
+                                    "DISMISSED" -> "No dismissed SMS transactions."
+                                    else        -> "No pending SMS transactions to review!"
+                                },
+                                color = TextSecondary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Pull down from top to scan for recent SMS",
+                                color = TextMuted,
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(activeList, key = { it.id }) { pending ->
                             PendingTransactionCard(
                                 pending = pending,
                                 accounts = accounts,
@@ -430,8 +526,8 @@ fun PendingTransactionsScreen(
                                 onEdit = { editTarget = pending }
                             )
                         }
+                        item { Spacer(modifier = Modifier.height(32.dp)) }
                     }
-                    item { Spacer(modifier = Modifier.height(32.dp)) }
                 }
             }
         }
@@ -1716,7 +1812,13 @@ private fun SmsSenderMappingsConfigSheet(
                                             )
                                             accounts.forEach { account ->
                                                 DropdownMenuItem(
-                                                    text = { Text(account.name, color = TextPrimary, fontSize = 13.sp) },
+                                                    text = {
+                                                        AccountDropdownItemView(
+                                                            account = account,
+                                                            isSelected = false,
+                                                            showBalance = true
+                                                        )
+                                                    },
                                                     onClick = {
                                                         showAccountMenu = false
                                                         onAddMapping(sender.senderAddress, account.id)
