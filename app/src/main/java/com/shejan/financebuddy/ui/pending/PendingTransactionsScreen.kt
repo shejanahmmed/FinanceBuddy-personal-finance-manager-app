@@ -45,6 +45,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -202,10 +206,26 @@ fun PendingTransactionsScreen(
     // Edit bottom sheet state
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    var isTabsVisible by remember { mutableStateOf(true) }
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                if (delta < -12f) {
+                    isTabsVisible = false
+                } else if (delta > 12f) {
+                    isTabsVisible = true
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundDark)
+            .nestedScroll(nestedScrollConnection)
     ) {
         // Ambient glow
         Box(
@@ -380,67 +400,73 @@ fun PendingTransactionsScreen(
                 }
             }
 
-            // ── Filter Selector Tabs (Pending / Confirmed / Dismissed) ────────
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(CardDarker)
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+            // ── Filter Selector Tabs (Pending / Confirmed / Dismissed) (Collapsible on Scroll) ────────
+            AnimatedVisibility(
+                visible = isTabsVisible,
+                enter   = expandVertically(animationSpec = tween(250)) + fadeIn(animationSpec = tween(250)),
+                exit    = shrinkVertically(animationSpec = tween(200)) + fadeOut(animationSpec = tween(200))
             ) {
-                val tabs = listOf(
-                    Triple("PENDING", "Pending", pendingList.size),
-                    Triple("CONFIRMED", "Confirmed", confirmedList.size),
-                    Triple("DISMISSED", "Dismissed", dismissedList.size)
-                )
-                tabs.forEach { (tabKey, label, count) ->
-                    val isSelected = selectedFilterTab == tabKey
-                    val tabColor = when (tabKey) {
-                        "CONFIRMED" -> IncomeGreen
-                        "DISMISSED" -> ExpenseRed
-                        else        -> TransferYellow
-                    }
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (isSelected) tabColor.copy(alpha = 0.18f) else Color.Transparent)
-                            .border(
-                                width = if (isSelected) 1.dp else 0.dp,
-                                color = if (isSelected) tabColor.copy(alpha = 0.5f) else Color.Transparent,
-                                shape = RoundedCornerShape(10.dp)
-                            )
-                            .clickable { selectedFilterTab = tabKey }
-                            .padding(vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(CardDarker)
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    val tabs = listOf(
+                        Triple("PENDING", "Pending", pendingList.size),
+                        Triple("CONFIRMED", "Confirmed", confirmedList.size),
+                        Triple("DISMISSED", "Dismissed", dismissedList.size)
+                    )
+                    tabs.forEach { (tabKey, label, count) ->
+                        val isSelected = selectedFilterTab == tabKey
+                        val tabColor = when (tabKey) {
+                            "CONFIRMED" -> IncomeGreen
+                            "DISMISSED" -> ExpenseRed
+                            else        -> TransferYellow
+                        }
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelected) tabColor.copy(alpha = 0.18f) else Color.Transparent)
+                                .border(
+                                    width = if (isSelected) 1.dp else 0.dp,
+                                    color = if (isSelected) tabColor.copy(alpha = 0.5f) else Color.Transparent,
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .clickable { selectedFilterTab = tabKey }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = label,
-                                color = if (isSelected) tabColor else TextSecondary,
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                            )
-                            if (count > 0) {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .clip(CircleShape)
-                                        .background(if (isSelected) tabColor else DividerColor)
-                                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = count.toString(),
-                                        color = if (isSelected) BackgroundDark else TextPrimary,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = label,
+                                    color = if (isSelected) tabColor else TextSecondary,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                )
+                                if (count > 0) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(CircleShape)
+                                            .background(if (isSelected) tabColor else DividerColor)
+                                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = count.toString(),
+                                            color = if (isSelected) BackgroundDark else TextPrimary,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             }
                         }
