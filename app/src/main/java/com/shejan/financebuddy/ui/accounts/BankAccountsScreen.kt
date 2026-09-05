@@ -1692,7 +1692,14 @@ private fun AccountFormSheet(
         )
     }
     var accountSubtype by remember(existingAccount) { mutableStateOf(existingAccount?.accountSubtype ?: "") }
-    var initialBalance by remember(existingAccount) { mutableStateOf(if (isEditing) existingAccount!!.balance.toString() else "") }
+    var initialBalance by remember(existingAccount) {
+        mutableStateOf(
+            if (isEditing) {
+                val b = existingAccount!!.balance
+                if (b % 1.0 == 0.0) b.toLong().toString() else b.toString()
+            } else ""
+        )
+    }
     var accountNumber  by remember(existingAccount) { mutableStateOf(existingAccount?.accountNumber ?: "") }
     var showAs         by remember(existingAccount) { mutableStateOf(existingAccount?.showAs ?: "") }
     val coroutineScope = rememberCoroutineScope()
@@ -1704,7 +1711,12 @@ private fun AccountFormSheet(
     val initialTypeVal = remember(existingAccount) { existingAccount?.type ?: "BANK" }
     val initialNameVal = remember(existingAccount) { existingAccount?.name ?: (if (initialTypeVal == "CASH") "Hand Cash" else "") }
     val initialSubtypeVal = remember(existingAccount) { existingAccount?.accountSubtype ?: "" }
-    val initialBalanceVal = remember(existingAccount) { if (isEditing) (existingAccount?.balance?.toString() ?: "") else "" }
+    val initialBalanceVal = remember(existingAccount) {
+        if (isEditing) {
+            val b = existingAccount?.balance ?: 0.0
+            if (b % 1.0 == 0.0) b.toLong().toString() else b.toString()
+        } else ""
+    }
     val initialAccNumVal = remember(existingAccount) { existingAccount?.accountNumber ?: "" }
     val initialShowAsVal = remember(existingAccount) { existingAccount?.showAs ?: "" }
 
@@ -1761,7 +1773,7 @@ private fun AccountFormSheet(
 
     val isNameValid = accountName.text.trim().isNotBlank()
     val isAccountTypeValid = accountType != "BANK" || accountSubtype.isNotBlank()
-    val isInitialBalanceValid = isEditing || (initialBalance.trim().isNotBlank() && initialBalance.trim().toDoubleOrNull() != null)
+    val isInitialBalanceValid = initialBalance.trim().isNotBlank() && initialBalance.trim().toDoubleOrNull() != null
     val isAccountNumberValid = accountType == "CASH" || accountNumber.trim().isNotBlank()
 
     val isValid = isNameValid && isAccountTypeValid && isInitialBalanceValid && isAccountNumberValid
@@ -1996,30 +2008,28 @@ private fun AccountFormSheet(
                 Spacer(Modifier.height(14.dp))
             }
 
-            // Initial balance (new accounts only)
-            if (!isEditing) {
-                OutlinedTextField(
-                    value = initialBalance,
-                    onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) initialBalance = it },
-                    label = { Text("Initial Balance (\u09f3) *") },
-                    placeholder = { Text("0.00", color = TextMuted) },
-                    prefix = { Text("\u09f3 ", color = AccentTeal, fontWeight = FontWeight.Bold) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.AccountBalanceWallet,
-                            contentDescription = null,
-                            tint = AccentTeal,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    colors = formTextFieldColors(initialBalance.isEmpty()),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(14.dp))
-            }
+            // Balance field (editable for both new and existing accounts)
+            OutlinedTextField(
+                value = initialBalance,
+                onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) initialBalance = it },
+                label = { Text(if (isEditing) "Account Balance (\u09f3) *" else "Initial Balance (\u09f3) *") },
+                placeholder = { Text("0.00", color = TextMuted) },
+                prefix = { Text("\u09f3 ", color = AccentTeal, fontWeight = FontWeight.Bold) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.AccountBalanceWallet,
+                        contentDescription = null,
+                        tint = AccentTeal,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                colors = formTextFieldColors(initialBalance.isEmpty()),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(14.dp))
 
             // Account Number (Banks and MFS only - hidden for Hand Cash)
             if (accountType != "CASH") {
@@ -2082,6 +2092,7 @@ private fun AccountFormSheet(
                         existingAccount!!.copy(
                             name = accountName.text.trim(),
                             type = accountType,
+                            balance = initialBalance.toDoubleOrNull() ?: existingAccount.balance,
                             accountSubtype = if (accountType == "BANK" || accountType == "CASH") accountSubtype else "",
                             isManaged = false,
                             holderName = "",
