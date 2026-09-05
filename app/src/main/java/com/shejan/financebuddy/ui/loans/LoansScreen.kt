@@ -1679,52 +1679,71 @@ fun GroupedBankLoanCardItem(
                                             )
                                         }
 
-                                        // Row 3: Mini Progress Bar + Individual Repay Button
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        // Progress Bar
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(5.dp)
+                                                .clip(RoundedCornerShape(2.5.dp))
+                                                .background(DividerColor.copy(alpha = 0.3f))
                                         ) {
+                                            if (loanPct > 0f) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth(fraction = (loanPct / 100f).coerceIn(0f, 1f))
+                                                        .height(5.dp)
+                                                        .clip(RoundedCornerShape(2.5.dp))
+                                                        .background(AccentTeal)
+                                                )
+                                            }
+                                        }
+
+                                        // Repay Button or Settled Indicator
+                                        if (remRepayable > 0) {
+                                            Button(
+                                                onClick = { onRepayClick(loan) },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = AccentTeal,
+                                                    contentColor = Color.White
+                                                ),
+                                                shape = RoundedCornerShape(10.dp),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = 2.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Payment,
+                                                    contentDescription = null,
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = "Repay Loan #${index + 1}",
+                                                    color = Color.White,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 13.sp
+                                                )
+                                            }
+                                        } else {
                                             Box(
                                                 modifier = Modifier
-                                                    .weight(1f)
-                                                    .height(4.dp)
-                                                    .clip(RoundedCornerShape(2.dp))
-                                                    .background(DividerColor.copy(alpha = 0.3f))
+                                                    .fillMaxWidth()
+                                                    .padding(top = 2.dp)
+                                                    .background(AccentTeal.copy(alpha = 0.1f), RoundedCornerShape(10.dp))
+                                                    .border(1.dp, AccentTeal.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                                                    .padding(vertical = 8.dp),
+                                                contentAlignment = Alignment.Center
                                             ) {
-                                                if (loanPct > 0f) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth(fraction = (loanPct / 100f).coerceIn(0f, 1f))
-                                                            .height(4.dp)
-                                                            .clip(RoundedCornerShape(2.dp))
-                                                            .background(AccentTeal)
-                                                    )
-                                                }
-                                            }
-
-                                            if (remRepayable > 0) {
-                                                Button(
-                                                    onClick = { onRepayClick(loan) },
-                                                    colors = ButtonDefaults.buttonColors(
-                                                        containerColor = AccentTeal,
-                                                        contentColor = Color.White
-                                                    ),
-                                                    shape = RoundedCornerShape(8.dp),
-                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                                    modifier = Modifier.height(28.dp)
-                                                ) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(15.dp))
+                                                    Spacer(modifier = Modifier.width(6.dp))
                                                     Text(
-                                                        text = "Pay EMI",
-                                                        fontSize = 11.sp,
+                                                        text = "Loan #${index + 1} Fully Settled",
+                                                        color = AccentTeal,
+                                                        fontSize = 12.sp,
                                                         fontWeight = FontWeight.Bold
                                                     )
-                                                }
-                                            } else {
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Icon(Icons.Default.CheckCircle, null, tint = AccentTeal, modifier = Modifier.size(13.dp))
-                                                    Spacer(modifier = Modifier.width(3.dp))
-                                                    Text("Settled", color = AccentTeal, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                                                 }
                                             }
                                         }
@@ -1835,10 +1854,9 @@ fun GroupedBankLoanCardItem(
                                 )
                             }
                         }
-                    } else {
-                        val loanToRepay = group.primaryUnpaidLoan ?: group.loans.first()
+                    } else if (group.loanCount == 1 && singleLoan != null) {
                         Button(
-                            onClick = { onRepayClick(loanToRepay) },
+                            onClick = { onRepayClick(singleLoan) },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = AccentTeal,
                                 contentColor = Color.White
@@ -2281,52 +2299,71 @@ fun GroupedPersonalLoanCardItem(
                                             }
                                         }
 
-                                        // Row 3: Mini Progress Bar + Individual Repay Button
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        // Progress Bar
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(5.dp)
+                                                .clip(RoundedCornerShape(2.5.dp))
+                                                .background(DividerColor.copy(alpha = 0.3f))
                                         ) {
+                                            if (loanPct > 0f) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth(fraction = (loanPct / 100f).coerceIn(0f, 1f))
+                                                        .height(5.dp)
+                                                        .clip(RoundedCornerShape(2.5.dp))
+                                                        .background(AccentTeal)
+                                                )
+                                            }
+                                        }
+
+                                        // Repay Button or Settled Indicator
+                                        if (loanRem > 0) {
+                                            Button(
+                                                onClick = { onRepayClick(loan) },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = if (isLent) AccentPurple else AccentTeal,
+                                                    contentColor = Color.White
+                                                ),
+                                                shape = RoundedCornerShape(10.dp),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = 2.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Payment,
+                                                    contentDescription = null,
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = if (isLent) "Record Repayment Received" else "Repay Loan #${index + 1}",
+                                                    color = Color.White,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 13.sp
+                                                )
+                                            }
+                                        } else {
                                             Box(
                                                 modifier = Modifier
-                                                    .weight(1f)
-                                                    .height(4.dp)
-                                                    .clip(RoundedCornerShape(2.dp))
-                                                    .background(DividerColor.copy(alpha = 0.3f))
+                                                    .fillMaxWidth()
+                                                    .padding(top = 2.dp)
+                                                    .background(AccentTeal.copy(alpha = 0.1f), RoundedCornerShape(10.dp))
+                                                    .border(1.dp, AccentTeal.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                                                    .padding(vertical = 8.dp),
+                                                contentAlignment = Alignment.Center
                                             ) {
-                                                if (loanPct > 0f) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth(fraction = (loanPct / 100f).coerceIn(0f, 1f))
-                                                            .height(4.dp)
-                                                            .clip(RoundedCornerShape(2.dp))
-                                                            .background(AccentTeal)
-                                                    )
-                                                }
-                                            }
-
-                                            if (loanRem > 0) {
-                                                Button(
-                                                    onClick = { onRepayClick(loan) },
-                                                    colors = ButtonDefaults.buttonColors(
-                                                        containerColor = if (isLent) AccentPurple else AccentTeal,
-                                                        contentColor = Color.White
-                                                    ),
-                                                    shape = RoundedCornerShape(8.dp),
-                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                                    modifier = Modifier.height(28.dp)
-                                                ) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(15.dp))
+                                                    Spacer(modifier = Modifier.width(6.dp))
                                                     Text(
-                                                        text = if (isLent) "Receive" else "Repay",
-                                                        fontSize = 11.sp,
+                                                        text = "Loan #${index + 1} Fully Settled",
+                                                        color = AccentTeal,
+                                                        fontSize = 12.sp,
                                                         fontWeight = FontWeight.Bold
                                                     )
-                                                }
-                                            } else {
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Icon(Icons.Default.CheckCircle, null, tint = AccentTeal, modifier = Modifier.size(13.dp))
-                                                    Spacer(modifier = Modifier.width(3.dp))
-                                                    Text("Settled", color = AccentTeal, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                                                 }
                                             }
                                         }
@@ -2436,10 +2473,9 @@ fun GroupedPersonalLoanCardItem(
                                 )
                             }
                         }
-                    } else {
-                        val loanToRepay = group.primaryUnpaidLoan ?: group.loans.first()
+                    } else if (group.loanCount == 1 && singleLoan != null) {
                         Button(
-                            onClick = { onRepayClick(loanToRepay) },
+                            onClick = { onRepayClick(singleLoan) },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if (isLent) AccentPurple else AccentTeal,
                                 contentColor = Color.White
@@ -2457,7 +2493,7 @@ fun GroupedPersonalLoanCardItem(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                if (isLent) "Record Repayment Received" else "Repay Person",
+                                if (isLent) "Record Repayment Received" else "Repay Loan",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.5.sp
