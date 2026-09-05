@@ -158,7 +158,6 @@ fun BankAccountsScreen(
     var deletingAccounts by remember { mutableStateOf<List<AccountEntity>?>(null) }
     var deleteDialogTitle by remember { mutableStateOf("Delete Account?") }
     var deleteDialogMessage by remember { mutableStateOf("") }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
     deletingAccounts?.let { targetAccounts ->
@@ -511,12 +510,15 @@ fun BankAccountsScreen(
 
     if (showAddSheet) {
         AccountFormSheet(
-            sheetState = sheetState,
             existingAccount = editingAccount,
-            onDismiss = { scope.launch { sheetState.hide() }.invokeOnCompletion { showAddSheet = false; editingAccount = null } },
+            onDismiss = {
+                showAddSheet = false
+                editingAccount = null
+            },
             onSave = { account ->
                 if (editingAccount != null && editingAccount!!.id != 0) onUpdateAccount(account) else onAddAccount(account)
-                scope.launch { sheetState.hide() }.invokeOnCompletion { showAddSheet = false; editingAccount = null }
+                showAddSheet = false
+                editingAccount = null
             }
         )
     }
@@ -1675,7 +1677,6 @@ private fun SingleAccountInnerCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccountFormSheet(
-    sheetState: SheetState,
     existingAccount: AccountEntity?,
     onDismiss: () -> Unit,
     onSave: (AccountEntity) -> Unit
@@ -1694,20 +1695,41 @@ private fun AccountFormSheet(
     var initialBalance by remember(existingAccount) { mutableStateOf(if (isEditing) existingAccount!!.balance.toString() else "") }
     var accountNumber  by remember(existingAccount) { mutableStateOf(existingAccount?.accountNumber ?: "") }
     var showAs         by remember(existingAccount) { mutableStateOf(existingAccount?.showAs ?: "") }
+    val coroutineScope = rememberCoroutineScope()
     var nameExpanded    by remember { mutableStateOf(false) }
     var subtypeExpanded by remember { mutableStateOf(false) }
     var showDiscardDialog by remember { mutableStateOf(false) }
+    var forceDismiss by remember { mutableStateOf(false) }
 
-    val isFormDirty = remember(accountName.text, initialBalance, accountNumber, showAs, isEditing) {
-        if (isEditing) {
-            accountName.text.trim() != (existingAccount?.name ?: "") ||
-            initialBalance.trim() != (existingAccount?.balance?.toString() ?: "") ||
-            accountNumber.trim() != (existingAccount?.accountNumber ?: "") ||
-            showAs.trim() != (existingAccount?.showAs ?: "")
-        } else {
-            accountName.text.trim().isNotEmpty() || initialBalance.trim().isNotEmpty() || accountNumber.trim().isNotEmpty() || showAs.trim().isNotEmpty()
-        }
+    val initialTypeVal = remember(existingAccount) { existingAccount?.type ?: "BANK" }
+    val initialNameVal = remember(existingAccount) { existingAccount?.name ?: (if (initialTypeVal == "CASH") "Hand Cash" else "") }
+    val initialSubtypeVal = remember(existingAccount) { existingAccount?.accountSubtype ?: "" }
+    val initialBalanceVal = remember(existingAccount) { if (isEditing) (existingAccount?.balance?.toString() ?: "") else "" }
+    val initialAccNumVal = remember(existingAccount) { existingAccount?.accountNumber ?: "" }
+    val initialShowAsVal = remember(existingAccount) { existingAccount?.showAs ?: "" }
+
+    val isFormDirty = remember(
+        accountName.text, initialBalance, accountNumber, showAs, accountSubtype, accountType, isEditing
+    ) {
+        accountName.text.trim() != initialNameVal.trim() ||
+        initialBalance.trim() != initialBalanceVal.trim() ||
+        accountNumber.trim() != initialAccNumVal.trim() ||
+        showAs.trim() != initialShowAsVal.trim() ||
+        accountSubtype != initialSubtypeVal ||
+        accountType != initialTypeVal
     }
+
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = { targetValue ->
+            if (targetValue == SheetValue.Hidden && isFormDirty && !forceDismiss) {
+                showDiscardDialog = true
+                false
+            } else {
+                true
+            }
+        }
+    )
 
     BackHandler(enabled = isFormDirty) {
         showDiscardDialog = true
@@ -1717,10 +1739,19 @@ private fun AccountFormSheet(
         DiscardChangesDialog(
             title = if (isEditing) "Discard Account Changes?" else "Discard Account?",
             message = "Are you sure you want to discard? Any entered account details will be lost.",
-            onDismissRequest = { showDiscardDialog = false },
+            onDismissRequest = {
+                showDiscardDialog = false
+            },
             onConfirmDiscard = {
                 showDiscardDialog = false
-                onDismiss()
+                forceDismiss = true
+                coroutineScope.launch {
+                    try {
+                        sheetState.hide()
+                    } finally {
+                        onDismiss()
+                    }
+                }
             }
         )
     }
@@ -1737,12 +1768,13 @@ private fun AccountFormSheet(
 
     ModalBottomSheet(
         onDismissRequest = {
-            if (isFormDirty) {
+            if (isFormDirty && !forceDismiss) {
                 showDiscardDialog = true
             } else {
                 onDismiss()
             }
         },
+        properties = ModalBottomSheetProperties(shouldDismissOnBackPress = !isFormDirty),
         sheetState = sheetState,
         containerColor = CardDark,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
@@ -2070,7 +2102,14 @@ private fun AccountFormSheet(
                             showAs = showAs.trim()
                         )
                     }
-                    onSave(saved)
+                    forceDismiss = true
+                    coroutineScope.launch {
+                        try {
+                            sheetState.hide()
+                        } finally {
+                            onSave(saved)
+                        }
+                    }
                 },
                 enabled = isValid,
                 modifier = Modifier
