@@ -43,6 +43,7 @@ import com.shejan.financebuddy.ui.common.DiscardChangesDialog
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -154,12 +155,14 @@ fun BankAccountsScreen(
 
     var showAddSheet by remember { mutableStateOf(false) }
     var editingAccount by remember { mutableStateOf<AccountEntity?>(null) }
-    var deletingAccount by remember { mutableStateOf<AccountEntity?>(null) }
+    var deletingAccounts by remember { mutableStateOf<List<AccountEntity>?>(null) }
+    var deleteDialogTitle by remember { mutableStateOf("Delete Account?") }
+    var deleteDialogMessage by remember { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
-    deletingAccount?.let { acc ->
-        Dialog(onDismissRequest = { deletingAccount = null }) {
+    deletingAccounts?.let { targetAccounts ->
+        Dialog(onDismissRequest = { deletingAccounts = null }) {
             Surface(
                 shape = RoundedCornerShape(24.dp),
                 color = CardDark,
@@ -194,7 +197,7 @@ fun BankAccountsScreen(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     Text(
-                        text = "Delete Account?",
+                        text = deleteDialogTitle,
                         fontSize = 19.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary,
@@ -204,7 +207,7 @@ fun BankAccountsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Are you sure you want to remove \"${acc.name}\"? Existing transactions will remain intact.",
+                        text = deleteDialogMessage,
                         fontSize = 13.5.sp,
                         color = TextSecondary,
                         textAlign = TextAlign.Center,
@@ -221,7 +224,7 @@ fun BankAccountsScreen(
                     ) {
                         // Cancel Button
                         Surface(
-                            onClick = { deletingAccount = null },
+                            onClick = { deletingAccounts = null },
                             shape = RoundedCornerShape(12.dp),
                             color = CardDarker,
                             border = BorderStroke(1.dp, DividerColor),
@@ -242,8 +245,8 @@ fun BankAccountsScreen(
                         // Delete Button
                         Surface(
                             onClick = {
-                                onDeleteAccount(acc)
-                                deletingAccount = null
+                                targetAccounts.forEach { onDeleteAccount(it) }
+                                deletingAccounts = null
                             },
                             shape = RoundedCornerShape(12.dp),
                             color = ExpenseRed,
@@ -405,7 +408,17 @@ fun BankAccountsScreen(
                                 group = group,
                                 currencyFormat = currencyFormat,
                                 onEdit = { account -> editingAccount = account; showAddSheet = true },
-                                onDelete = { account -> deletingAccount = account },
+                                onDelete = { account ->
+                                    deletingAccounts = listOf(account)
+                                    val name = account.showAs.ifBlank { account.name }
+                                    deleteDialogTitle = "Delete Account?"
+                                    deleteDialogMessage = "Are you sure you want to remove \"$name\"? Existing transactions will remain intact."
+                                },
+                                onDeleteAll = { accountsToDelete ->
+                                    deletingAccounts = accountsToDelete
+                                    deleteDialogTitle = "Delete Bank Card?"
+                                    deleteDialogMessage = "Are you sure you want to delete all ${accountsToDelete.size} accounts under \"${group.name}\"? Existing transactions will remain intact."
+                                },
                                 onAddAnother = { name, type ->
                                     editingAccount = AccountEntity(
                                         id = 0,
@@ -430,7 +443,17 @@ fun BankAccountsScreen(
                                 group = group,
                                 currencyFormat = currencyFormat,
                                 onEdit = { account -> editingAccount = account; showAddSheet = true },
-                                onDelete = { account -> deletingAccount = account },
+                                onDelete = { account ->
+                                    deletingAccounts = listOf(account)
+                                    val name = account.showAs.ifBlank { account.name }
+                                    deleteDialogTitle = "Delete Account?"
+                                    deleteDialogMessage = "Are you sure you want to remove \"$name\"? Existing transactions will remain intact."
+                                },
+                                onDeleteAll = { accountsToDelete ->
+                                    deletingAccounts = accountsToDelete
+                                    deleteDialogTitle = "Delete Bank Card?"
+                                    deleteDialogMessage = "Are you sure you want to delete all ${accountsToDelete.size} accounts under \"${group.name}\"? Existing transactions will remain intact."
+                                },
                                 onAddAnother = { name, type ->
                                     editingAccount = AccountEntity(
                                         id = 0,
@@ -455,7 +478,17 @@ fun BankAccountsScreen(
                                 group = group,
                                 currencyFormat = currencyFormat,
                                 onEdit = { account -> editingAccount = account; showAddSheet = true },
-                                onDelete = { account -> deletingAccount = account },
+                                onDelete = { account ->
+                                    deletingAccounts = listOf(account)
+                                    val name = account.showAs.ifBlank { account.name }
+                                    deleteDialogTitle = "Delete Account?"
+                                    deleteDialogMessage = "Are you sure you want to remove \"$name\"? Existing transactions will remain intact."
+                                },
+                                onDeleteAll = { accountsToDelete ->
+                                    deletingAccounts = accountsToDelete
+                                    deleteDialogTitle = "Delete Bank Card?"
+                                    deleteDialogMessage = "Are you sure you want to delete all ${accountsToDelete.size} accounts under \"${group.name}\"? Existing transactions will remain intact."
+                                },
                                 onAddAnother = { name, type ->
                                     editingAccount = AccountEntity(
                                         id = 0,
@@ -826,6 +859,7 @@ private fun GroupedAccountManageCard(
     currencyFormat: DecimalFormat,
     onEdit: (AccountEntity) -> Unit,
     onDelete: (AccountEntity) -> Unit,
+    onDeleteAll: (List<AccountEntity>) -> Unit,
     onAddAnother: (String, String) -> Unit
 ) {
     val cardColor = remember(group.colorHex, group.name) {
@@ -833,24 +867,41 @@ private fun GroupedAccountManageCard(
             BANK_COLOR_MAP[group.name]?.let { Color(android.graphics.Color.parseColor(it)) } ?: AccentTeal
         }
     }
-    var expanded by remember { mutableStateOf(true) }
     var showMenu by remember { mutableStateOf(false) }
-    val rotationState by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "ExpandRotation")
+    var showEditSelector by remember { mutableStateOf(false) }
+    var showDeleteSelector by remember { mutableStateOf(false) }
+
+    if (showEditSelector) {
+        EditAccountSelectDialog(
+            group = group,
+            cardColor = cardColor,
+            currencyFormat = currencyFormat,
+            onDismiss = { showEditSelector = false },
+            onSelectAccount = onEdit
+        )
+    }
+
+    if (showDeleteSelector) {
+        DeleteAccountSelectDialog(
+            group = group,
+            cardColor = cardColor,
+            currencyFormat = currencyFormat,
+            onDismiss = { showDeleteSelector = false },
+            onDeleteSingle = onDelete,
+            onDeleteEntireGroup = { onDeleteAll(group.accounts) }
+        )
+    }
 
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardDark),
         border = BorderStroke(1.dp, cardColor.copy(alpha = 0.25f)),
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize()
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            // Header: Icon + Name + Count Badge + Total Balance + Menu/Expand
+            // Header: Icon + Name + Count Badge + Total Balance + Menu
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(if (group.count > 1) Modifier.clickable { expanded = !expanded } else Modifier),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Institution Icon Badge
@@ -876,35 +927,14 @@ private fun GroupedAccountManageCard(
 
                 // Title & Count Info
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = group.name,
-                            color = TextPrimary,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (group.count > 1) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(cardColor.copy(alpha = 0.15f))
-                                    .border(1.dp, cardColor.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "${group.count} Accounts",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = cardColor
-                                )
-                            }
-                        }
-                    }
+                    Text(
+                        text = group.name,
+                        color = TextPrimary,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Text(
                         text = if (group.count > 1) "Combined: ৳${currencyFormat.format(group.totalBalance)}"
                         else if (group.type == "CASH") "Physical Cash"
@@ -915,102 +945,86 @@ private fun GroupedAccountManageCard(
                     )
                 }
 
-                // Trailing: If single account -> Balance & Menu; If multi account -> Expand arrow & Menu
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    if (group.count > 1) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(CardDarker)
-                                .border(1.dp, DividerColor, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowDown,
-                                contentDescription = if (expanded) "Collapse" else "Expand",
-                                tint = TextPrimary,
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .rotate(rotationState)
-                            )
-                        }
+                // 3-dots Menu
+                Box {
+                    IconButton(
+                        onClick = { showMenu = true },
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Options",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
 
-                    // 3-dots Menu
-                    Box {
-                        IconButton(
-                            onClick = { showMenu = true },
-                            modifier = Modifier.size(30.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = "Options",
-                                tint = TextSecondary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false },
-                            shape = RoundedCornerShape(14.dp),
-                            containerColor = CardDarker,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(14.dp))
-                                .border(1.dp, DividerColor, RoundedCornerShape(14.dp))
-                        ) {
-                            if (group.count == 1) {
-                                val single = group.accounts.first()
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(Icons.Default.Edit, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(16.dp))
-                                            Spacer(Modifier.width(10.dp))
-                                            Text("Edit Account", color = TextPrimary, fontSize = 13.sp)
-                                        }
-                                    },
-                                    onClick = {
-                                        showMenu = false
-                                        onEdit(single)
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(Icons.Default.Delete, contentDescription = null, tint = ExpenseRed, modifier = Modifier.size(16.dp))
-                                            Spacer(Modifier.width(10.dp))
-                                            Text("Delete Account", color = ExpenseRed, fontSize = 13.sp)
-                                        }
-                                    },
-                                    onClick = {
-                                        showMenu = false
-                                        onDelete(single)
-                                    }
-                                )
-                            }
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.Add, contentDescription = null, tint = cardColor, modifier = Modifier.size(16.dp))
-                                        Spacer(Modifier.width(10.dp))
-                                        Text("Add Another at ${group.name}", color = cardColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                    }
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    onAddAnother(group.name, group.type)
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        shape = RoundedCornerShape(14.dp),
+                        containerColor = CardDark,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .border(1.dp, DividerColor, RoundedCornerShape(14.dp))
+                    ) {
+                        // 1. Edit Account
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Edit, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(10.dp))
+                                    Text("Edit Account", color = TextPrimary, fontSize = 13.sp)
                                 }
-                            )
-                        }
+                            },
+                            onClick = {
+                                showMenu = false
+                                if (group.count == 1) {
+                                    onEdit(group.accounts.first())
+                                } else {
+                                    showEditSelector = true
+                                }
+                            }
+                        )
+
+                        // 2. Add Another Account
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Add, contentDescription = null, tint = cardColor, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(10.dp))
+                                    Text("Add Another at ${group.name}", color = cardColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                onAddAnother(group.name, group.type)
+                            }
+                        )
+
+                        // 3. Delete Account
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Delete, contentDescription = null, tint = ExpenseRed, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(10.dp))
+                                    Text("Delete Account", color = ExpenseRed, fontSize = 13.sp)
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                if (group.count == 1) {
+                                    onDelete(group.accounts.first())
+                                } else {
+                                    showDeleteSelector = true
+                                }
+                            }
+                        )
                     }
                 }
             }
 
-            // Single Account Card or Multi-Account Cards Inside
+            // Single Account Card or Multi-Account Cards Inside (Always Expanded)
             if (group.count == 1) {
                 val account = group.accounts.first()
                 Spacer(Modifier.height(10.dp))
@@ -1019,11 +1033,9 @@ private fun GroupedAccountManageCard(
                     cardColor = cardColor,
                     currencyFormat = currencyFormat,
                     accountIndex = 1,
-                    isOnlyAccount = true,
-                    onEdit = { onEdit(account) },
-                    onDelete = { onDelete(account) }
+                    isOnlyAccount = true
                 )
-            } else if (expanded) {
+            } else {
                 Spacer(Modifier.height(12.dp))
                 HorizontalDivider(color = DividerColor.copy(alpha = 0.5f), modifier = Modifier.padding(bottom = 10.dp))
 
@@ -1046,9 +1058,431 @@ private fun GroupedAccountManageCard(
                             cardColor = cardColor,
                             currencyFormat = currencyFormat,
                             accountIndex = index + 1,
-                            isOnlyAccount = false,
-                            onEdit = { onEdit(account) },
-                            onDelete = { onDelete(account) }
+                            isOnlyAccount = false
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EditAccountSelectDialog(
+    group: GroupedAccount,
+    cardColor: Color,
+    currencyFormat: DecimalFormat,
+    onDismiss: () -> Unit,
+    onSelectAccount: (AccountEntity) -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = CardDark,
+            border = BorderStroke(1.dp, DividerColor),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(AccentTeal.copy(alpha = 0.15f))
+                                .border(1.dp, AccentTeal.copy(alpha = 0.35f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = null,
+                                tint = AccentTeal,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Select Account to Edit",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = group.name,
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = TextMuted, modifier = Modifier.size(18.dp))
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Text(
+                    text = "Choose the specific account you want to edit:",
+                    fontSize = 12.5.sp,
+                    color = TextMuted,
+                    modifier = Modifier.padding(bottom = 10.dp)
+                )
+
+                // List of accounts
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    group.accounts.forEachIndexed { index, acc ->
+                        val displayName = when {
+                            acc.showAs.isNotBlank() -> acc.showAs
+                            else -> "${acc.accountSubtype.ifBlank { "Account" }} #${index + 1}"
+                        }
+                        val accNum = if (acc.accountNumber.isNotBlank()) {
+                            val raw = acc.accountNumber.trim()
+                            if (raw.length > 4) "•••• ${raw.takeLast(4)}" else raw
+                        } else "•••• ----"
+
+                        Surface(
+                            onClick = {
+                                onSelectAccount(acc)
+                                onDismiss()
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = CardDarker,
+                            border = BorderStroke(1.dp, DividerColor),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = displayName,
+                                        fontSize = 13.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = accNum,
+                                            fontSize = 11.sp,
+                                            color = TextSecondary
+                                        )
+                                        if (acc.accountSubtype.isNotBlank()) {
+                                            Text(
+                                                text = "• ${acc.accountSubtype}",
+                                                fontSize = 11.sp,
+                                                color = cardColor
+                                            )
+                                        }
+                                    }
+                                }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "৳${currencyFormat.format(acc.balance)}",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AccentTeal
+                                    )
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = null,
+                                        tint = TextMuted,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Cancel button
+                Surface(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(12.dp),
+                    color = CardDarker,
+                    border = BorderStroke(1.dp, DividerColor),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(42.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "Cancel",
+                            color = TextPrimary,
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeleteAccountSelectDialog(
+    group: GroupedAccount,
+    cardColor: Color,
+    currencyFormat: DecimalFormat,
+    onDismiss: () -> Unit,
+    onDeleteSingle: (AccountEntity) -> Unit,
+    onDeleteEntireGroup: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = CardDark,
+            border = BorderStroke(1.dp, DividerColor),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(ExpenseRed.copy(alpha = 0.15f))
+                                .border(1.dp, ExpenseRed.copy(alpha = 0.35f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = ExpenseRed,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Delete Account",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = group.name,
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = TextMuted, modifier = Modifier.size(18.dp))
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                Text(
+                    text = "Select an account to delete:",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextMuted,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // List of individual accounts to delete
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    group.accounts.forEachIndexed { index, acc ->
+                        val displayName = when {
+                            acc.showAs.isNotBlank() -> acc.showAs
+                            else -> "${acc.accountSubtype.ifBlank { "Account" }} #${index + 1}"
+                        }
+                        val accNum = if (acc.accountNumber.isNotBlank()) {
+                            val raw = acc.accountNumber.trim()
+                            if (raw.length > 4) "•••• ${raw.takeLast(4)}" else raw
+                        } else "•••• ----"
+
+                        Surface(
+                            onClick = {
+                                onDismiss()
+                                onDeleteSingle(acc)
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = CardDarker,
+                            border = BorderStroke(1.dp, DividerColor),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = displayName,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = accNum,
+                                            fontSize = 11.sp,
+                                            color = TextSecondary
+                                        )
+                                        if (acc.accountSubtype.isNotBlank()) {
+                                            Text(
+                                                text = "• ${acc.accountSubtype}",
+                                                fontSize = 11.sp,
+                                                color = cardColor
+                                            )
+                                        }
+                                    }
+                                }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "৳${currencyFormat.format(acc.balance)}",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextSecondary
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(CircleShape)
+                                            .background(ExpenseRed.copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.DeleteOutline,
+                                            contentDescription = "Delete",
+                                            tint = ExpenseRed,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+                HorizontalDivider(color = DividerColor.copy(alpha = 0.6f))
+                Spacer(Modifier.height(12.dp))
+
+                // Delete Entire Bank Card Option
+                Surface(
+                    onClick = {
+                        onDismiss()
+                        onDeleteEntireGroup()
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    color = ExpenseRed.copy(alpha = 0.10f),
+                    border = BorderStroke(1.dp, ExpenseRed.copy(alpha = 0.40f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(ExpenseRed.copy(alpha = 0.20f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = ExpenseRed,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Delete Entire Bank Card",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ExpenseRed
+                            )
+                            Text(
+                                text = "Removes all ${group.count} accounts under ${group.name}",
+                                fontSize = 11.sp,
+                                color = ExpenseRed.copy(alpha = 0.75f)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                // Cancel button
+                Surface(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(12.dp),
+                    color = CardDarker,
+                    border = BorderStroke(1.dp, DividerColor),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(42.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "Cancel",
+                            color = TextPrimary,
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
@@ -1063,9 +1497,7 @@ private fun SingleAccountInnerCard(
     cardColor: Color,
     currencyFormat: DecimalFormat,
     accountIndex: Int = 1,
-    isOnlyAccount: Boolean = false,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
+    isOnlyAccount: Boolean = false
 ) {
     // Resolve display name / nickname
     val displayName = when {
@@ -1100,7 +1532,7 @@ private fun SingleAccountInnerCard(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Row 1: Account Name / Nickname + Balance + Action Buttons
+            // Row 1: Account Name / Nickname + Balance
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1124,46 +1556,13 @@ private fun SingleAccountInnerCard(
 
                 Spacer(Modifier.width(8.dp))
 
-                // Balance & Quick Actions
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = "৳${currencyFormat.format(account.balance)}",
-                        color = AccentTeal,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = onEdit,
-                            modifier = Modifier.size(26.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit",
-                                tint = AccentTeal,
-                                modifier = Modifier.size(15.dp)
-                            )
-                        }
-                        IconButton(
-                            onClick = onDelete,
-                            modifier = Modifier.size(26.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete",
-                                tint = ExpenseRed,
-                                modifier = Modifier.size(15.dp)
-                            )
-                        }
-                    }
-                }
+                // Balance
+                Text(
+                    text = "৳${currencyFormat.format(account.balance)}",
+                    color = AccentTeal,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             // Row 2: Distinct Boxes for Account Number, Type of Account, and Holder
