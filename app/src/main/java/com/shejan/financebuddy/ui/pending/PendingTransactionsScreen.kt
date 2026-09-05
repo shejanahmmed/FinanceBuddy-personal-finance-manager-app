@@ -45,6 +45,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -233,10 +234,18 @@ fun PendingTransactionsScreen(
         }
     }
 
+    val isAnyDialogActive = showSyncOptionsDialog || showConfirmAllDialog || showDismissAllDialog || showMappingConfigSheet
+    val blurRadius by animateDpAsState(
+        targetValue = if (isAnyDialogActive) 6.dp else 0.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "DialogBackdropBlur"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundDark)
+            .blur(blurRadius)
             .nestedScroll(nestedScrollConnection)
     ) {
         // Ambient glow
@@ -690,21 +699,47 @@ fun PendingTransactionsScreen(
                 },
                 confirmButton = {
                     if (readyCount > 0) {
-                        Button(
-                            onClick = {
-                                onConfirmAll()
-                                showConfirmAllDialog = false
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = IncomeGreen),
-                            shape = RoundedCornerShape(10.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Accept ($readyCount)", color = OnAccent, fontWeight = FontWeight.Bold)
+                            OutlinedButton(
+                                onClick = { showConfirmAllDialog = false },
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, DividerColor.copy(alpha = 0.8f)),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = CardDarker,
+                                    contentColor = TextPrimary
+                                ),
+                                modifier = Modifier.weight(1f).height(44.dp)
+                            ) {
+                                Text("Cancel", fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
+                            }
+                            Button(
+                                onClick = {
+                                    onConfirmAll()
+                                    showConfirmAllDialog = false
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = IncomeGreen),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f).height(44.dp)
+                            ) {
+                                Text("Accept ($readyCount)", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                            }
                         }
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showConfirmAllDialog = false }) {
-                        Text(if (readyCount > 0) "Cancel" else "Got It", color = TextSecondary)
+                    } else {
+                        Button(
+                            onClick = { showConfirmAllDialog = false },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AccentTeal,
+                                contentColor = OnAccent
+                            ),
+                            modifier = Modifier.fillMaxWidth().height(44.dp)
+                        ) {
+                            Text("Got It", fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                        }
                     }
                 }
             )
@@ -766,20 +801,34 @@ fun PendingTransactionsScreen(
                     }
                 },
                 confirmButton = {
-                    Button(
-                        onClick = {
-                            onDismissAll()
-                            showDismissAllDialog = false
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed),
-                        shape = RoundedCornerShape(10.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Dismiss All (${pendingList.size})", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDismissAllDialog = false }) {
-                        Text("Cancel", color = TextSecondary)
+                        OutlinedButton(
+                            onClick = { showDismissAllDialog = false },
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, DividerColor.copy(alpha = 0.8f)),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = CardDarker,
+                                contentColor = TextPrimary
+                            ),
+                            modifier = Modifier.weight(1f).height(44.dp)
+                        ) {
+                            Text("Cancel", fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
+                        }
+                        Button(
+                            onClick = {
+                                onDismissAll()
+                                showDismissAllDialog = false
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f).height(44.dp)
+                        ) {
+                            Text("Dismiss All", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                        }
                     }
                 }
             )
@@ -848,10 +897,18 @@ fun PendingTransactionsScreen(
                         }
                     }
                 },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = { showSyncOptionsDialog = false }) {
-                        Text("Cancel", color = TextSecondary)
+                confirmButton = {
+                    OutlinedButton(
+                        onClick = { showSyncOptionsDialog = false },
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, DividerColor.copy(alpha = 0.8f)),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = CardDarker,
+                            contentColor = TextPrimary
+                        ),
+                        modifier = Modifier.fillMaxWidth().height(44.dp)
+                    ) {
+                        Text("Cancel", fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
                     }
                 }
             )
@@ -861,10 +918,9 @@ fun PendingTransactionsScreen(
             ModalBottomSheet(
                 onDismissRequest = { showMappingConfigSheet = false },
                 sheetState       = configSheetState,
-                containerColor   = CardDarker,
-                shape            = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                tonalElevation   = 8.dp,
-                dragHandle = { BottomSheetDefaults.DragHandle(color = TextSecondary.copy(alpha = 0.75f)) }
+                containerColor   = CardDark,
+                shape            = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                dragHandle       = { BottomSheetDefaults.DragHandle(color = TextSecondary.copy(alpha = 0.75f)) }
             ) {
                 SmsSenderMappingsConfigSheet(
                     accounts = accounts,
@@ -1483,20 +1539,34 @@ private fun PendingTransactionCard(
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        showDeleteDialog = false
-                        onDeletePermanently()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed),
-                    shape = RoundedCornerShape(10.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Delete", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel", color = TextSecondary)
+                    OutlinedButton(
+                        onClick = { showDeleteDialog = false },
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, DividerColor.copy(alpha = 0.8f)),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = CardDarker,
+                            contentColor = TextPrimary
+                        ),
+                        modifier = Modifier.weight(1f).height(44.dp)
+                    ) {
+                        Text("Cancel", fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
+                    }
+                    Button(
+                        onClick = {
+                            showDeleteDialog = false
+                            onDeletePermanently()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f).height(44.dp)
+                    ) {
+                        Text("Delete", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                    }
                 }
             }
         )
@@ -1738,8 +1808,8 @@ private fun SmsSenderMappingsConfigSheet(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(14.dp))
-                                    .background(CardDark)
-                                    .border(1.dp, DividerColor, RoundedCornerShape(14.dp))
+                                    .background(CardDarker)
+                                    .border(1.dp, DividerColor.copy(alpha = 0.7f), RoundedCornerShape(14.dp))
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -1794,8 +1864,8 @@ private fun SmsSenderMappingsConfigSheet(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(14.dp))
-                                    .background(CardDark)
-                                    .border(1.dp, DividerColor, RoundedCornerShape(14.dp))
+                                    .background(CardDarker)
+                                    .border(1.dp, DividerColor.copy(alpha = 0.7f), RoundedCornerShape(14.dp))
                                     .padding(14.dp)
                             ) {
                                 Row(
@@ -1830,7 +1900,8 @@ private fun SmsSenderMappingsConfigSheet(
                                         DropdownMenu(
                                             expanded = showAccountMenu,
                                             onDismissRequest = { showAccountMenu = false },
-                                            containerColor = CardDarker
+                                            containerColor = CardDark,
+                                            modifier = Modifier.border(1.dp, DividerColor.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
                                         ) {
                                             DropdownMenuItem(
                                                 text = { Text("Select Target Account:", color = AccentTeal, fontWeight = FontWeight.Bold, fontSize = 11.sp) },
@@ -1869,7 +1940,8 @@ private fun SmsSenderMappingsConfigSheet(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .background(CardDarker, RoundedCornerShape(8.dp))
+                                        .background(SurfaceDark, RoundedCornerShape(8.dp))
+                                        .border(1.dp, DividerColor.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                                         .padding(10.dp)
                                 ) {
                                     Text(
@@ -1894,10 +1966,13 @@ private fun SmsSenderMappingsConfigSheet(
                 .fillMaxWidth()
                 .height(48.dp),
             shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = CardDarker,
+                contentColor = TextPrimary
+            ),
             border = BorderStroke(1.dp, DividerColor)
         ) {
-            Text("Close Settings")
+            Text("Close Settings", fontWeight = FontWeight.SemiBold)
         }
         Spacer(modifier = Modifier.height(32.dp))
     }
