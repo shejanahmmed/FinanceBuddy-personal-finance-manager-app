@@ -39,6 +39,7 @@ import com.shejan.financebuddy.data.db.PayeeEntity
 import com.shejan.financebuddy.ui.theme.*
 import androidx.activity.compose.BackHandler
 import com.shejan.financebuddy.ui.common.DiscardChangesDialog
+import com.shejan.financebuddy.ui.common.rememberBitmapFromUri
 import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.UUID
@@ -734,20 +735,4 @@ private val PRESET_MFS = listOf(
     "bKash", "Nagad", "Rocket", "Upay", "CellFin (IBBL)", "Ok Wallet", "MyCash"
 )
 
-@Composable
-private fun rememberBitmapFromUri(uriString: String?): ImageBitmap? {
-    val context = LocalContext.current
-    return remember(uriString) {
-        if (uriString.isNullOrEmpty()) null
-        else {
-            try {
-                val uri = android.net.Uri.parse(uriString)
-                context.contentResolver.openInputStream(uri)?.use { stream ->
-                    android.graphics.BitmapFactory.decodeStream(stream)?.asImageBitmap()
-                }
-            } catch (e: Exception) {
-                null
-            }
-        }
-    }
-}
+// rememberBitmapFromUri is provided by com.shejan.financebuddy.ui.common.PayeeAvatar

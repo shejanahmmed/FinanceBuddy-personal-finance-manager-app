@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.activity.compose.BackHandler
 import com.shejan.financebuddy.ui.common.DiscardChangesDialog
+import com.shejan.financebuddy.ui.common.rememberBitmapFromUri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.PickVisualMediaRequest
@@ -1259,23 +1260,7 @@ private fun formTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedContainerColor = CardDarker, unfocusedContainerColor = CardDarker
 )
 
-@Composable
-private fun rememberBitmapFromUri(uriString: String?): ImageBitmap? {
-    val context = LocalContext.current
-    return remember(uriString) {
-        if (uriString.isNullOrEmpty()) null
-        else {
-            try {
-                val uri = android.net.Uri.parse(uriString)
-                context.contentResolver.openInputStream(uri)?.use { stream ->
-                    android.graphics.BitmapFactory.decodeStream(stream)?.asImageBitmap()
-                }
-            } catch (e: Exception) {
-                null
-            }
-        }
-    }
-}
+// rememberBitmapFromUri is provided by com.shejan.financebuddy.ui.common.PayeeAvatar
 
 @Composable
 private fun RecipientHistoryCard(

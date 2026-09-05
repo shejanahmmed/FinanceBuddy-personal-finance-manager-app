@@ -119,6 +119,7 @@ import com.shejan.financebuddy.ui.theme.TextMuted
 import com.shejan.financebuddy.ui.theme.TextPrimary
 import com.shejan.financebuddy.ui.theme.TextSecondary
 import com.shejan.financebuddy.ui.theme.TransferYellow
+import com.shejan.financebuddy.ui.common.PayeeAvatar
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -1077,6 +1078,13 @@ fun AddTransactionSheet(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
+                                            // Recipient profile avatar
+                                            PayeeAvatar(
+                                                name = parentPayee?.name ?: acc.recipientName,
+                                                imageUri = parentPayee?.imageUri,
+                                                size = 34.dp,
+                                                fontSize = 14.sp
+                                            )
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(nameToShow, color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 14.sp)
                                                 val accLast4 = if (acc.accountNumber.length > 4) {

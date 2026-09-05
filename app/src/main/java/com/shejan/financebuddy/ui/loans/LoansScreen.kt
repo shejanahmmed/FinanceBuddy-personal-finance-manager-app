@@ -56,6 +56,7 @@ import com.shejan.financebuddy.data.db.LoanEntity
 import com.shejan.financebuddy.data.db.AccountEntity
 import com.shejan.financebuddy.data.db.PayeeEntity
 import com.shejan.financebuddy.ui.theme.*
+import com.shejan.financebuddy.ui.common.PayeeAvatar
 import java.text.DecimalFormat
 import java.util.Locale
 
@@ -3389,11 +3390,11 @@ fun AddPersonalLoanFormSheet(
                                 onClick = { lenderInput = payee.name },
                                 label = { Text(payee.name, fontSize = 12.sp) },
                                 leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Person,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(14.dp),
-                                        tint = if (isSelected) AccentTeal else TextSecondary
+                                    PayeeAvatar(
+                                        name = payee.name,
+                                        imageUri = payee.imageUri,
+                                        size = 22.dp,
+                                        fontSize = 10.sp
                                     )
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
