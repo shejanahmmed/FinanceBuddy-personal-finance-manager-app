@@ -2,8 +2,12 @@ package com.shejan.financebuddy.ui.payees
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -129,7 +133,7 @@ fun PayeeDetailScreen(
         }.sortedByDescending { it.timestamp }
     }
     val currencyFormat = remember { DecimalFormat("#,##0.00") }
-    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy • hh:mm a", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -662,12 +666,11 @@ fun PayeeDetailScreen(
                         modifier = Modifier.weight(1f)
                     ) {
                         items(recipientTransactions, key = { it.id }) { tx ->
-                            val accName = remember(allAccounts, tx.fromAccountId) {
-                                allAccounts.firstOrNull { it.id == tx.fromAccountId }?.name ?: "Account"
-                            }
                             RecipientHistoryCard(
                                 transaction = tx,
-                                accountName = accName,
+                                payee = payee,
+                                allAccounts = allAccounts,
+                                payeeAccounts = accounts,
                                 currencyFormat = currencyFormat,
                                 dateFormat = dateFormat
                             )
@@ -1265,88 +1268,321 @@ private fun formTextFieldColors() = OutlinedTextFieldDefaults.colors(
 @Composable
 private fun RecipientHistoryCard(
     transaction: TransactionEntity,
-    accountName: String,
+    payee: PayeeEntity,
+    allAccounts: List<AccountEntity>,
+    payeeAccounts: List<PayeeAccountEntity>,
     currencyFormat: DecimalFormat,
     dateFormat: SimpleDateFormat
 ) {
+    var isExpanded by remember { mutableStateOf(false) }
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "arrowRotation"
+    )
+
     val isIncome = transaction.type == "INCOME"
-    val amountColor = if (isIncome) IncomeGreen else ExpenseRed
-    val sign = if (isIncome) "+" else "-"
+    val isTransfer = transaction.type == "TRANSFER"
+    val isExpense = transaction.type == "EXPENSE"
+
+    val amountColor = when {
+        isIncome -> IncomeGreen
+        isTransfer -> TransferYellow
+        else -> ExpenseRed
+    }
+
+    val typeIcon = when {
+        isIncome -> Icons.Default.ArrowDownward
+        isTransfer -> Icons.Default.SwapHoriz
+        else -> Icons.Default.ArrowUpward
+    }
+
+    val typeLabel = remember(transaction) {
+        val catLower = transaction.category.lowercase(Locale.ROOT)
+        val noteLower = transaction.note.lowercase(Locale.ROOT)
+        when {
+            catLower.contains("loan") || noteLower.contains("loan") -> {
+                if (isIncome) "Loan Received" else if (isExpense) "Loan Repayment" else "Loan Transfer"
+            }
+            isTransfer -> "Money Transfer"
+            isIncome -> if (transaction.category.isNotBlank() && transaction.category != "Income") transaction.category else "Income Received"
+            else -> if (transaction.category.isNotBlank() && transaction.category != "Expense") transaction.category else "Payment"
+        }
+    }
+
+    val fromAccount = remember(allAccounts, transaction.fromAccountId) {
+        allAccounts.firstOrNull { it.id == transaction.fromAccountId }
+    }
+    val toAccount = remember(allAccounts, transaction.toAccountId) {
+        if (transaction.toAccountId != null) allAccounts.firstOrNull { it.id == transaction.toAccountId } else null
+    }
+
+    val extractedNumber = remember(transaction.note) {
+        val inParentheses = Regex("""\(([\d\s\-+]{4,})\)""").find(transaction.note)?.groupValues?.get(1)?.trim()
+        inParentheses ?: Regex("""\b\d{6,20}\b""").find(transaction.note)?.value
+    }
+
+    val matchedPayeeAccount = remember(payeeAccounts, transaction.note, extractedNumber) {
+        payeeAccounts.firstOrNull { acc ->
+            acc.accountNumber.isNotBlank() && (
+                transaction.note.contains(acc.accountNumber, ignoreCase = true) ||
+                (extractedNumber != null && (acc.accountNumber.contains(extractedNumber) || extractedNumber.contains(acc.accountNumber)))
+            )
+        } ?: payeeAccounts.firstOrNull()
+    }
+
+    val toBankName = remember(toAccount, matchedPayeeAccount, payeeAccounts) {
+        when {
+            toAccount != null -> toAccount.name
+            matchedPayeeAccount != null && matchedPayeeAccount.bankName.isNotBlank() -> matchedPayeeAccount.bankName
+            payeeAccounts.isNotEmpty() && payeeAccounts.first().bankName.isNotBlank() -> payeeAccounts.first().bankName
+            else -> "Bank / Mobile Wallet"
+        }
+    }
+
+    val toAccNum = remember(toAccount, matchedPayeeAccount, extractedNumber, payeeAccounts) {
+        when {
+            toAccount != null && toAccount.accountNumber.isNotBlank() -> toAccount.accountNumber
+            matchedPayeeAccount != null && matchedPayeeAccount.accountNumber.isNotBlank() -> matchedPayeeAccount.accountNumber
+            !extractedNumber.isNullOrBlank() -> extractedNumber
+            payeeAccounts.isNotEmpty() && payeeAccounts.first().accountNumber.isNotBlank() -> payeeAccounts.first().accountNumber
+            else -> "N/A"
+        }
+    }
+
+    val cleanRemarks = remember(transaction.note) {
+        if (transaction.note.startsWith("To:", ignoreCase = true) && transaction.note.contains(" - ")) {
+            transaction.note.substringAfter(" - ").trim()
+        } else if (transaction.note.startsWith("To:", ignoreCase = true)) {
+            ""
+        } else {
+            transaction.note.trim()
+        }
+    }
 
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardDark),
+        border = BorderStroke(1.dp, if (isExpanded) AccentBlue.copy(alpha = 0.35f) else DividerColor),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, DividerColor, RoundedCornerShape(16.dp))
+            .animateContentSize(
+                animationSpec = spring(
+                    stiffness = Spring.StiffnessMediumLow,
+                    dampingRatio = Spring.DampingRatioNoBouncy
+                )
+            )
+            .clickable { isExpanded = !isExpanded }
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
-            // Icon
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(amountColor.copy(alpha = 0.12f))
-                    .border(1.dp, amountColor.copy(alpha = 0.25f), CircleShape),
-                contentAlignment = Alignment.Center
+            // -- Collapsed Summary Row -------------------------
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = if (isIncome) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
-                    contentDescription = null,
-                    tint = amountColor,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            Spacer(Modifier.width(14.dp))
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
-                Text(
-                    text = accountName,
-                    color = TextPrimary,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                // Type Icon Badge
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(amountColor.copy(alpha = 0.12f))
+                        .border(1.dp, amountColor.copy(alpha = 0.25f), CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
+                    Icon(
+                        imageVector = typeIcon,
+                        contentDescription = null,
+                        tint = amountColor,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                // Title + Date Column
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = typeLabel,
+                        color = TextPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Text(
                         text = dateFormat.format(Date(transaction.timestamp)),
                         color = TextSecondary,
-                        fontSize = 11.sp
+                        fontSize = 11.5.sp
                     )
-                    if (transaction.note.isNotBlank()) {
-                        Text("•", color = TextMuted, fontSize = 11.sp)
-                        Text(
-                            text = transaction.note,
-                            color = TextMuted,
-                            fontSize = 11.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                }
+
+                Spacer(Modifier.width(8.dp))
+
+                // Amount
+                Text(
+                    text = "${if (isIncome) "+" else "-"}৳${currencyFormat.format(transaction.amount)}",
+                    color = amountColor,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // -- Expand / Shrink Arrow in the Center -----------
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(CardDarker)
+                        .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 2.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = if (isExpanded) "Collapse" else "Expand",
+                        tint = if (isExpanded) AccentBlue else TextSecondary,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .rotate(arrowRotation)
+                    )
                 }
             }
 
-            Spacer(Modifier.width(10.dp))
+            // -- Expanded Detailed View ------------------------
+            if (isExpanded) {
+                Spacer(Modifier.height(10.dp))
+                HorizontalDivider(color = DividerColor.copy(alpha = 0.6f))
+                Spacer(Modifier.height(10.dp))
 
-            Text(
-                text = "$sign৳${currencyFormat.format(transaction.amount)}",
-                color = amountColor,
-                fontSize = 14.5.sp,
-                fontWeight = FontWeight.Bold
-            )
+                // Single Unified Box Container
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = CardDarker,
+                    border = BorderStroke(1.dp, DividerColor.copy(alpha = 0.6f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // From Bank Row
+                        DetailInfoItem(
+                            icon = Icons.Default.AccountBalance,
+                            label = "From Bank",
+                            value = fromAccount?.name ?: "Unknown Bank"
+                        )
+
+                        // From Account Row
+                        val rawFromAccNum = fromAccount?.accountNumber?.takeIf { it.isNotBlank() } ?: if (fromAccount?.type == "CASH") "Physical Cash" else "N/A"
+                        DetailInfoItem(
+                            icon = Icons.Default.CreditCard,
+                            label = "From Account",
+                            value = maskAccountDigits(rawFromAccNum)
+                        )
+
+                        // Recipient Name Row
+                        DetailInfoItem(
+                            icon = Icons.Default.Person,
+                            label = "Recipient",
+                            value = payee.name
+                        )
+
+                        // To Bank Row
+                        DetailInfoItem(
+                            icon = Icons.Default.AccountBalance,
+                            label = "To Bank",
+                            value = toBankName
+                        )
+
+                        // To Account Row
+                        DetailInfoItem(
+                            icon = Icons.Default.CreditCard,
+                            label = "To Account",
+                            value = maskAccountDigits(toAccNum)
+                        )
+
+                        // Category Row
+                        if (transaction.category.isNotBlank()) {
+                            DetailInfoItem(
+                                icon = Icons.Default.Category,
+                                label = "Category",
+                                value = transaction.category
+                            )
+                        }
+
+                        // Note / Remarks Row
+                        if (cleanRemarks.isNotBlank()) {
+                            DetailInfoItem(
+                                icon = Icons.Default.Description,
+                                label = "Note / Remarks",
+                                value = cleanRemarks
+                            )
+                        }
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun DetailInfoItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = AccentBlue,
+            modifier = Modifier.size(15.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = label,
+            color = TextSecondary,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.width(105.dp)
+        )
+        Text(
+            text = value,
+            color = TextPrimary,
+            fontSize = 12.5.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+private fun maskAccountDigits(accNum: String): String {
+    val clean = accNum.trim()
+    if (clean.isEmpty() || clean == "N/A" || clean.contains("Cash", ignoreCase = true)) return clean
+    return if (clean.length > 4) {
+        val stars = "*".repeat(clean.length - 4)
+        val last4 = clean.takeLast(4)
+        "$stars$last4"
+    } else {
+        clean
     }
 }
