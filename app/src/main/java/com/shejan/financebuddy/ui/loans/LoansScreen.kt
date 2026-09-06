@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -1273,10 +1274,34 @@ fun GroupedBankLoanCardItem(
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    var showEditSelector by remember { mutableStateOf(false) }
+    var showDeleteSelector by remember { mutableStateOf(false) }
     val rotationState by animateFloatAsState(targetValue = if (expanded) 180f else 0f)
 
     val bankColor = getBankColor(group.bankName)
     val singleLoan = group.loans.firstOrNull()
+
+    if (showEditSelector) {
+        EditBankLoanSelectDialog(
+            group = group,
+            bankColor = bankColor,
+            currencyFormat = currencyFormat,
+            accounts = accounts,
+            onDismiss = { showEditSelector = false },
+            onSelectLoan = onEditClick
+        )
+    }
+
+    if (showDeleteSelector) {
+        DeleteBankLoanSelectDialog(
+            group = group,
+            bankColor = bankColor,
+            currencyFormat = currencyFormat,
+            accounts = accounts,
+            onDismiss = { showDeleteSelector = false },
+            onDeleteSingle = onDeleteClick
+        )
+    }
 
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -1366,59 +1391,40 @@ fun GroupedBankLoanCardItem(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
                             shape = RoundedCornerShape(14.dp),
-                            containerColor = CardDarker,
+                            containerColor = CardDark,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(14.dp))
                                 .border(1.dp, DividerColor, RoundedCornerShape(14.dp))
                         ) {
-                            if (group.loanCount == 1 && singleLoan != null) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Default.Edit,
-                                                contentDescription = "Edit Loan",
-                                                tint = AccentBlue,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(10.dp))
-                                            Text(
-                                                text = "Edit Loan",
-                                                color = TextPrimary,
-                                                fontSize = 13.5.sp,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        showMenu = false
+                            // 1. Edit Loan
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit Loan",
+                                            tint = AccentTeal,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(
+                                            text = "Edit Loan",
+                                            color = TextPrimary,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    if (group.loanCount == 1 && singleLoan != null) {
                                         onEditClick(singleLoan)
+                                    } else {
+                                        showEditSelector = true
                                     }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = "Delete Loan",
-                                                tint = ExpenseRed,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(10.dp))
-                                            Text(
-                                                text = "Delete Loan",
-                                                color = ExpenseRed,
-                                                fontSize = 13.5.sp,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        showMenu = false
-                                        onDeleteClick(singleLoan)
-                                    }
-                                )
-                            }
+                                }
+                            )
+
+                            // 2. Add Another Loan
                             if (onAddAnotherClick != null) {
                                 DropdownMenuItem(
                                     text = {
@@ -1426,15 +1432,15 @@ fun GroupedBankLoanCardItem(
                                             Icon(
                                                 imageVector = Icons.Default.Add,
                                                 contentDescription = "Add Loan",
-                                                tint = AccentTeal,
-                                                modifier = Modifier.size(18.dp)
+                                                tint = bankColor,
+                                                modifier = Modifier.size(16.dp)
                                             )
                                             Spacer(modifier = Modifier.width(10.dp))
                                             Text(
                                                 text = "Add Another Loan at ${group.bankName}",
-                                                color = AccentTeal,
-                                                fontSize = 13.5.sp,
-                                                fontWeight = FontWeight.Medium
+                                                color = bankColor,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.SemiBold
                                             )
                                         }
                                     },
@@ -1444,6 +1450,34 @@ fun GroupedBankLoanCardItem(
                                     }
                                 )
                             }
+
+                            // 3. Delete Loan
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete Loan",
+                                            tint = ExpenseRed,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(
+                                            text = "Delete Loan",
+                                            color = ExpenseRed,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    if (group.loanCount == 1 && singleLoan != null) {
+                                        onDeleteClick(singleLoan)
+                                    } else {
+                                        showDeleteSelector = true
+                                    }
+                                }
+                            )
                         }
                     }
                 }
@@ -1570,7 +1604,7 @@ fun GroupedBankLoanCardItem(
                                     modifier = Modifier.padding(12.dp),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    // Row 1: Header + Action buttons
+                                    // Row 1: Header
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1591,35 +1625,6 @@ fun GroupedBankLoanCardItem(
                                                 color = TextMuted,
                                                 fontSize = 11.sp
                                             )
-                                        }
-
-                                        // Edit & Delete Action Icons
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            IconButton(
-                                                onClick = { onEditClick(loan) },
-                                                modifier = Modifier.size(28.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Edit,
-                                                    contentDescription = "Edit",
-                                                    tint = AccentBlue,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                            }
-                                            IconButton(
-                                                onClick = { onDeleteClick(loan) },
-                                                modifier = Modifier.size(28.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Delete,
-                                                    contentDescription = "Delete",
-                                                    tint = ExpenseRed,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                            }
                                         }
                                     }
 
@@ -1670,7 +1675,7 @@ fun GroupedBankLoanCardItem(
                                         }
                                     }
 
-                                    // Big Repay Button directly in this loan box
+                                    // Repay Loan Button inside individual loan card
                                     if (remRepayable > 0) {
                                         Button(
                                             onClick = { onRepayClick(loan) },
@@ -1697,27 +1702,6 @@ fun GroupedBankLoanCardItem(
                                                 fontSize = 13.sp
                                             )
                                         }
-                                    } else {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(top = 2.dp)
-                                                .background(AccentTeal.copy(alpha = 0.1f), RoundedCornerShape(10.dp))
-                                                .border(1.dp, AccentTeal.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
-                                                .padding(vertical = 8.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(15.dp))
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Text(
-                                                    text = "Loan #${index + 1} Fully Settled",
-                                                    color = AccentTeal,
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            }
-                                        }
                                     }
                                 }
                             }
@@ -1743,7 +1727,12 @@ fun GroupedBankLoanCardItem(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Repay Loan", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                            Text(
+                                text = "Repay Loan",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.5.sp
+                            )
                         }
                     } else {
                         Spacer(modifier = Modifier.height(10.dp))
@@ -1756,25 +1745,25 @@ fun GroupedBankLoanCardItem(
                             contentAlignment = Alignment.Center
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Fully Repaid",
+                                    text = "Loan Fully Settled",
                                     color = AccentTeal,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
                     }
                 }
 
-                // Expand Arrow Row
-                Row(
+                // Centered Expand / Collapse Arrow
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 10.dp),
-                    horizontalArrangement = Arrangement.Center
+                        .padding(top = 8.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Box(
                         modifier = Modifier
@@ -1796,7 +1785,7 @@ fun GroupedBankLoanCardItem(
                 }
             }
 
-            // Expanded Details Block (Analytics & Breakdown Only)
+            // Expanded content (HorizontalPager Breakdown & Doughnut)
             if (expanded) {
                 Column(
                     modifier = Modifier
@@ -1900,10 +1889,36 @@ fun GroupedPersonalLoanCardItem(
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    var showEditSelector by remember { mutableStateOf(false) }
+    var showDeleteSelector by remember { mutableStateOf(false) }
     val rotationState by animateFloatAsState(targetValue = if (expanded) 180f else 0f)
 
     val personalColor = if (isLent) AccentPurple else AccentBlue
     val singleLoan = group.loans.firstOrNull()
+
+    if (showEditSelector) {
+        EditPersonalLoanSelectDialog(
+            group = group,
+            personalColor = personalColor,
+            currencyFormat = currencyFormat,
+            accounts = accounts,
+            isLent = isLent,
+            onDismiss = { showEditSelector = false },
+            onSelectLoan = onEditClick
+        )
+    }
+
+    if (showDeleteSelector) {
+        DeletePersonalLoanSelectDialog(
+            group = group,
+            personalColor = personalColor,
+            currencyFormat = currencyFormat,
+            accounts = accounts,
+            isLent = isLent,
+            onDismiss = { showDeleteSelector = false },
+            onDeleteSingle = onDeleteClick
+        )
+    }
 
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -1975,7 +1990,7 @@ fun GroupedPersonalLoanCardItem(
                         )
                     }
 
-                    // Top-right Menu or Action
+                    // Top-right Menu
                     Box {
                         IconButton(
                             onClick = { showMenu = true },
@@ -1993,59 +2008,40 @@ fun GroupedPersonalLoanCardItem(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
                             shape = RoundedCornerShape(14.dp),
-                            containerColor = CardDarker,
+                            containerColor = CardDark,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(14.dp))
                                 .border(1.dp, DividerColor, RoundedCornerShape(14.dp))
                         ) {
-                            if (group.loanCount == 1 && singleLoan != null) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Default.Edit,
-                                                contentDescription = "Edit Loan",
-                                                tint = AccentBlue,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(10.dp))
-                                            Text(
-                                                text = "Edit Loan",
-                                                color = TextPrimary,
-                                                fontSize = 13.5.sp,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        showMenu = false
+                            // 1. Edit Loan
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit Loan",
+                                            tint = AccentTeal,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(
+                                            text = "Edit Loan",
+                                            color = TextPrimary,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    if (group.loanCount == 1 && singleLoan != null) {
                                         onEditClick(singleLoan)
+                                    } else {
+                                        showEditSelector = true
                                     }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = "Delete Loan",
-                                                tint = ExpenseRed,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(10.dp))
-                                            Text(
-                                                text = "Delete Loan",
-                                                color = ExpenseRed,
-                                                fontSize = 13.5.sp,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        showMenu = false
-                                        onDeleteClick(singleLoan)
-                                    }
-                                )
-                            }
+                                }
+                            )
+
+                            // 2. Add Another Loan / Lend / Borrow Again
                             if (onAddAnotherClick != null) {
                                 DropdownMenuItem(
                                     text = {
@@ -2053,15 +2049,15 @@ fun GroupedPersonalLoanCardItem(
                                             Icon(
                                                 imageVector = Icons.Default.Add,
                                                 contentDescription = "Add Loan",
-                                                tint = AccentTeal,
-                                                modifier = Modifier.size(18.dp)
+                                                tint = personalColor,
+                                                modifier = Modifier.size(16.dp)
                                             )
                                             Spacer(modifier = Modifier.width(10.dp))
                                             Text(
                                                 text = if (isLent) "Lend Again to ${group.lenderName}" else "Borrow Again from ${group.lenderName}",
-                                                color = AccentTeal,
-                                                fontSize = 13.5.sp,
-                                                fontWeight = FontWeight.Medium
+                                                color = personalColor,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.SemiBold
                                             )
                                         }
                                     },
@@ -2071,6 +2067,34 @@ fun GroupedPersonalLoanCardItem(
                                     }
                                 )
                             }
+
+                            // 3. Delete Loan
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete Loan",
+                                            tint = ExpenseRed,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(
+                                            text = "Delete Loan",
+                                            color = ExpenseRed,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    if (group.loanCount == 1 && singleLoan != null) {
+                                        onDeleteClick(singleLoan)
+                                    } else {
+                                        showDeleteSelector = true
+                                    }
+                                }
+                            )
                         }
                     }
                 }
@@ -2176,7 +2200,6 @@ fun GroupedPersonalLoanCardItem(
                     ) {
                         group.loans.forEachIndexed { index, loan ->
                             val loanRem = (loan.loanAmount - loan.repaidAmount).coerceAtLeast(0.0)
-                            val loanPct = if (loan.loanAmount > 0) ((loan.repaidAmount / loan.loanAmount) * 100).toFloat().coerceIn(0f, 100f) else 0f
                             val linkedAcc = remember(accounts, loan.accountId) { accounts.find { it.id == loan.accountId } }
 
                             Surface(
@@ -2189,7 +2212,7 @@ fun GroupedPersonalLoanCardItem(
                                     modifier = Modifier.padding(12.dp),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    // Row 1: Header + Action buttons
+                                    // Row 1: Header
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -2212,35 +2235,6 @@ fun GroupedPersonalLoanCardItem(
                                                     fontSize = 11.sp,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                        }
-
-                                        // Edit & Delete Action Icons
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            IconButton(
-                                                onClick = { onEditClick(loan) },
-                                                modifier = Modifier.size(28.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Edit,
-                                                    contentDescription = "Edit",
-                                                    tint = AccentBlue,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                            }
-                                            IconButton(
-                                                onClick = { onDeleteClick(loan) },
-                                                modifier = Modifier.size(28.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Delete,
-                                                    contentDescription = "Delete",
-                                                    tint = ExpenseRed,
-                                                    modifier = Modifier.size(16.dp)
                                                 )
                                             }
                                         }
@@ -2271,26 +2265,7 @@ fun GroupedPersonalLoanCardItem(
                                         }
                                     }
 
-                                    // Progress Bar
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(5.dp)
-                                            .clip(RoundedCornerShape(2.5.dp))
-                                            .background(DividerColor.copy(alpha = 0.3f))
-                                    ) {
-                                        if (loanPct > 0f) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxWidth(fraction = (loanPct / 100f).coerceIn(0f, 1f))
-                                                    .height(5.dp)
-                                                    .clip(RoundedCornerShape(2.5.dp))
-                                                    .background(AccentTeal)
-                                            )
-                                        }
-                                    }
-
-                                    // Big Repay Button directly in this loan box
+                                    // Repay Loan Button inside individual loan card
                                     if (loanRem > 0) {
                                         Button(
                                             onClick = { onRepayClick(loan) },
@@ -2316,27 +2291,6 @@ fun GroupedPersonalLoanCardItem(
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 13.sp
                                             )
-                                        }
-                                    } else {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(top = 2.dp)
-                                                .background(AccentTeal.copy(alpha = 0.1f), RoundedCornerShape(10.dp))
-                                                .border(1.dp, AccentTeal.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
-                                                .padding(vertical = 8.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(15.dp))
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Text(
-                                                    text = "Loan #${index + 1} Fully Settled",
-                                                    color = AccentTeal,
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            }
                                         }
                                     }
                                 }
@@ -2364,7 +2318,7 @@ fun GroupedPersonalLoanCardItem(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                if (isLent) "Record Repayment Received" else "Repay Loan",
+                                text = if (isLent) "Record Repayment Received" else "Repay Loan",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.5.sp
@@ -2381,25 +2335,25 @@ fun GroupedPersonalLoanCardItem(
                             contentAlignment = Alignment.Center
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Fully Repaid",
+                                    text = "Loan Fully Settled",
                                     color = AccentTeal,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
                     }
                 }
 
-                // Expand Arrow
-                Row(
+                // Centered Expand / Collapse Arrow
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 10.dp),
-                    horizontalArrangement = Arrangement.Center
+                        .padding(top = 8.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Box(
                         modifier = Modifier
@@ -2421,7 +2375,7 @@ fun GroupedPersonalLoanCardItem(
                 }
             }
 
-            // Expanded Details Block (Analytics & Breakdown Only)
+            // Expanded Breakdown & Doughnut Pager
             if (expanded) {
                 Column(
                     modifier = Modifier
@@ -2430,7 +2384,6 @@ fun GroupedPersonalLoanCardItem(
                 ) {
                     HorizontalDivider(color = DividerColor.copy(alpha = 0.5f), modifier = Modifier.padding(bottom = 12.dp))
 
-                    // Visual Pager / Chart Breakdown
                     val cardPagerState = rememberPagerState(pageCount = { 2 })
 
                     HorizontalPager(
@@ -2438,23 +2391,23 @@ fun GroupedPersonalLoanCardItem(
                         modifier = Modifier.fillMaxWidth()
                     ) { page ->
                         if (page == 0) {
-                            // Page 1: Consolidated Numbers Breakdown
+                            // Page 1 (Default): Full-Width Numbers Breakdown
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                DetailTextRow(label = if (isLent) "Total Lent" else "Total Borrowed", value = "৳${currencyFormat.format(group.totalPrincipal)}", valueColor = TextPrimary)
+                                DetailTextRow(label = if (isLent) "Total Lent Amount" else "Total Borrowed Amount", value = "৳${currencyFormat.format(group.totalPrincipal)}", valueColor = TextPrimary)
+                                DetailTextRow(label = if (isLent) "Remaining Receivable" else "Remaining Debt", value = "৳${currencyFormat.format(group.totalRemaining)}", valueColor = AccentTeal)
                                 DetailTextRow(label = if (isLent) "Total Returned" else "Total Repaid", value = "৳${currencyFormat.format(group.totalRepaid)}", valueColor = AccentTeal)
-                                DetailTextRow(label = if (isLent) "Total Still Owed" else "Total Remaining", value = "৳${currencyFormat.format(group.totalRemaining)}", valueColor = personalColor)
                                 if (group.loanCount == 1 && singleLoan != null) {
                                     val linkedAccount = accounts.find { it.id == singleLoan.accountId }
                                     if (linkedAccount != null) {
                                         DetailTextRow(label = "Account Linked", value = linkedAccount.name, valueColor = personalColor)
                                     }
                                 } else {
-                                    DetailTextRow(label = "Total Active Loans", value = "${group.loanCount} Records", valueColor = TextSecondary)
+                                    DetailTextRow(label = "Active Records", value = "${group.loanCount} Loans", valueColor = personalColor)
                                 }
                             }
                         } else {
@@ -2504,6 +2457,758 @@ fun GroupedPersonalLoanCardItem(
                                     .background(if (active) AccentTeal else TextMuted.copy(alpha = 0.4f))
                             )
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EditBankLoanSelectDialog(
+    group: GroupedBankLoan,
+    bankColor: Color,
+    currencyFormat: DecimalFormat,
+    accounts: List<AccountEntity>,
+    onDismiss: () -> Unit,
+    onSelectLoan: (LoanEntity) -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = CardDark,
+            border = BorderStroke(1.dp, DividerColor),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(AccentTeal.copy(alpha = 0.15f))
+                                .border(1.dp, AccentTeal.copy(alpha = 0.35f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = null,
+                                tint = AccentTeal,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Select Loan to Edit",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = group.bankName,
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = TextMuted, modifier = Modifier.size(18.dp))
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Text(
+                    text = "Choose the specific loan you want to edit:",
+                    fontSize = 12.5.sp,
+                    color = TextMuted,
+                    modifier = Modifier.padding(bottom = 10.dp)
+                )
+
+                // List of loans
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    group.loans.forEachIndexed { index, loan ->
+                        val emi = calculateEmi(loan.loanAmount, loan.interestRate, loan.durationMonths)
+                        val origRepayable = emi * loan.durationMonths
+                        val remRepayable = (origRepayable - loan.repaidAmount).coerceAtLeast(0.0)
+                        val ratio = if (origRepayable > 0) loan.loanAmount / origRepayable else 1.0
+                        val remPrincipal = remRepayable * ratio
+                        val linkedAcc = accounts.find { it.id == loan.accountId }
+
+                        Surface(
+                            onClick = {
+                                onSelectLoan(loan)
+                                onDismiss()
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = CardDarker,
+                            border = BorderStroke(1.dp, DividerColor),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Loan #${index + 1}",
+                                        fontSize = 13.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "${loan.durationMonths}m @ ${loan.interestRate}%",
+                                            fontSize = 11.sp,
+                                            color = TextSecondary
+                                        )
+                                        if (linkedAcc != null) {
+                                            Text(
+                                                text = "• ${linkedAcc.name}",
+                                                fontSize = 11.sp,
+                                                color = bankColor,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            text = "৳${currencyFormat.format(remPrincipal)}",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AccentTeal
+                                        )
+                                        Text(
+                                            text = "৳${currencyFormat.format(loan.loanAmount)} total",
+                                            fontSize = 10.5.sp,
+                                            color = TextMuted
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = null,
+                                        tint = TextMuted,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Cancel button
+                Surface(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(12.dp),
+                    color = CardDarker,
+                    border = BorderStroke(1.dp, DividerColor),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(42.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "Cancel",
+                            color = TextPrimary,
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeleteBankLoanSelectDialog(
+    group: GroupedBankLoan,
+    bankColor: Color,
+    currencyFormat: DecimalFormat,
+    accounts: List<AccountEntity>,
+    onDismiss: () -> Unit,
+    onDeleteSingle: (LoanEntity) -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = CardDark,
+            border = BorderStroke(1.dp, DividerColor),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(ExpenseRed.copy(alpha = 0.15f))
+                                .border(1.dp, ExpenseRed.copy(alpha = 0.35f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = ExpenseRed,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Delete Loan",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = group.bankName,
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = TextMuted, modifier = Modifier.size(18.dp))
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                Text(
+                    text = "Select a loan to delete:",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextMuted,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // List of loans to delete
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    group.loans.forEachIndexed { index, loan ->
+                        val emi = calculateEmi(loan.loanAmount, loan.interestRate, loan.durationMonths)
+                        val origRepayable = emi * loan.durationMonths
+                        val remRepayable = (origRepayable - loan.repaidAmount).coerceAtLeast(0.0)
+                        val ratio = if (origRepayable > 0) loan.loanAmount / origRepayable else 1.0
+                        val remPrincipal = remRepayable * ratio
+                        val linkedAcc = accounts.find { it.id == loan.accountId }
+
+                        Surface(
+                            onClick = {
+                                onDismiss()
+                                onDeleteSingle(loan)
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = CardDarker,
+                            border = BorderStroke(1.dp, DividerColor),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Loan #${index + 1}",
+                                        fontSize = 13.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "${loan.durationMonths}m @ ${loan.interestRate}%",
+                                            fontSize = 11.sp,
+                                            color = TextSecondary
+                                        )
+                                        if (linkedAcc != null) {
+                                            Text(
+                                                text = "• ${linkedAcc.name}",
+                                                fontSize = 11.sp,
+                                                color = bankColor,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            text = "৳${currencyFormat.format(remPrincipal)}",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary
+                                        )
+                                        Text(
+                                            text = "৳${currencyFormat.format(loan.loanAmount)} total",
+                                            fontSize = 10.5.sp,
+                                            color = TextMuted
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete",
+                                        tint = ExpenseRed.copy(alpha = 0.8f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Cancel button
+                Surface(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(12.dp),
+                    color = CardDarker,
+                    border = BorderStroke(1.dp, DividerColor),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(42.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "Cancel",
+                            color = TextPrimary,
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EditPersonalLoanSelectDialog(
+    group: GroupedPersonalLoan,
+    personalColor: Color,
+    currencyFormat: DecimalFormat,
+    accounts: List<AccountEntity>,
+    isLent: Boolean,
+    onDismiss: () -> Unit,
+    onSelectLoan: (LoanEntity) -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = CardDark,
+            border = BorderStroke(1.dp, DividerColor),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(AccentTeal.copy(alpha = 0.15f))
+                                .border(1.dp, AccentTeal.copy(alpha = 0.35f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = null,
+                                tint = AccentTeal,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Select Loan to Edit",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = group.lenderName,
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = TextMuted, modifier = Modifier.size(18.dp))
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Text(
+                    text = "Choose the specific loan you want to edit:",
+                    fontSize = 12.5.sp,
+                    color = TextMuted,
+                    modifier = Modifier.padding(bottom = 10.dp)
+                )
+
+                // List of loans
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    group.loans.forEachIndexed { index, loan ->
+                        val loanRem = (loan.loanAmount - loan.repaidAmount).coerceAtLeast(0.0)
+                        val linkedAcc = accounts.find { it.id == loan.accountId }
+
+                        Surface(
+                            onClick = {
+                                onSelectLoan(loan)
+                                onDismiss()
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = CardDarker,
+                            border = BorderStroke(1.dp, DividerColor),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Loan #${index + 1}",
+                                        fontSize = 13.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = if (isLent) "Lent Record" else "Borrowed Record",
+                                            fontSize = 11.sp,
+                                            color = TextSecondary
+                                        )
+                                        if (linkedAcc != null) {
+                                            Text(
+                                                text = "• ${linkedAcc.name}",
+                                                fontSize = 11.sp,
+                                                color = personalColor,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            text = "৳${currencyFormat.format(loanRem)}",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (loanRem <= 0.0) AccentTeal else personalColor
+                                        )
+                                        Text(
+                                            text = "৳${currencyFormat.format(loan.loanAmount)} total",
+                                            fontSize = 10.5.sp,
+                                            color = TextMuted
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = null,
+                                        tint = TextMuted,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Cancel button
+                Surface(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(12.dp),
+                    color = CardDarker,
+                    border = BorderStroke(1.dp, DividerColor),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(42.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "Cancel",
+                            color = TextPrimary,
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeletePersonalLoanSelectDialog(
+    group: GroupedPersonalLoan,
+    personalColor: Color,
+    currencyFormat: DecimalFormat,
+    accounts: List<AccountEntity>,
+    isLent: Boolean,
+    onDismiss: () -> Unit,
+    onDeleteSingle: (LoanEntity) -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = CardDark,
+            border = BorderStroke(1.dp, DividerColor),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(ExpenseRed.copy(alpha = 0.15f))
+                                .border(1.dp, ExpenseRed.copy(alpha = 0.35f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = ExpenseRed,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Delete Loan",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = group.lenderName,
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = TextMuted, modifier = Modifier.size(18.dp))
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                Text(
+                    text = "Select a loan to delete:",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextMuted,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // List of loans to delete
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    group.loans.forEachIndexed { index, loan ->
+                        val loanRem = (loan.loanAmount - loan.repaidAmount).coerceAtLeast(0.0)
+                        val linkedAcc = accounts.find { it.id == loan.accountId }
+
+                        Surface(
+                            onClick = {
+                                onDismiss()
+                                onDeleteSingle(loan)
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = CardDarker,
+                            border = BorderStroke(1.dp, DividerColor),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Loan #${index + 1}",
+                                        fontSize = 13.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = if (isLent) "Lent Record" else "Borrowed Record",
+                                            fontSize = 11.sp,
+                                            color = TextSecondary
+                                        )
+                                        if (linkedAcc != null) {
+                                            Text(
+                                                text = "• ${linkedAcc.name}",
+                                                fontSize = 11.sp,
+                                                color = personalColor,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            text = "৳${currencyFormat.format(loanRem)}",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary
+                                        )
+                                        Text(
+                                            text = "৳${currencyFormat.format(loan.loanAmount)} total",
+                                            fontSize = 10.5.sp,
+                                            color = TextMuted
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete",
+                                        tint = ExpenseRed.copy(alpha = 0.8f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Cancel button
+                Surface(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(12.dp),
+                    color = CardDarker,
+                    border = BorderStroke(1.dp, DividerColor),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(42.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "Cancel",
+                            color = TextPrimary,
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
