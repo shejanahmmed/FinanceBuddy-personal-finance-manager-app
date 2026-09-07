@@ -462,13 +462,13 @@ fun SettingsScreen(
                                 modifier = Modifier
                                     .size(38.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (blockScreenshots) AccentTeal.copy(alpha = 0.15f) else DividerColor.copy(alpha = 0.5f)),
+                                    .background(AccentTeal.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Shield,
                                     contentDescription = null,
-                                    tint = if (blockScreenshots) AccentTeal else TextSecondary,
+                                    tint = AccentTeal,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -568,13 +568,13 @@ fun SettingsScreen(
                                 modifier = Modifier
                                     .size(38.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isDailyReminderEnabled) AccentTeal.copy(alpha = 0.15f) else DividerColor.copy(alpha = 0.5f)),
+                                    .background(AccentTeal.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = if (isDailyReminderEnabled) Icons.Default.NotificationsActive else Icons.Default.NotificationsOff,
+                                    imageVector = Icons.Default.NotificationsActive,
                                     contentDescription = null,
-                                    tint = if (isDailyReminderEnabled) AccentTeal else TextSecondary,
+                                    tint = AccentTeal,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -820,13 +820,13 @@ fun SettingsScreen(
                                 modifier = Modifier
                                     .size(38.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isAppLockEnabled) AccentTeal.copy(alpha = 0.15f) else DividerColor.copy(alpha = 0.5f)),
+                                    .background(AccentTeal.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Lock,
                                     contentDescription = null,
-                                    tint = if (isAppLockEnabled) AccentTeal else TextSecondary,
+                                    tint = AccentTeal,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -1622,15 +1622,14 @@ fun ThemeOptionRow(
                 .clip(RoundedCornerShape(8.dp))
                 .background(
                     if (!enabled) DividerColor.copy(alpha = 0.2f)
-                    else if (selected) AccentTeal.copy(alpha = 0.15f)
-                    else DividerColor.copy(alpha = 0.5f)
+                    else AccentTeal.copy(alpha = 0.15f)
                 ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (!enabled) TextMuted.copy(alpha = 0.4f) else if (selected) AccentTeal else TextSecondary,
+                tint = if (!enabled) TextMuted else AccentTeal,
                 modifier = Modifier.size(20.dp)
             )
         }
