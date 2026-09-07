@@ -89,6 +89,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.PopupProperties
 import androidx.core.content.edit
 import com.shejan.financebuddy.data.db.AccountEntity
 import com.shejan.financebuddy.data.db.PayeeAccountEntity
@@ -222,8 +223,8 @@ fun AddTransactionSheet(
 
     var payeeExpanded by remember { mutableStateOf(false) }
 
-    val isFromAccountNew = remember(selectedFromAccount, fromAccountSearchText, accounts) {
-        selectedFromAccount == null && fromAccountSearchText.text.trim().isNotEmpty() &&
+    val isFromAccountNew = remember(selectedFromAccount, fromAccountSearchText, accounts, selectedType) {
+        selectedType == "INCOME" && selectedFromAccount == null && fromAccountSearchText.text.trim().isNotEmpty() &&
                 accounts.none { it.name.equals(fromAccountSearchText.text.trim(), ignoreCase = true) }
     }
     val isToAccountNew = remember(selectedToAccount, toAccountSearchText, accounts) {
@@ -603,21 +604,25 @@ fun AddTransactionSheet(
                 expanded = fromAccountExpanded,
                 onExpandedChange = { isExpanded ->
                     fromAccountExpanded = isExpanded
-                    if (isExpanded) fromAccountSearchText = TextFieldValue("")
                 },
                 modifier = Modifier
                     .fillMaxWidth()
             ) {
                 OutlinedTextField(
                     value = fromAccountSearchText,
-                    onValueChange = {
-                        fromAccountSearchText = it
+                    onValueChange = { newTfv ->
+                        fromAccountSearchText = newTfv
+                        val typed = newTfv.text.trim()
+                        selectedFromAccount = accounts.firstOrNull { acc ->
+                            val disp = getAccountDisplayText(acc)
+                            disp.equals(typed, ignoreCase = true) || acc.name.equals(typed, ignoreCase = true)
+                        }
                         fromAccountExpanded = true
                     },
-                    readOnly = selectedFromAccount != null,
+                    readOnly = false,
                     textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                     label = { Text(if (selectedType == "TRANSFER") "From Account" else "Account", color = TextSecondary) },
-                    placeholder = { Text("Select account", color = TextMuted) },
+                    placeholder = { Text("Select or type account/bank", color = TextMuted) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,
@@ -660,11 +665,14 @@ fun AddTransactionSheet(
                     onDismissRequest = {
                         fromAccountExpanded = false
                         val displayText = getAccountDisplayText(selectedFromAccount)
-                        fromAccountSearchText = TextFieldValue(
-                            text = displayText,
-                            selection = TextRange(displayText.length)
-                        )
+                        if (displayText.isNotEmpty()) {
+                            fromAccountSearchText = TextFieldValue(
+                                text = displayText,
+                                selection = TextRange(displayText.length)
+                            )
+                        }
                     },
+                    properties = PopupProperties(focusable = false),
                     offset = DpOffset(0.dp, (-306).dp),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -676,7 +684,7 @@ fun AddTransactionSheet(
                         searchText = fromAccountSearchText.text,
                         accountsList = accounts,
                         selectedAccount = selectedFromAccount,
-                        allowPresetLinking = selectedType != "EXPENSE",
+                        allowPresetLinking = selectedType == "INCOME",
                         allowCashOption = true,
                         cashTagText = if (selectedType == "TRANSFER" && isOwnAccount) "Deposit" else "In Hand",
                         onSelectExisting = { account ->
@@ -744,14 +752,19 @@ fun AddTransactionSheet(
                 ) {
                     OutlinedTextField(
                         value = toAccountSearchText,
-                        onValueChange = {
-                            toAccountSearchText = it
+                        onValueChange = { newTfv ->
+                            toAccountSearchText = newTfv
+                            val typed = newTfv.text.trim()
+                            selectedToAccount = destAccounts.firstOrNull { acc ->
+                                val disp = getAccountDisplayText(acc)
+                                disp.equals(typed, ignoreCase = true) || acc.name.equals(typed, ignoreCase = true)
+                            }
                             toAccountExpanded = true
                         },
-                        readOnly = selectedToAccount != null,
+                        readOnly = false,
                         textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                         label = { Text(if (isOwnAccount) "To Account" else "To Bank/MFS", color = TextSecondary) },
-                        placeholder = { Text(if (isOwnAccount) "Select destination" else "Select bank", color = TextMuted) },
+                        placeholder = { Text(if (isOwnAccount) "Select or type destination" else "Select or type bank", color = TextMuted) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Search,
@@ -794,11 +807,14 @@ fun AddTransactionSheet(
                         onDismissRequest = {
                             toAccountExpanded = false
                             val displayText = getAccountDisplayText(selectedToAccount)
-                            toAccountSearchText = TextFieldValue(
-                                text = displayText,
-                                selection = TextRange(displayText.length)
-                            )
+                            if (displayText.isNotEmpty()) {
+                                toAccountSearchText = TextFieldValue(
+                                    text = displayText,
+                                    selection = TextRange(displayText.length)
+                                )
+                            }
                         },
+                        properties = PopupProperties(focusable = false),
                         offset = DpOffset(0.dp, (-306).dp),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -918,6 +934,7 @@ fun AddTransactionSheet(
                         DropdownMenu(
                             expanded = payeeExpanded,
                             onDismissRequest = { payeeExpanded = false },
+                            properties = PopupProperties(focusable = false),
                             offset = DpOffset(0.dp, (-296).dp),
                             modifier = Modifier
                                 .fillMaxWidth()
