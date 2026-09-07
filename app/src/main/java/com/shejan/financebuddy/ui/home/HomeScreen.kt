@@ -252,7 +252,7 @@ fun HomeScreen(
                                 modifier = Modifier
                                     .border(
                                         width = 1.dp,
-                                        color = Color.White.copy(alpha = 0.15f),
+                                        color = DividerColor,
                                         shape = RoundedCornerShape(20.dp)
                                     )
                                     .background(CardDarker, shape = RoundedCornerShape(20.dp))

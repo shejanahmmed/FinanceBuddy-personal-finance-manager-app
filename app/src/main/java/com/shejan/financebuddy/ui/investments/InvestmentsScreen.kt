@@ -517,12 +517,12 @@ fun InvestmentsScreen(
                                 onClick = { deletingInvestment = null },
                                 shape = RoundedCornerShape(12.dp),
                                 border = BorderStroke(1.dp, DividerColor),
-                                colors = ButtonDefaults.outlinedButtonColors(containerColor = CardDarker, contentColor = Color.White),
+                                colors = ButtonDefaults.outlinedButtonColors(containerColor = CardDarker, contentColor = TextPrimary),
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(44.dp)
                             ) {
-                                Text("Cancel", color = Color.White, fontWeight = FontWeight.SemiBold)
+                                Text("Cancel", color = TextPrimary, fontWeight = FontWeight.SemiBold)
                             }
 
                             Button(
@@ -1093,12 +1093,12 @@ private fun QuickUpdateValueDialog(
                         onClick = onDismiss,
                         shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, DividerColor),
-                        colors = ButtonDefaults.outlinedButtonColors(containerColor = CardDarker, contentColor = Color.White),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = CardDarker, contentColor = TextPrimary),
                         modifier = Modifier
                             .weight(1f)
                             .height(44.dp)
                     ) {
-                        Text("Cancel", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Text("Cancel", color = TextPrimary, fontWeight = FontWeight.SemiBold)
                     }
 
                     Button(
@@ -1213,12 +1213,12 @@ private fun LogDividendDialog(
                         onClick = onDismiss,
                         shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, DividerColor),
-                        colors = ButtonDefaults.outlinedButtonColors(containerColor = CardDarker, contentColor = Color.White),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = CardDarker, contentColor = TextPrimary),
                         modifier = Modifier
                             .weight(1f)
                             .height(44.dp)
                     ) {
-                        Text("Cancel", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Text("Cancel", color = TextPrimary, fontWeight = FontWeight.SemiBold)
                     }
 
                     Button(

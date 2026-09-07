@@ -498,7 +498,7 @@ fun AddTransactionSheet(
                                 .background(if (isSelected) indicatorColor else CardDark)
                                 .border(
                                     width = 1.dp,
-                                    color = if (isSelected) Color.White.copy(alpha = 0.35f) else DividerColor,
+                                    color = if (isSelected) indicatorColor else DividerColor,
                                     shape = RoundedCornerShape(20.dp)
                                 )
                                 .combinedClickable(

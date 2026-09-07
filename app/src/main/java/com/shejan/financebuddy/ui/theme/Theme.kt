@@ -55,19 +55,19 @@ private val FinanceBuddyLightColorScheme = lightColorScheme(
     onSecondaryContainer = Color(0xFF1E40AF),
     tertiary             = Color(0xFF7C3AED), // Matte Violet 600
     onTertiary           = Color.White,
-    background           = Color(0xFFF1F5F9), // Slate 100 matte canvas
+    background           = Color(0xFFF8FAFC), // Slate 50 ultra-clean canvas
     onBackground         = Color(0xFF0F172A), // Slate 900 primary text
     surface              = Color(0xFFFFFFFF), // Crisp pure white card surface
     onSurface            = Color(0xFF0F172A),
-    surfaceVariant       = Color(0xFFE2E8F0), // Secondary input/card container
-    onSurfaceVariant     = Color(0xFF475569), // Secondary label text
-    outline              = Color(0xFFCBD5E1), // Crisp subtle border outline
-    outlineVariant       = Color(0xFFE2E8F0),
+    surfaceVariant       = Color(0xFFF1F5F9), // Slate 100 secondary input/container
+    onSurfaceVariant     = Color(0xFF475569), // Slate 600 label text
+    outline              = Color(0xFFE2E8F0), // Slate 200 subtle border outline
+    outlineVariant       = Color(0xFFF1F5F9),
     error                = Color(0xFFE11D48), // Rose 600 error
     onError              = Color.White,
     errorContainer       = Color(0xFFFFE4E6),
     onErrorContainer     = Color(0xFF9F1239),
-    scrim                = Color(0x59000000)
+    scrim                = Color(0x400F172A)
 )
 
 private val FinanceBuddyAmoledColorScheme = darkColorScheme(

@@ -1794,7 +1794,7 @@ private fun SmsSenderMappingsConfigSheet(
                             Spacer(modifier = Modifier.height(12.dp))
                             Text("No custom mappings yet", color = TextMuted, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("Go to 'Link New Sender' tab to link a number", color = TextMuted.copy(alpha = 0.6f), fontSize = 12.sp)
+                            Text("Go to 'Link New Sender' tab to link a number", color = TextMuted, fontSize = 12.sp)
                         }
                     }
                 } else {
@@ -1849,7 +1849,7 @@ private fun SmsSenderMappingsConfigSheet(
                             Spacer(modifier = Modifier.height(12.dp))
                             Text("No unmapped senders found", color = TextMuted, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("SMS inbox scanned, but no unmapped transaction-like messages were detected.", color = TextMuted.copy(alpha = 0.6f), fontSize = 12.sp, textAlign = TextAlign.Center)
+                            Text("SMS inbox scanned, but no unmapped transaction-like messages were detected.", color = TextMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
                         }
                     }
                 } else {

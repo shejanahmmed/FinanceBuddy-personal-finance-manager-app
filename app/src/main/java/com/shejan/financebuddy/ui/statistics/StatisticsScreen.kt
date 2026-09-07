@@ -819,7 +819,7 @@ private fun MetricTile(
     Card(
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = CardDarker),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+        border = BorderStroke(1.dp, DividerColor),
         modifier = modifier
     ) {
         Row(
@@ -901,7 +901,7 @@ private fun IncomeExpenseComparisonRow(
         Card(
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = CardDarker),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
+            border = BorderStroke(1.dp, DividerColor),
             modifier = Modifier
                 .width(64.dp)
                 .fillMaxHeight()
@@ -923,7 +923,7 @@ private fun IncomeExpenseComparisonRow(
         Card(
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = CardDarker),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
+            border = BorderStroke(1.dp, DividerColor),
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
