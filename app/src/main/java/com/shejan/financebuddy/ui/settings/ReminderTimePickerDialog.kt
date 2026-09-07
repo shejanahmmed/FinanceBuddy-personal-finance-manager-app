@@ -1,5 +1,10 @@
 package com.shejan.financebuddy.ui.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -8,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +34,9 @@ import java.util.Locale
 fun ReminderTimePickerDialog(
     initialHour: Int,
     initialMinute: Int,
+    title: String = "Reminder Time",
+    subtitle: String = "Choose when you want to be reminded",
+    otherSlots: List<Triple<Int, Int, Int>> = emptyList(),
     onDismiss: () -> Unit,
     onConfirm: (hour: Int, minute: Int) -> Unit
 ) {
@@ -36,6 +45,11 @@ fun ReminderTimePickerDialog(
         initialMinute = initialMinute,
         is24Hour = false
     )
+
+    // Check if the currently chosen time conflicts with another slot
+    val conflictingSlot = remember(timePickerState.hour, timePickerState.minute, otherSlots) {
+        otherSlots.find { it.second == timePickerState.hour && it.third == timePickerState.minute }
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -79,13 +93,13 @@ fun ReminderTimePickerDialog(
 
                     Column {
                         Text(
-                            text = "Daily Reminder Time",
+                            text = title,
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
                         )
                         Text(
-                            text = "Choose when you want to be reminded",
+                            text = subtitle,
                             fontSize = 11.5.sp,
                             color = TextSecondary
                         )
@@ -115,7 +129,7 @@ fun ReminderTimePickerDialog(
                     )
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Quick Preset Chips
                 Row(
@@ -132,7 +146,6 @@ fun ReminderTimePickerDialog(
                         val isSelected = timePickerState.hour == time.first && timePickerState.minute == time.second
                         Surface(
                             onClick = {
-                                // Update time state
                                 timePickerState.hour = time.first
                                 timePickerState.minute = time.second
                             },
@@ -158,7 +171,43 @@ fun ReminderTimePickerDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                // Inline Conflict Warning Message inside the dialog
+                AnimatedVisibility(
+                    visible = conflictingSlot != null,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = ExpenseRed.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, ExpenseRed.copy(alpha = 0.4f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = ExpenseRed,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Reminder ${conflictingSlot?.first} is already set for this time. Please pick a different time.",
+                                color = ExpenseRed,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                lineHeight = 14.sp
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
 
                 // Action Buttons (Cancel / Confirm)
                 Row(
@@ -187,11 +236,14 @@ fun ReminderTimePickerDialog(
 
                     Surface(
                         onClick = {
-                            onConfirm(timePickerState.hour, timePickerState.minute)
+                            if (conflictingSlot == null) {
+                                onConfirm(timePickerState.hour, timePickerState.minute)
+                            }
                         },
+                        enabled = conflictingSlot == null,
                         shape = RoundedCornerShape(12.dp),
-                        color = AccentTeal,
-                        border = BorderStroke(1.dp, AccentTeal),
+                        color = if (conflictingSlot == null) AccentTeal else CardDarker,
+                        border = BorderStroke(1.dp, if (conflictingSlot == null) AccentTeal else DividerColor),
                         modifier = Modifier
                             .weight(1f)
                             .height(44.dp)
@@ -199,7 +251,7 @@ fun ReminderTimePickerDialog(
                         Box(contentAlignment = Alignment.Center) {
                             Text(
                                 text = "Set Reminder",
-                                color = BackgroundDark,
+                                color = if (conflictingSlot == null) BackgroundDark else TextMuted,
                                 fontSize = 13.5.sp,
                                 fontWeight = FontWeight.Bold
                             )

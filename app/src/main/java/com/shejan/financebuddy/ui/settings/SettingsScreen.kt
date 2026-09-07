@@ -53,6 +53,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -105,11 +106,21 @@ fun SettingsScreen(
     val appLockPin by preferencesManager.appLockPin.collectAsState(initial = "")
     val autoLockTimeout by preferencesManager.autoLockTimeout.collectAsState(initial = "IMMEDIATELY")
 
-    // ─── Daily Reminder State ───────────────────────────────────
+    // ─── Daily Reminder State (Multi-Slot Support) ─────────────
     val isDailyReminderEnabled by preferencesManager.isDailyReminderEnabled.collectAsState(initial = false)
-    val dailyReminderHour by preferencesManager.dailyReminderHour.collectAsState(initial = 20)
-    val dailyReminderMinute by preferencesManager.dailyReminderMinute.collectAsState(initial = 0)
-    var showTimePickerDialog by remember { mutableStateOf(false) }
+    val reminder1Enabled by preferencesManager.reminder1Enabled.collectAsState(initial = true)
+    val reminder1Hour by preferencesManager.reminder1Hour.collectAsState(initial = 20)
+    val reminder1Minute by preferencesManager.reminder1Minute.collectAsState(initial = 0)
+
+    val reminder2Enabled by preferencesManager.reminder2Enabled.collectAsState(initial = false)
+    val reminder2Hour by preferencesManager.reminder2Hour.collectAsState(initial = 14)
+    val reminder2Minute by preferencesManager.reminder2Minute.collectAsState(initial = 0)
+
+    val reminder3Enabled by preferencesManager.reminder3Enabled.collectAsState(initial = false)
+    val reminder3Hour by preferencesManager.reminder3Hour.collectAsState(initial = 9)
+    val reminder3Minute by preferencesManager.reminder3Minute.collectAsState(initial = 0)
+
+    var editingReminderSlot by remember { mutableStateOf<Int?>(null) }
 
     var showPinSetupDialog by remember { mutableStateOf(false) }
     var showVerifyDialog by remember { mutableStateOf(false) }
@@ -134,9 +145,9 @@ fun SettingsScreen(
         if (isGranted) {
             scope.launch {
                 preferencesManager.setDailyReminderEnabled(true)
-                DailyReminderManager.scheduleDailyReminder(context, dailyReminderHour, dailyReminderMinute)
+                DailyReminderManager.rescheduleAllActiveReminders(context)
             }
-            showToast("Daily reminder enabled ⏰")
+            showToast("Daily reminders enabled ⏰")
         } else {
             showToast("Notification permission required for daily reminders")
         }
@@ -484,7 +495,7 @@ fun SettingsScreen(
                             checked = blockScreenshots,
                             onCheckedChange = { enable ->
                                 scope.launch { preferencesManager.setBlockScreenshots(enable) }
-                                showToast(if (enable) "Screenshot protection enabled \uD83D\uDEE1\uFE0F" else "Screenshot protection disabled")
+                                showToast(if (enable) "Screenshot protection enabled 🛡️" else "Screenshot protection disabled")
                             },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = OnAccent,
@@ -500,14 +511,37 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // ─── SECTION 4: DAILY REMINDER ────────────────────────────
-                Text(
-                    text = "Daily Reminder",
-                    color = AccentTeal,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                // ─── SECTION 4: DAILY REMINDERS ───────────────────────────
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Daily Reminders",
+                        color = AccentTeal,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (isDailyReminderEnabled) {
+                        val activeSlotsCount = listOf(reminder1Enabled, reminder2Enabled, reminder3Enabled).count { it }
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = AccentTeal.copy(alpha = 0.15f),
+                            border = BorderStroke(1.dp, AccentTeal.copy(alpha = 0.3f))
+                        ) {
+                            Text(
+                                text = "$activeSlotsCount of 3 Active",
+                                color = AccentTeal,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
 
                 Column(
                     modifier = Modifier
@@ -518,7 +552,7 @@ fun SettingsScreen(
                         .padding(4.dp)
                         .animateContentSize()
                 ) {
-                    // Daily Reminder Toggle Switch Row
+                    // Daily Reminder Master Switch Row
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -547,13 +581,13 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text(
-                                    text = "Daily Finance Reminder",
+                                    text = "Daily Finance Reminders",
                                     color = TextPrimary,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Get notified everyday to record and check your finances",
+                                    text = "Set up to 3 custom reminder alerts per day to record your transactions",
                                     color = TextSecondary,
                                     fontSize = 11.sp,
                                     lineHeight = 14.sp
@@ -574,16 +608,16 @@ fun SettingsScreen(
                                     } else {
                                         scope.launch {
                                             preferencesManager.setDailyReminderEnabled(true)
-                                            DailyReminderManager.scheduleDailyReminder(context, dailyReminderHour, dailyReminderMinute)
+                                            DailyReminderManager.rescheduleAllActiveReminders(context)
                                         }
-                                        showToast("Daily reminder enabled ⏰")
+                                        showToast("Daily reminders enabled ⏰")
                                     }
                                 } else {
                                     scope.launch {
                                         preferencesManager.setDailyReminderEnabled(false)
-                                        DailyReminderManager.cancelDailyReminder(context)
+                                        DailyReminderManager.cancelAllReminders(context)
                                     }
-                                    showToast("Daily reminder disabled")
+                                    showToast("Daily reminders disabled")
                                 }
                             },
                             colors = SwitchDefaults.colors(
@@ -597,133 +631,140 @@ fun SettingsScreen(
                         )
                     }
 
-                    // Expanded reminder controls shown ONLY when toggle is ON
+                    // Expanded multi-slot reminder controls shown ONLY when master toggle is ON
                     if (isDailyReminderEnabled) {
-                        // Reminder Time Row (Clickable to open Time Picker)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showTimePickerDialog = true }
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(AccentTeal.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AccessTime,
-                                    contentDescription = null,
-                                    tint = AccentTeal,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+                            color = DividerColor.copy(alpha = 0.5f),
+                            thickness = 0.8.dp
+                        )
 
-                            Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = "REMINDER SLOTS (UP TO 3)",
+                            color = TextMuted,
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.5.sp,
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp)
+                        )
 
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Reminder Time",
-                                    color = TextPrimary,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = "Tap to choose a custom notification time",
-                                    color = TextSecondary,
-                                    fontSize = 11.sp,
-                                    lineHeight = 14.sp
-                                )
-                            }
+                        // 3 Slots configuration
+                        val slots = listOf(
+                            Triple(1, "Reminder 1", "Evening check-in") to Pair(reminder1Enabled, Pair(reminder1Hour, reminder1Minute)),
+                            Triple(2, "Reminder 2", "Midday / Afternoon check-in") to Pair(reminder2Enabled, Pair(reminder2Hour, reminder2Minute)),
+                            Triple(3, "Reminder 3", "Morning overview") to Pair(reminder3Enabled, Pair(reminder3Hour, reminder3Minute))
+                        )
 
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            // Formatted Time Badge Pill
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = CardDarker,
-                                border = BorderStroke(1.dp, AccentTeal.copy(alpha = 0.4f)),
-                                modifier = Modifier.clickable { showTimePickerDialog = true }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Text(
-                                        text = DailyReminderManager.formatTime(dailyReminderHour, dailyReminderMinute),
-                                        color = AccentTeal,
-                                        fontSize = 12.5.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Icon(
-                                        imageVector = Icons.Default.Edit,
-                                        contentDescription = "Edit Time",
-                                        tint = AccentTeal.copy(alpha = 0.8f),
-                                        modifier = Modifier.size(13.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        // Quick Presets Row
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "Quick Presets",
-                                color = TextMuted,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(bottom = 6.dp)
-                            )
-
-                            val presetTimes = listOf(
-                                Triple(20, 0, "08:00 PM"),
-                                Triple(21, 0, "09:00 PM"),
-                                Triple(22, 0, "10:00 PM"),
-                                Triple(8, 0, "08:00 AM")
-                            )
+                        slots.forEach { (slotInfo, slotState) ->
+                            val (slotIndex, title, subtitle) = slotInfo
+                            val (isEnabled, timePair) = slotState
+                            val (hour, minute) = timePair
+                            val formattedTime = DailyReminderManager.formatTime(hour, minute)
 
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 5.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isEnabled) CardDarker else CardDarker.copy(alpha = 0.45f))
+                                    .border(
+                                        1.dp,
+                                        if (isEnabled) AccentTeal.copy(alpha = 0.25f) else DividerColor.copy(alpha = 0.4f),
+                                        RoundedCornerShape(12.dp)
+                                    )
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                presetTimes.forEach { (h, m, label) ->
-                                    val isSelected = dailyReminderHour == h && dailyReminderMinute == m
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isSelected) AccentTeal else CardDarker)
-                                            .border(1.dp, if (isSelected) AccentTeal else DividerColor, RoundedCornerShape(8.dp))
-                                            .clickable {
-                                                if (!isSelected) {
-                                                    scope.launch {
-                                                        preferencesManager.setDailyReminderTime(h, m)
-                                                        DailyReminderManager.scheduleDailyReminder(context, h, m)
-                                                    }
-                                                    showToast("Reminder set to $label ⏰")
-                                                }
-                                            }
-                                            .padding(vertical = 7.dp),
-                                        contentAlignment = Alignment.Center
+                                // Title & Subtitle
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = title,
+                                        color = if (isEnabled) TextPrimary else TextSecondary,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = subtitle,
+                                        color = TextMuted,
+                                        fontSize = 10.5.sp
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(6.dp))
+
+                                // Time Picker Chip (Clickable to edit time)
+                                Surface(
+                                    onClick = {
+                                        editingReminderSlot = slotIndex
+                                    },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isEnabled) AccentTeal.copy(alpha = 0.12f) else CardDark,
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isEnabled) AccentTeal.copy(alpha = 0.5f) else DividerColor
+                                    ),
+                                    modifier = Modifier.padding(end = 4.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         Text(
-                                            text = label,
-                                            fontSize = 10.sp,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                            color = if (isSelected) OnAccent else TextSecondary,
-                                            maxLines = 1,
-                                            softWrap = false
+                                            text = formattedTime,
+                                            color = if (isEnabled) AccentTeal else TextSecondary,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit $title",
+                                            tint = if (isEnabled) AccentTeal.copy(alpha = 0.8f) else TextMuted,
+                                            modifier = Modifier.size(11.dp)
                                         )
                                     }
                                 }
+
+                                // Slot Toggle Switch
+                                Switch(
+                                    checked = isEnabled,
+                                    onCheckedChange = { slotEnabled ->
+                                        if (slotEnabled) {
+                                            // Check if another enabled slot already has the exact same time
+                                            val otherActiveSlots = listOf(
+                                                Triple(1, reminder1Hour, reminder1Minute) to reminder1Enabled,
+                                                Triple(2, reminder2Hour, reminder2Minute) to reminder2Enabled,
+                                                Triple(3, reminder3Hour, reminder3Minute) to reminder3Enabled
+                                            ).filter { it.first.first != slotIndex && it.second }
+
+                                            val conflictingSlot = otherActiveSlots.find { it.first.second == hour && it.first.third == minute }
+                                            if (conflictingSlot != null) {
+                                                showToast("Reminder ${conflictingSlot.first.first} is already set for $formattedTime ⚠️")
+                                                return@Switch
+                                            }
+                                        }
+
+                                        scope.launch {
+                                            preferencesManager.setReminderSlotEnabled(slotIndex, slotEnabled)
+                                            if (slotEnabled) {
+                                                DailyReminderManager.scheduleSlotReminder(context, slotIndex, hour, minute)
+                                                showToast("Reminder $slotIndex enabled for $formattedTime ⏰")
+                                            } else {
+                                                DailyReminderManager.cancelSlotReminder(context, slotIndex)
+                                                showToast("Reminder $slotIndex disabled")
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.scale(0.85f),
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = OnAccent,
+                                        checkedTrackColor = AccentTeal,
+                                        checkedBorderColor = Color.Transparent,
+                                        uncheckedThumbColor = SwitchThumbUnchecked,
+                                        uncheckedTrackColor = SwitchTrackUnchecked,
+                                        uncheckedBorderColor = SwitchBorderUnchecked
+                                    )
+                                )
                             }
                         }
 
@@ -731,11 +772,11 @@ fun SettingsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 10.dp),
+                                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "💡 Tapping the reminder notification opens FinanceBuddy directly to update your expenses.",
+                                text = "💡 You can enable 1, 2, or all 3 reminders at your preferred times. Tapping a reminder notification opens FinanceBuddy directly.",
                                 color = TextMuted,
                                 fontSize = 10.5.sp,
                                 lineHeight = 14.sp
@@ -1382,22 +1423,44 @@ fun SettingsScreen(
             )
         }
 
-        // Dialog for picking daily reminder time
-        if (showTimePickerDialog) {
+        // Dialog for picking daily reminder time for any slot (1, 2, or 3)
+        editingReminderSlot?.let { slotIndex ->
+            val (currentHour, currentMinute, slotTitle) = when (slotIndex) {
+                1 -> Triple(reminder1Hour, reminder1Minute, "Reminder 1 Time")
+                2 -> Triple(reminder2Hour, reminder2Minute, "Reminder 2 Time")
+                3 -> Triple(reminder3Hour, reminder3Minute, "Reminder 3 Time")
+                else -> Triple(20, 0, "Reminder Time")
+            }
+            val slotEnabled = when (slotIndex) {
+                1 -> reminder1Enabled
+                2 -> reminder2Enabled
+                3 -> reminder3Enabled
+                else -> false
+            }
+
+            val otherSlots = listOf(
+                Triple(1, reminder1Hour, reminder1Minute),
+                Triple(2, reminder2Hour, reminder2Minute),
+                Triple(3, reminder3Hour, reminder3Minute)
+            ).filter { it.first != slotIndex }
+
             ReminderTimePickerDialog(
-                initialHour = dailyReminderHour,
-                initialMinute = dailyReminderMinute,
-                onDismiss = { showTimePickerDialog = false },
+                initialHour = currentHour,
+                initialMinute = currentMinute,
+                title = slotTitle,
+                subtitle = "Set notification alert time for slot $slotIndex",
+                otherSlots = otherSlots,
+                onDismiss = { editingReminderSlot = null },
                 onConfirm = { hour, minute ->
-                    showTimePickerDialog = false
+                    editingReminderSlot = null
                     scope.launch {
-                        preferencesManager.setDailyReminderTime(hour, minute)
-                        if (isDailyReminderEnabled) {
-                            DailyReminderManager.scheduleDailyReminder(context, hour, minute)
+                        preferencesManager.setReminderSlotTime(slotIndex, hour, minute)
+                        if (isDailyReminderEnabled && slotEnabled) {
+                            DailyReminderManager.scheduleSlotReminder(context, slotIndex, hour, minute)
                         }
                     }
                     val formatted = DailyReminderManager.formatTime(hour, minute)
-                    showToast("Daily reminder set to $formatted ⏰")
+                    showToast("Reminder $slotIndex set to $formatted ⏰")
                 }
             )
         }

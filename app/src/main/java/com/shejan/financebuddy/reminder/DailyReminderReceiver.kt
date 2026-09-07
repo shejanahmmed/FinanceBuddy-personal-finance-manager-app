@@ -22,27 +22,43 @@ class DailyReminderReceiver : BroadcastReceiver() {
         scope.launch {
             try {
                 val preferencesManager = PreferencesManager(context)
-                val isEnabled = preferencesManager.isDailyReminderEnabled.first()
+                val isMasterEnabled = preferencesManager.isDailyReminderEnabled.first()
 
                 when (intent.action) {
                     ACTION_FIRE_REMINDER -> {
-                        if (isEnabled) {
-                            DailyReminderManager.showReminderNotification(context)
-                            // Re-arm alarm for the next day at the same configured time
-                            val hour = preferencesManager.dailyReminderHour.first()
-                            val minute = preferencesManager.dailyReminderMinute.first()
-                            DailyReminderManager.scheduleDailyReminder(context, hour, minute)
+                        if (isMasterEnabled) {
+                            val slotIndex = intent.getIntExtra(DailyReminderManager.EXTRA_SLOT_INDEX, 1)
+                            val (isSlotEnabled, hour, minute) = when (slotIndex) {
+                                1 -> Triple(
+                                    preferencesManager.reminder1Enabled.first(),
+                                    preferencesManager.reminder1Hour.first(),
+                                    preferencesManager.reminder1Minute.first()
+                                )
+                                2 -> Triple(
+                                    preferencesManager.reminder2Enabled.first(),
+                                    preferencesManager.reminder2Hour.first(),
+                                    preferencesManager.reminder2Minute.first()
+                                )
+                                3 -> Triple(
+                                    preferencesManager.reminder3Enabled.first(),
+                                    preferencesManager.reminder3Hour.first(),
+                                    preferencesManager.reminder3Minute.first()
+                                )
+                                else -> Triple(false, 20, 0)
+                            }
+
+                            if (isSlotEnabled) {
+                                DailyReminderManager.showReminderNotification(context, slotIndex)
+                                // Re-arm alarm for the next day at the same configured slot time
+                                DailyReminderManager.scheduleSlotReminder(context, slotIndex, hour, minute)
+                            }
                         }
                     }
                     Intent.ACTION_BOOT_COMPLETED,
                     Intent.ACTION_MY_PACKAGE_REPLACED,
                     "android.intent.action.QUICKBOOT_POWERON",
                     "com.htc.intent.action.QUICKBOOT_POWERON" -> {
-                        if (isEnabled) {
-                            val hour = preferencesManager.dailyReminderHour.first()
-                            val minute = preferencesManager.dailyReminderMinute.first()
-                            DailyReminderManager.scheduleDailyReminder(context, hour, minute)
-                        }
+                        DailyReminderManager.rescheduleAllActiveReminders(context)
                     }
                 }
             } catch (e: Exception) {

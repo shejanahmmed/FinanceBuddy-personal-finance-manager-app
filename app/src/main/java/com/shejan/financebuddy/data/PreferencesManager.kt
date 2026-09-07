@@ -35,6 +35,19 @@ class PreferencesManager(private val context: Context) {
         private val DAILY_REMINDER_ENABLED = booleanPreferencesKey("daily_reminder_enabled")
         private val DAILY_REMINDER_HOUR = intPreferencesKey("daily_reminder_hour")
         private val DAILY_REMINDER_MINUTE = intPreferencesKey("daily_reminder_minute")
+
+        // Multi-slot daily reminder keys
+        private val DAILY_REMINDER_1_ENABLED = booleanPreferencesKey("daily_reminder_1_enabled")
+        private val DAILY_REMINDER_1_HOUR = intPreferencesKey("daily_reminder_1_hour")
+        private val DAILY_REMINDER_1_MINUTE = intPreferencesKey("daily_reminder_1_minute")
+
+        private val DAILY_REMINDER_2_ENABLED = booleanPreferencesKey("daily_reminder_2_enabled")
+        private val DAILY_REMINDER_2_HOUR = intPreferencesKey("daily_reminder_2_hour")
+        private val DAILY_REMINDER_2_MINUTE = intPreferencesKey("daily_reminder_2_minute")
+
+        private val DAILY_REMINDER_3_ENABLED = booleanPreferencesKey("daily_reminder_3_enabled")
+        private val DAILY_REMINDER_3_HOUR = intPreferencesKey("daily_reminder_3_hour")
+        private val DAILY_REMINDER_3_MINUTE = intPreferencesKey("daily_reminder_3_minute")
     }
 
     /** Emits whether total balance should be masked with asterisks. Defaults to false. */
@@ -228,42 +241,139 @@ class PreferencesManager(private val context: Context) {
         }
     }
 
-    /** Emits whether daily finance reminder is enabled. Defaults to false. */
+    // ─── DAILY FINANCE REMINDERS (MULTI-SLOT SUPPORT) ─────────────
+
+    /** Master switch: emits whether the daily finance reminder feature is enabled. Defaults to false. */
     val isDailyReminderEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[DAILY_REMINDER_ENABLED] ?: false
     }
 
-    /** Emits the daily reminder hour (0-23). Defaults to 20 (8:00 PM). */
-    val dailyReminderHour: Flow<Int> = context.dataStore.data.map { prefs ->
-        prefs[DAILY_REMINDER_HOUR] ?: 20
-    }
-
-    /** Emits the daily reminder minute (0-59). Defaults to 0. */
-    val dailyReminderMinute: Flow<Int> = context.dataStore.data.map { prefs ->
-        prefs[DAILY_REMINDER_MINUTE] ?: 0
-    }
-
-    /** Sets daily reminder preferences (enabled status, hour, minute). */
-    suspend fun setDailyReminder(enabled: Boolean, hour: Int, minute: Int) {
-        context.dataStore.edit { prefs ->
-            prefs[DAILY_REMINDER_ENABLED] = enabled
-            prefs[DAILY_REMINDER_HOUR] = hour
-            prefs[DAILY_REMINDER_MINUTE] = minute
-        }
-    }
-
-    /** Sets only whether daily reminder is enabled. */
+    /** Sets master switch for daily reminders. */
     suspend fun setDailyReminderEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[DAILY_REMINDER_ENABLED] = enabled
+            // If turning ON for the first time and no slot 1 setting exists, ensure slot 1 is enabled
+            if (enabled && prefs[DAILY_REMINDER_1_ENABLED] == null && prefs[DAILY_REMINDER_2_ENABLED] != true && prefs[DAILY_REMINDER_3_ENABLED] != true) {
+                prefs[DAILY_REMINDER_1_ENABLED] = true
+            }
         }
     }
 
-    /** Sets the daily reminder time. */
-    suspend fun setDailyReminderTime(hour: Int, minute: Int) {
+    // --- Slot 1 (Default: 8:00 PM / 20:00) ---
+    val reminder1Enabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[DAILY_REMINDER_1_ENABLED] ?: true
+    }
+
+    val reminder1Hour: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[DAILY_REMINDER_1_HOUR] ?: (prefs[DAILY_REMINDER_HOUR] ?: 20)
+    }
+
+    val reminder1Minute: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[DAILY_REMINDER_1_MINUTE] ?: (prefs[DAILY_REMINDER_MINUTE] ?: 0)
+    }
+
+    // Legacy backwards compatibility aliases for Slot 1
+    val dailyReminderHour: Flow<Int> = reminder1Hour
+    val dailyReminderMinute: Flow<Int> = reminder1Minute
+
+    // --- Slot 2 (Default: 2:00 PM / 14:00) ---
+    val reminder2Enabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[DAILY_REMINDER_2_ENABLED] ?: false
+    }
+
+    val reminder2Hour: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[DAILY_REMINDER_2_HOUR] ?: 14
+    }
+
+    val reminder2Minute: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[DAILY_REMINDER_2_MINUTE] ?: 0
+    }
+
+    // --- Slot 3 (Default: 9:00 AM / 09:00) ---
+    val reminder3Enabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[DAILY_REMINDER_3_ENABLED] ?: false
+    }
+
+    val reminder3Hour: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[DAILY_REMINDER_3_HOUR] ?: 9
+    }
+
+    val reminder3Minute: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[DAILY_REMINDER_3_MINUTE] ?: 0
+    }
+
+    /** Updates a specific reminder slot's enabled state and time. */
+    suspend fun setReminderSlot(slotIndex: Int, enabled: Boolean, hour: Int, minute: Int) {
         context.dataStore.edit { prefs ->
+            when (slotIndex) {
+                1 -> {
+                    prefs[DAILY_REMINDER_1_ENABLED] = enabled
+                    prefs[DAILY_REMINDER_1_HOUR] = hour
+                    prefs[DAILY_REMINDER_1_MINUTE] = minute
+                    prefs[DAILY_REMINDER_HOUR] = hour
+                    prefs[DAILY_REMINDER_MINUTE] = minute
+                }
+                2 -> {
+                    prefs[DAILY_REMINDER_2_ENABLED] = enabled
+                    prefs[DAILY_REMINDER_2_HOUR] = hour
+                    prefs[DAILY_REMINDER_2_MINUTE] = minute
+                }
+                3 -> {
+                    prefs[DAILY_REMINDER_3_ENABLED] = enabled
+                    prefs[DAILY_REMINDER_3_HOUR] = hour
+                    prefs[DAILY_REMINDER_3_MINUTE] = minute
+                }
+            }
+        }
+    }
+
+    /** Updates only the enabled state of a specific reminder slot. */
+    suspend fun setReminderSlotEnabled(slotIndex: Int, enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            when (slotIndex) {
+                1 -> prefs[DAILY_REMINDER_1_ENABLED] = enabled
+                2 -> prefs[DAILY_REMINDER_2_ENABLED] = enabled
+                3 -> prefs[DAILY_REMINDER_3_ENABLED] = enabled
+            }
+        }
+    }
+
+    /** Updates only the time (hour & minute) of a specific reminder slot. */
+    suspend fun setReminderSlotTime(slotIndex: Int, hour: Int, minute: Int) {
+        context.dataStore.edit { prefs ->
+            when (slotIndex) {
+                1 -> {
+                    prefs[DAILY_REMINDER_1_HOUR] = hour
+                    prefs[DAILY_REMINDER_1_MINUTE] = minute
+                    prefs[DAILY_REMINDER_HOUR] = hour
+                    prefs[DAILY_REMINDER_MINUTE] = minute
+                }
+                2 -> {
+                    prefs[DAILY_REMINDER_2_HOUR] = hour
+                    prefs[DAILY_REMINDER_2_MINUTE] = minute
+                }
+                3 -> {
+                    prefs[DAILY_REMINDER_3_HOUR] = hour
+                    prefs[DAILY_REMINDER_3_MINUTE] = minute
+                }
+            }
+        }
+    }
+
+    /** Legacy helper for slot 1 */
+    suspend fun setDailyReminder(enabled: Boolean, hour: Int, minute: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[DAILY_REMINDER_ENABLED] = enabled
+            prefs[DAILY_REMINDER_1_ENABLED] = enabled
+            prefs[DAILY_REMINDER_1_HOUR] = hour
+            prefs[DAILY_REMINDER_1_MINUTE] = minute
             prefs[DAILY_REMINDER_HOUR] = hour
             prefs[DAILY_REMINDER_MINUTE] = minute
         }
+    }
+
+    /** Legacy helper for slot 1 time */
+    suspend fun setDailyReminderTime(hour: Int, minute: Int) {
+        setReminderSlotTime(1, hour, minute)
     }
 }
