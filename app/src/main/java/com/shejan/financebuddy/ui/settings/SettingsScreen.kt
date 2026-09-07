@@ -304,30 +304,31 @@ fun SettingsScreen(
                 ) {
                     ThemeOptionRow(
                         title = "Follow System Default",
-                        description = "Matches device settings (Defaults to Dark Mode)",
+                        description = "Matches device settings (Dark or Light automatically)",
                         icon = Icons.Default.Devices,
                         selected = themeMode == "SYSTEM",
                         onClick = {
                             scope.launch { preferencesManager.setThemeMode("SYSTEM") }
-                            showToast("Theme set to Follow System (Dark Mode)")
+                            showToast("Theme set to Follow System")
                         }
                     )
                     HorizontalDivider(color = DividerColor, modifier = Modifier.padding(horizontal = 16.dp))
                     ThemeOptionRow(
                         title = "Light Mode",
-                        description = "Under active development — coming soon in a future update",
+                        description = "Clean, crisp light canvas optimal for bright daylight",
                         icon = Icons.Default.LightMode,
-                        selected = false,
-                        enabled = false,
-                        badgeText = "Coming Soon",
-                        onClick = { }
+                        selected = themeMode == "LIGHT",
+                        onClick = {
+                            scope.launch { preferencesManager.setThemeMode("LIGHT") }
+                            showToast("Switched to Light Mode ☀️")
+                        }
                     )
                     HorizontalDivider(color = DividerColor, modifier = Modifier.padding(horizontal = 16.dp))
                     ThemeOptionRow(
                         title = "Dark Mode",
                         description = "Power-saving, dark canvas optimal for night",
                         icon = Icons.Default.DarkMode,
-                        selected = themeMode == "DARK" || themeMode == "LIGHT",
+                        selected = themeMode == "DARK",
                         onClick = {
                             scope.launch { preferencesManager.setThemeMode("DARK") }
                             showToast("Switched to Dark Mode 🌙")

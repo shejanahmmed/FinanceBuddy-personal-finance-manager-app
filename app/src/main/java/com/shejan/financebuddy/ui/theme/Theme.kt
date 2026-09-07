@@ -104,9 +104,9 @@ fun FinanceBuddyTheme(
 ) {
     val activeMode = when (themeMode) {
         "AMOLED" -> "AMOLED"
-        "LIGHT"  -> "DARK"
+        "LIGHT"  -> "LIGHT"
         "DARK"   -> "DARK"
-        else     -> "DARK"
+        else     -> if (darkTheme) "DARK" else "LIGHT"
     }
 
     // Synchronize global theme state
