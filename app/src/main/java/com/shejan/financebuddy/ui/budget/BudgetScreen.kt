@@ -1381,6 +1381,21 @@ fun AddBudgetSheet(
                     when {
                         amount == null || amount <= 0 -> error = "Please enter a valid amount"
                         else -> {
+                            if (selectedCategory.isNotEmpty()) {
+                                val saved = sharedPreferences.getString("active_expense_categories", null)
+                                val currentList = saved?.split("|")?.filter { it.isNotEmpty() } ?: defaultExpenseCategories
+                                if (!currentList.any { it.equals(selectedCategory, ignoreCase = true) }) {
+                                    val updated = currentList + selectedCategory
+                                    sharedPreferences.edit {
+                                        putString("active_expense_categories", updated.joinToString("|"))
+                                        val custom = sharedPreferences.getString("custom_expense_categories", "")
+                                            ?.split("|")?.filter { it.isNotEmpty() } ?: emptyList()
+                                        if (!custom.any { it.equals(selectedCategory, ignoreCase = true) }) {
+                                            putString("custom_expense_categories", (custom + selectedCategory).joinToString("|"))
+                                        }
+                                    }
+                                }
+                            }
                             onSave(
                                 BudgetEntity(
                                     id          = budgetToEdit?.id ?: 0,
@@ -1495,7 +1510,14 @@ fun AddBudgetSheet(
                                     if (!expenseCategories.any { it.equals(trimmed, ignoreCase = true) }) {
                                         val updated = expenseCategories + trimmed
                                         expenseCategories = updated
-                                        sharedPreferences.edit { putString("active_expense_categories", updated.joinToString("|")) }
+                                        sharedPreferences.edit {
+                                            putString("active_expense_categories", updated.joinToString("|"))
+                                            val custom = sharedPreferences.getString("custom_expense_categories", "")
+                                                ?.split("|")?.filter { it.isNotEmpty() } ?: emptyList()
+                                            if (!custom.any { it.equals(trimmed, ignoreCase = true) }) {
+                                                putString("custom_expense_categories", (custom + trimmed).joinToString("|"))
+                                            }
+                                        }
                                     }
                                     selectedCategory = trimmed
                                 }

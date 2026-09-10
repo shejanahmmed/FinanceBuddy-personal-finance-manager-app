@@ -292,6 +292,31 @@ fun AddTransactionSheet(
         showCancelConfirmation = true
     }
 
+    // Reload categories dynamically on presentation to ensure newly added categories from Budget or other screens appear
+    LaunchedEffect(Unit) {
+        val savedExp = sharedPreferences.getString("active_expense_categories", null)
+        val customExp = sharedPreferences.getString("custom_expense_categories", "")
+            ?.split("|")?.filter { it.isNotEmpty() } ?: emptyList()
+        val expList = if (savedExp != null) {
+            val list = savedExp.split("|").filter { it.isNotEmpty() }
+            (list + customExp).distinct()
+        } else {
+            (defaultExpenseCategories + customExp).distinct()
+        }
+        expenseCategories = expList
+
+        val savedInc = sharedPreferences.getString("active_income_categories", null)
+        val customInc = sharedPreferences.getString("custom_income_categories", "")
+            ?.split("|")?.filter { it.isNotEmpty() } ?: emptyList()
+        val incList = if (savedInc != null) {
+            val list = savedInc.split("|").filter { it.isNotEmpty() }
+            (list + customInc).distinct()
+        } else {
+            (defaultIncomeCategories + customInc).distinct()
+        }
+        incomeCategories = incList
+    }
+
     // Reset default category if type changes and current category is invalid
     LaunchedEffect(selectedType) {
         if (selectedType == "TRANSFER") {
@@ -1304,14 +1329,28 @@ fun AddTransactionSheet(
                                             if (!incomeCategories.contains(trimmed)) {
                                                 val updated = incomeCategories + trimmed
                                                 incomeCategories = updated
-                                                sharedPreferences.edit { putString("active_income_categories", updated.joinToString("|")) }
+                                                sharedPreferences.edit {
+                                                    putString("active_income_categories", updated.joinToString("|"))
+                                                    val custom = sharedPreferences.getString("custom_income_categories", "")
+                                                        ?.split("|")?.filter { it.isNotEmpty() } ?: emptyList()
+                                                    if (!custom.contains(trimmed)) {
+                                                        putString("custom_income_categories", (custom + trimmed).joinToString("|"))
+                                                    }
+                                                }
                                                 selectedCategory = trimmed
                                             }
                                         } else if (selectedType == "EXPENSE") {
                                             if (!expenseCategories.contains(trimmed)) {
                                                 val updated = expenseCategories + trimmed
                                                 expenseCategories = updated
-                                                sharedPreferences.edit { putString("active_expense_categories", updated.joinToString("|")) }
+                                                sharedPreferences.edit {
+                                                    putString("active_expense_categories", updated.joinToString("|"))
+                                                    val custom = sharedPreferences.getString("custom_expense_categories", "")
+                                                        ?.split("|")?.filter { it.isNotEmpty() } ?: emptyList()
+                                                    if (!custom.contains(trimmed)) {
+                                                        putString("custom_expense_categories", (custom + trimmed).joinToString("|"))
+                                                    }
+                                                }
                                                 selectedCategory = trimmed
                                             }
                                         }
