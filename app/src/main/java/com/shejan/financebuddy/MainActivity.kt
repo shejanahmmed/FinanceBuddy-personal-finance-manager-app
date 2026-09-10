@@ -108,6 +108,7 @@ import com.shejan.financebuddy.ui.theme.BackgroundDark
 import com.shejan.financebuddy.ui.theme.CardDark
 import com.shejan.financebuddy.ui.theme.CardDarker
 import com.shejan.financebuddy.ui.theme.DividerColor
+import com.shejan.financebuddy.ui.theme.DrawerBackground
 import com.shejan.financebuddy.ui.theme.ExpenseRed
 import com.shejan.financebuddy.ui.theme.FinanceBuddyTheme
 import com.shejan.financebuddy.ui.theme.SurfaceDark
@@ -690,8 +691,8 @@ fun MainDashboardContainer(
         scrimColor = Color.Black.copy(alpha = 0.5f),
         drawerContent = {
             ModalDrawerSheet(
-                modifier             = Modifier.fillMaxWidth(0.70f),
-                drawerContainerColor = SurfaceDark, // white in light mode, deep navy in dark
+                modifier             = Modifier.fillMaxWidth(0.72f),
+                drawerContainerColor = DrawerBackground,
                 drawerShape          = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)
             ) {
                 Column(
@@ -703,11 +704,11 @@ fun MainDashboardContainer(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 28.dp, start = 20.dp, end = 12.dp, bottom = 12.dp)
+                            .padding(top = 28.dp, start = 20.dp, end = 16.dp, bottom = 12.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(end = 40.dp) // buffer for close icon
+                            modifier = Modifier.padding(end = 42.dp) // buffer for close icon
                         ) {
                             Box(
                                 modifier = Modifier
@@ -726,7 +727,7 @@ fun MainDashboardContainer(
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text       = "FinanceBuddy",
-                                fontSize   = 16.sp,
+                                fontSize   = 17.sp,
                                 fontWeight = FontWeight.Bold,
                                 color      = TextPrimary
                             )
@@ -737,7 +738,7 @@ fun MainDashboardContainer(
                                 .size(34.dp)
                                 .align(Alignment.CenterEnd)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(CardDarker) // off-white in light, darker card in dark
+                                .background(Color(0xFF263045))
                                 .border(1.dp, DividerColor, RoundedCornerShape(8.dp))
                                 .clickable { scope.launch { drawerState.close() } },
                             contentAlignment = Alignment.Center
@@ -745,7 +746,7 @@ fun MainDashboardContainer(
                             Icon(
                                 imageVector        = Icons.Default.Close,
                                 contentDescription = "Close Drawer",
-                                tint               = TextPrimary,
+                                tint               = Color.White,
                                 modifier           = Modifier.size(18.dp)
                             )
                         }
@@ -755,18 +756,19 @@ fun MainDashboardContainer(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 16.dp)
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .background(CardDarker) // off-white in light, deeper card in dark
+                            .background(Color(0xFF263045))
+                            .border(1.dp, DividerColor, RoundedCornerShape(16.dp))
                             .clickable { showEditProfileDialog = true }
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
+                                .size(40.dp)
                                 .clip(CircleShape)
-                                .background(Brush.linearGradient(colors = listOf(AccentTeal.copy(alpha = 0.15f), AccentBlue.copy(alpha = 0.15f)))),
+                                .background(Brush.linearGradient(colors = listOf(AccentTeal.copy(alpha = 0.25f), AccentBlue.copy(alpha = 0.25f)))),
                             contentAlignment = Alignment.Center
                         ) {
                             val profileBitmap = remember(profileImagePath) {
@@ -802,14 +804,15 @@ fun MainDashboardContainer(
                         Column {
                             Text(
                                 text = profileName,
-                                color = TextPrimary,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
+                                color = Color.White,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "Tap to edit profile",
-                                color = TextMuted,
-                                fontSize = 11.sp
+                                color = AccentTeal,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
@@ -902,14 +905,15 @@ fun MainDashboardContainer(
                         Text(
                             text = "Local Storage Secured",
                             color = AccentTeal,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "v1.0.0 (Beta) • Local AES-256",
-                            color = TextMuted,
-                            fontSize = 10.sp
+                            color = TextSecondary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -1227,38 +1231,53 @@ fun DrawerMenuItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 2.dp)
+            .padding(horizontal = 14.dp, vertical = 3.dp)
             .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF263045))
+            .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = TextSecondary,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(16.dp))
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(AccentTeal.copy(alpha = 0.20f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = AccentTeal,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(14.dp))
         Text(
             text = label,
-            color = TextPrimary,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
+            color = Color.White,
+            fontSize = 14.5.sp,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f)
         )
         if (badgeText != null) {
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(AccentTeal.copy(alpha = 0.15f))
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(AccentTeal, AccentBlue)
+                        )
+                    )
+                    .padding(horizontal = 9.dp, vertical = 3.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = badgeText,
-                    color = AccentTeal,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold
+                    color = BackgroundDark,
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Black
                 )
             }
         }

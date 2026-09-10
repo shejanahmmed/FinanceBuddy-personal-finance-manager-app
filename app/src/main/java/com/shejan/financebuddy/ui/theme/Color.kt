@@ -26,6 +26,12 @@ val SurfaceDark: Color get() = when (currentThemeModeState) {
     else     -> Color(0xFF121620)
 }
 
+val DrawerBackground: Color get() = when (currentThemeModeState) {
+    "AMOLED" -> Color(0xFF161B28) // Distinct elevated surface for AMOLED drawer
+    "LIGHT"  -> Color(0xFFFFFFFF) // Crisp pure white for Light mode
+    else     -> Color(0xFF1E2638) // Clearly lighter, modern dark slate surface (distinct from 0xFF0A0D14)
+}
+
 val CardDark: Color get() = when (currentThemeModeState) {
     "AMOLED" -> Color(0xFF121212) // Material Elevation Level 1 for AMOLED Cards
     "LIGHT"  -> Color(0xFFFFFFFF) // Pure white card surface

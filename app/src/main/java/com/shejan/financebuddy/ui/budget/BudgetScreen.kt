@@ -3,8 +3,10 @@ package com.shejan.financebuddy.ui.budget
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -53,6 +56,9 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.text.TextStyle
+import androidx.core.content.edit
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Scaffold
@@ -83,6 +89,7 @@ import com.shejan.financebuddy.ui.theme.BackgroundDark
 import com.shejan.financebuddy.ui.theme.CardDark
 import com.shejan.financebuddy.ui.theme.CardDarker
 import com.shejan.financebuddy.ui.theme.DividerColor
+import com.shejan.financebuddy.ui.theme.DrawerBackground
 import com.shejan.financebuddy.ui.theme.ExpenseRed
 import com.shejan.financebuddy.ui.theme.GradientEnd
 import com.shejan.financebuddy.ui.theme.GradientStart
@@ -1145,7 +1152,7 @@ fun BudgetItemCard(
 // Add / Edit Budget Bottom Sheet
 // ─────────────────────────────────────────────────────────────
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AddBudgetSheet(
     sheetState: androidx.compose.material3.SheetState,
@@ -1158,25 +1165,27 @@ fun AddBudgetSheet(
 ) {
     val context = LocalContext.current
     val sharedPreferences = remember { context.getSharedPreferences("finance_buddy_prefs", Context.MODE_PRIVATE) }
-    val defaultExpenseCategories = listOf("Food", "Groceries", "Rent", "Utilities", "Travel", "Shopping", "Entertainment", "Medical", "Other")
+    val defaultExpenseCategories = listOf("Food", "Groceries", "Rent", "Utilities", "Travel", "Shopping", "Entertainment", "Medical")
 
-    val allExpenseCategories = remember {
+    var expenseCategories by remember {
         val saved = sharedPreferences.getString("active_expense_categories", null)
-        if (saved != null) {
-            saved.split("|").filter { it.isNotEmpty() }
-        } else {
-            val custom = sharedPreferences.getString("custom_expense_categories", "")
-                ?.split("|")?.filter { it.isNotEmpty() } ?: emptyList()
-            (defaultExpenseCategories + custom).distinct()
-        }
+        mutableStateOf(
+            if (saved != null) {
+                saved.split("|").filter { it.isNotEmpty() && !it.equals("Other", ignoreCase = true) }
+            } else {
+                val custom = sharedPreferences.getString("custom_expense_categories", "")
+                    ?.split("|")?.filter { it.isNotEmpty() && !it.equals("Other", ignoreCase = true) } ?: emptyList()
+                (defaultExpenseCategories + custom).distinct()
+            }
+        )
     }
 
     // Available categories = those not already budgeted, or the one being edited
-    val available = remember(allExpenseCategories, existingCategories, budgetToEdit) {
+    val available = remember(expenseCategories, existingCategories, budgetToEdit) {
         if (budgetToEdit != null) {
-            allExpenseCategories.filter { it.equals(budgetToEdit.category, ignoreCase = true) || it !in existingCategories }
+            expenseCategories.filter { it.equals(budgetToEdit.category, ignoreCase = true) || it !in existingCategories }
         } else {
-            allExpenseCategories.filter { it !in existingCategories }
+            expenseCategories.filter { it !in existingCategories }
         }
     }
 
@@ -1193,6 +1202,10 @@ fun AddBudgetSheet(
     var limitAmount      by remember(initialAmount) { mutableStateOf(initialAmount) }
     var error            by remember { mutableStateOf<String?>(null) }
     var showDiscardDialog by remember { mutableStateOf(false) }
+    var showAddCategoryDialog by remember { mutableStateOf(false) }
+    var showDeleteCategoryDialog by remember { mutableStateOf(false) }
+    var categoryToDelete by remember { mutableStateOf("") }
+    var newCategoryName by remember { mutableStateOf("") }
 
     val isFormDirty = remember(limitAmount, selectedCategory, initialAmount, initialCategory) {
         if (budgetToEdit != null) {
@@ -1233,7 +1246,7 @@ fun AddBudgetSheet(
             }
         },
         sheetState       = sheetState,
-        containerColor   = CardDarker,
+        containerColor   = DrawerBackground,
         shape            = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(
@@ -1275,21 +1288,54 @@ fun AddBudgetSheet(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
                             .background(
-                                if (isSelected) catColor.copy(alpha = 0.2f) else CardDark
+                                if (isSelected) catColor.copy(alpha = 0.25f) else Color(0xFF263045)
                             )
-                            .then(
-                                if (isSelected) Modifier.then(
-                                    Modifier.clip(RoundedCornerShape(12.dp))
-                                ) else Modifier
+                            .border(
+                                width = 1.dp,
+                                color = if (isSelected) catColor else DividerColor,
+                                shape = RoundedCornerShape(12.dp)
                             )
-                            .clickable { selectedCategory = cat }
+                            .combinedClickable(
+                                onClick = { selectedCategory = cat },
+                                onLongClick = {
+                                    categoryToDelete = cat
+                                    showDeleteCategoryDialog = true
+                                }
+                            )
                             .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
                         Text(
                             text       = cat,
                             fontSize   = 13.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color      = if (isSelected) catColor else TextSecondary
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                            color      = if (isSelected) catColor else Color.White
+                        )
+                    }
+                }
+
+                // Add Custom Category Chip
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF263045))
+                        .border(1.dp, AccentTeal, RoundedCornerShape(12.dp))
+                        .clickable { showAddCategoryDialog = true }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Category",
+                            tint = AccentTeal,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "New",
+                            color = AccentTeal,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
@@ -1365,6 +1411,207 @@ fun AddBudgetSheet(
                         style = MaterialTheme.typography.titleMedium,
                         color = BackgroundDark
                     )
+                }
+            }
+        }
+    }
+
+    // ── Custom Category Dialog ──────────────────────────────
+    if (showAddCategoryDialog) {
+        Dialog(
+            onDismissRequest = {
+                showAddCategoryDialog = false
+                newCategoryName = ""
+            },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .wrapContentHeight(),
+                shape = RoundedCornerShape(20.dp),
+                color = CardDark,
+                border = BorderStroke(1.dp, DividerColor)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Add Custom Category",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    OutlinedTextField(
+                        value = newCategoryName,
+                        onValueChange = { newCategoryName = it },
+                        textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
+                        label = { Text("Category Name", color = TextSecondary) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor   = AccentTeal,
+                            unfocusedBorderColor = DividerColor,
+                            focusedTextColor     = TextPrimary,
+                            unfocusedTextColor   = TextPrimary,
+                            cursorColor          = AccentTeal
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = {
+                                showAddCategoryDialog = false
+                                newCategoryName = ""
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, DividerColor),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ExpenseRed,
+                                contentColor = Color.White
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                        ) {
+                            Text(
+                                text = "Cancel",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                val trimmed = newCategoryName.trim()
+                                if (trimmed.isNotEmpty()) {
+                                    if (!expenseCategories.any { it.equals(trimmed, ignoreCase = true) }) {
+                                        val updated = expenseCategories + trimmed
+                                        expenseCategories = updated
+                                        sharedPreferences.edit { putString("active_expense_categories", updated.joinToString("|")) }
+                                    }
+                                    selectedCategory = trimmed
+                                }
+                                showAddCategoryDialog = false
+                                newCategoryName = ""
+                            },
+                            enabled = newCategoryName.trim().isNotEmpty(),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(
+                                1.dp,
+                                if (newCategoryName.trim().isNotEmpty()) AccentTeal.copy(alpha = 0.6f) else DividerColor
+                            ),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AccentTeal,
+                                contentColor = BackgroundDark,
+                                disabledContainerColor = CardDarker,
+                                disabledContentColor = TextMuted
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                        ) {
+                            Text(
+                                text = "Add",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showDeleteCategoryDialog) {
+        Dialog(
+            onDismissRequest = { showDeleteCategoryDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .wrapContentHeight(),
+                shape = RoundedCornerShape(20.dp),
+                color = CardDark,
+                border = BorderStroke(1.dp, DividerColor)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Delete Category?",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Are you sure you want to delete the category \"$categoryToDelete\"?",
+                        color = TextSecondary,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = { showDeleteCategoryDialog = false },
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, DividerColor),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = CardDarker,
+                                contentColor = TextPrimary
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                        ) {
+                            Text(
+                                text = "Cancel",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                val updated = expenseCategories.filter { it != categoryToDelete }
+                                expenseCategories = updated
+                                sharedPreferences.edit { putString("active_expense_categories", updated.joinToString("|")) }
+                                if (selectedCategory == categoryToDelete) {
+                                    selectedCategory = updated.firstOrNull() ?: ""
+                                }
+                                showDeleteCategoryDialog = false
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, DividerColor),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ExpenseRed,
+                                contentColor = Color.White
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                        ) {
+                            Text(
+                                text = "Delete",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
                 }
             }
         }
