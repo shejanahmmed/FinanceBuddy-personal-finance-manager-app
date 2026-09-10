@@ -14,6 +14,9 @@ interface BudgetDao {
     @Query("SELECT * FROM budgets ORDER BY category ASC")
     fun getAllBudgets(): Flow<List<BudgetEntity>>
 
+    @Query("SELECT * FROM budgets WHERE monthYear = :monthYear ORDER BY category ASC")
+    fun getBudgetsByMonth(monthYear: String): Flow<List<BudgetEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBudget(budget: BudgetEntity): Long
 
@@ -22,6 +25,9 @@ interface BudgetDao {
 
     @Delete
     suspend fun deleteBudget(budget: BudgetEntity)
+
+    @Query("SELECT * FROM budgets WHERE category = :category AND (monthYear = :monthYear OR monthYear = '') LIMIT 1")
+    suspend fun getBudgetByCategoryAndMonth(category: String, monthYear: String): BudgetEntity?
 
     @Query("SELECT * FROM budgets WHERE category = :category LIMIT 1")
     suspend fun getBudgetByCategory(category: String): BudgetEntity?

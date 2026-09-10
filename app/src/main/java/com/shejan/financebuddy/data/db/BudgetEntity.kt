@@ -8,5 +8,6 @@ data class BudgetEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val category: String,      // e.g. "Food", "Rent", "Shopping"
     val limitAmount: Double,   // user-set spending cap in BDT
-    val colorHex: String       // display accent color for this category
+    val colorHex: String,      // display accent color for this category
+    val monthYear: String = "" // format "yyyy-MM", e.g. "2026-09"
 )

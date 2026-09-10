@@ -95,6 +95,7 @@ object BackupManager {
                     put("category", b.category)
                     put("limitAmount", b.limitAmount)
                     put("colorHex", b.colorHex)
+                    put("monthYear", b.monthYear)
                 })
             }
         })
@@ -305,7 +306,8 @@ object BackupManager {
                     id = b.getInt("id"),
                     category = b.getString("category"),
                     limitAmount = b.getDouble("limitAmount"),
-                    colorHex = b.getString("colorHex")
+                    colorHex = b.getString("colorHex"),
+                    monthYear = b.optString("monthYear", "")
                 )
             )
         }

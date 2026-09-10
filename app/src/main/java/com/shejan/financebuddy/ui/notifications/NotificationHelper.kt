@@ -49,7 +49,10 @@ object NotificationHelper {
                 c.get(Calendar.YEAR) == currentYear && c.get(Calendar.MONTH) == currentMonth
             }
 
-            for (b in budgets) {
+            val currentMonthStr = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US).format(cal.time)
+            val currentMonthBudgets = budgets.filter { it.monthYear.isEmpty() || it.monthYear == currentMonthStr }
+
+            for (b in currentMonthBudgets) {
                 val spent = currentMonthExpenses
                     .filter { it.category.equals(b.category, ignoreCase = true) }
                     .sumOf { it.amount }

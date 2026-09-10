@@ -148,6 +148,7 @@ data class MonthOption(
     val offset: Int,
     val label: String,
     val fullLabel: String,
+    val monthYear: String,
     val startTimestamp: Long,
     val endTimestamp: Long
 )
@@ -169,6 +170,7 @@ fun BudgetScreen(
         val options = mutableListOf<MonthOption>()
         val monthFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
         val shortMonthFormat = SimpleDateFormat("MMM yyyy", Locale.getDefault())
+        val monthYearFormat = SimpleDateFormat("yyyy-MM", Locale.US)
 
         for (offset in 0..23) {
             val startCal = Calendar.getInstance().apply {
@@ -195,14 +197,26 @@ fun BudgetScreen(
             val isCurrent = offset == 0
             val label = if (isCurrent) "This Month" else shortMonthFormat.format(monthDate)
             val fullLabel = if (isCurrent) "${monthFormat.format(monthDate)} (This Month)" else monthFormat.format(monthDate)
+            val monthYear = monthYearFormat.format(monthDate)
 
-            options.add(MonthOption(offset, label, fullLabel, startTs, endTs))
+            options.add(MonthOption(offset, label, fullLabel, monthYear, startTs, endTs))
         }
         options
     }
 
     var selectedMonthOption by remember { mutableStateOf(monthOptions.first()) }
     var showMonthDropdown by remember { mutableStateOf(false) }
+
+    val currentMonthBudgets = remember(budgets, selectedMonthOption) {
+        val selectedMonthYear = selectedMonthOption.monthYear
+        budgets.filter { b ->
+            if (b.monthYear.isNotEmpty()) {
+                b.monthYear == selectedMonthYear
+            } else {
+                selectedMonthOption.offset == 0
+            }
+        }
+    }
 
     val currentSpentByCategory = remember(selectedMonthOption, allTransactions, spentByCategory) {
         if (allTransactions.isNotEmpty()) {
@@ -224,9 +238,9 @@ fun BudgetScreen(
         }
     }
 
-    val totalBudgeted  = remember(budgets) { budgets.sumOf { it.limitAmount } }
-    val totalSpent     = remember(budgets, currentSpentByCategory) {
-        budgets.sumOf { b ->
+    val totalBudgeted  = remember(currentMonthBudgets) { currentMonthBudgets.sumOf { it.limitAmount } }
+    val totalSpent     = remember(currentMonthBudgets, currentSpentByCategory) {
+        currentMonthBudgets.sumOf { b ->
             currentSpentByCategory.entries.find { it.key.equals(b.category.trim(), ignoreCase = true) }?.value ?: 0.0
         }
     }
@@ -423,13 +437,13 @@ fun BudgetScreen(
                         verticalAlignment     = Alignment.CenterVertically
                     ) {
                         Text(
-                            text       = "Category Budgets",
+                            text       = "Spending Limits",
                             style      = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color      = TextPrimary
                         )
                         Text(
-                            text  = "${budgets.size} set",
+                            text  = if (currentMonthBudgets.size == 1) "1 category" else "${currentMonthBudgets.size} categories",
                             style = MaterialTheme.typography.labelSmall,
                             color = TextSecondary
                         )
@@ -438,7 +452,7 @@ fun BudgetScreen(
                 }
 
                 // ── Empty state ─────────────────────────────────────
-                if (budgets.isEmpty()) {
+                if (currentMonthBudgets.isEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
@@ -453,14 +467,14 @@ fun BudgetScreen(
                                 Text(text = "📊", fontSize = 36.sp)
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
-                                    text      = "No budgets set yet",
+                                    text      = if (selectedMonthOption.offset == 0) "No budgets set yet" else "No budgets for ${selectedMonthOption.label}",
                                     color     = TextPrimary,
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize  = 16.sp
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text      = "Tap + Budget above to set a spending limit\nfor each category",
+                                    text      = if (selectedMonthOption.offset == 0) "Tap + Budget above to set a spending limit\nfor each category" else "Tap + Budget above to set a spending limit\nfor ${selectedMonthOption.label}",
                                     color     = TextMuted,
                                     fontSize  = 13.sp,
                                     textAlign = TextAlign.Center,
@@ -472,7 +486,7 @@ fun BudgetScreen(
                 }
 
                 // ── Budget item cards ───────────────────────────────
-                items(budgets, key = { it.id }) { budget ->
+                items(currentMonthBudgets, key = { it.id }) { budget ->
                     val spent = currentSpentByCategory.entries.find { it.key.equals(budget.category.trim(), ignoreCase = true) }?.value ?: 0.0
                     BudgetItemCard(
                         budget         = budget,
@@ -495,8 +509,10 @@ fun BudgetScreen(
         if (showAddSheet) {
             AddBudgetSheet(
                 sheetState         = sheetState,
-                existingCategories = budgets.map { it.category },
+                existingCategories = currentMonthBudgets.map { it.category },
                 budgetToEdit       = editingBudget,
+                targetMonthYear    = selectedMonthOption.monthYear,
+                monthLabel         = selectedMonthOption.label,
                 onDismiss          = {
                     showAddSheet = false
                     editingBudget = null
@@ -985,6 +1001,8 @@ fun AddBudgetSheet(
     sheetState: androidx.compose.material3.SheetState,
     existingCategories: List<String>,
     budgetToEdit: BudgetEntity? = null,
+    targetMonthYear: String = "",
+    monthLabel: String = "This Month",
     onDismiss: () -> Unit,
     onSave: (BudgetEntity) -> Unit
 ) {
@@ -1075,7 +1093,7 @@ fun AddBudgetSheet(
                 .padding(bottom = 40.dp)
         ) {
             Text(
-                text      = if (budgetToEdit != null) "Edit Budget Limit" else "Set Budget Limit",
+                text      = if (budgetToEdit != null) "Edit Budget Limit ($monthLabel)" else "Set Budget Limit ($monthLabel)",
                 style     = MaterialTheme.typography.titleLarge,
                 color     = TextPrimary,
                 modifier  = Modifier.fillMaxWidth(),
@@ -1172,7 +1190,8 @@ fun AddBudgetSheet(
                                     id          = budgetToEdit?.id ?: 0,
                                     category    = selectedCategory,
                                     limitAmount = amount,
-                                    colorHex    = getCategoryColor(selectedCategory)
+                                    colorHex    = getCategoryColor(selectedCategory),
+                                    monthYear   = budgetToEdit?.monthYear?.ifEmpty { targetMonthYear } ?: targetMonthYear
                                 )
                             )
                         }
