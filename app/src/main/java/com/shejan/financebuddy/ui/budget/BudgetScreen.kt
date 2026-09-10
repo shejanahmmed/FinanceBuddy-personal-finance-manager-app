@@ -38,6 +38,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -248,6 +249,7 @@ fun BudgetScreen(
     var showAddSheet by remember { mutableStateOf(false) }
     var editingBudget by remember { mutableStateOf<BudgetEntity?>(null) }
     var deletingBudget by remember { mutableStateOf<BudgetEntity?>(null) }
+    var showInfoDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(triggerAddSheet) {
         if (triggerAddSheet) {
@@ -257,6 +259,11 @@ fun BudgetScreen(
         }
     }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Budget Info Dialog
+    if (showInfoDialog) {
+        BudgetInfoDialog(onDismiss = { showInfoDialog = false })
+    }
 
     // Delete Confirmation Dialog
     deletingBudget?.let { budget ->
@@ -422,7 +429,8 @@ fun BudgetScreen(
                         totalBudgeted  = totalBudgeted,
                         totalSpent     = totalSpent,
                         currencyFormat = currencyFormat,
-                        monthLabel     = selectedMonthOption.label
+                        monthLabel     = selectedMonthOption.label,
+                        onInfoClick    = { showInfoDialog = true }
                     )
                     Spacer(modifier = Modifier.height(20.dp))
                 }
@@ -661,7 +669,8 @@ fun MonthlyOverviewCard(
     totalBudgeted: Double,
     totalSpent: Double,
     currencyFormat: DecimalFormat,
-    monthLabel: String = "This Month"
+    monthLabel: String = "This Month",
+    onInfoClick: () -> Unit = {}
 ) {
     val progress = if (totalBudgeted > 0) (totalSpent / totalBudgeted).toFloat().coerceIn(0f, 1f) else 0f
     val animatedProgress by animateFloatAsState(
@@ -687,12 +696,28 @@ fun MonthlyOverviewCard(
         colors = CardDefaults.cardColors(containerColor = CardDark),
         border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            IconButton(
+                onClick = onInfoClick,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 10.dp, end = 10.dp)
+                    .size(32.dp)
+            ) {
+                Icon(
+                    imageVector        = Icons.Default.Info,
+                    contentDescription = "Budget Information",
+                    tint               = TextMuted,
+                    modifier           = Modifier.size(18.dp)
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
             // Arc chart
             Box(
                 modifier         = Modifier.size(160.dp),
@@ -763,6 +788,131 @@ fun MonthlyOverviewCard(
                 )
                 BudgetStatItem(label = "Remaining", value = "৳${currencyFormat.format(remaining)}",     color = IncomeGreen)
             }
+        }
+    }
+}
+}
+
+@Composable
+fun BudgetInfoDialog(
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = CardDark,
+            border = BorderStroke(1.dp, DividerColor)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "About Monthly Budgets",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Track and plan your category spending limits with precision.",
+                    fontSize = 13.sp,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Feature bullet points
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(CardDarker)
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    BudgetInfoRow(
+                        title = "Monthly Spending Caps",
+                        description = "Set customized spending targets for each category to keep your monthly expenses in check."
+                    )
+                    BudgetInfoRow(
+                        title = "Real-Time Tracking",
+                        description = "Expenses automatically sync with your logged transactions for the selected month."
+                    )
+                    BudgetInfoRow(
+                        title = "Smart Insights & Alerts",
+                        description = "Visual indicators warn you as you approach 80% or exceed your allocated limit."
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Action button
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(46.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Brush.horizontalGradient(colors = listOf(GradientStart, GradientEnd))),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Got It",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BackgroundDark
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BudgetInfoRow(title: String, description: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(top = 5.dp)
+                .size(6.dp)
+                .clip(CircleShape)
+                .background(AccentTeal)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Column {
+            Text(
+                text = title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = description,
+                fontSize = 12.sp,
+                color = TextSecondary,
+                lineHeight = 16.sp
+            )
         }
     }
 }
