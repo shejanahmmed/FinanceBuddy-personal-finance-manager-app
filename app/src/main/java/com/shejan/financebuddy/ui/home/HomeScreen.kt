@@ -51,6 +51,7 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Label
@@ -113,6 +114,7 @@ import com.shejan.financebuddy.ui.theme.TextMuted
 import com.shejan.financebuddy.ui.theme.TextPrimary
 import com.shejan.financebuddy.ui.theme.TextSecondary
 import com.shejan.financebuddy.ui.theme.TransferYellow
+import com.shejan.financebuddy.ui.theme.currentThemeModeState
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -222,6 +224,8 @@ fun HomeScreen(
                     SimpleDateFormat("MMM d", Locale.getDefault()).format(Date())
                 }
 
+                val isLight = currentThemeModeState == "LIGHT"
+
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -255,7 +259,10 @@ fun HomeScreen(
                                         color = DividerColor,
                                         shape = RoundedCornerShape(20.dp)
                                     )
-                                    .background(CardDarker, shape = RoundedCornerShape(20.dp))
+                                    .background(
+                                        CardDarker,
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
                                     .padding(horizontal = 12.dp, vertical = 4.dp)
                             ) {
                                 Text(
@@ -318,33 +325,39 @@ fun HomeScreen(
                             Surface(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(64.dp)
+                                    .height(66.dp)
                                     .clickable(
                                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                                         indication = null
                                     ) { onIncomeClick() },
                                 shape = RoundedCornerShape(16.dp),
-                                color = CardDarker,
-                                border = BorderStroke(1.dp, DividerColor)
+                                color = if (isLight) Color(0xFFECFDF5) else CardDarker,
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isLight) Color(0xFFA7F3D0) else DividerColor
+                                )
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                        .padding(horizontal = 14.dp, vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(38.dp)
-                                            .clip(CircleShape)
-                                            .background(IncomeGreen.copy(alpha = 0.15f)),
+                                            .size(24.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(
+                                                if (isLight) Color(0xFFD1FAE5)
+                                                else IncomeGreen.copy(alpha = 0.15f)
+                                            ),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.ArrowDownward,
-                                            contentDescription = "Income",
-                                            tint = IncomeGreen,
-                                            modifier = Modifier.size(18.dp)
+                                            contentDescription = null,
+                                            tint = if (isLight) Color(0xFF059669) else IncomeGreen,
+                                            modifier = Modifier.size(14.dp)
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(10.dp))
@@ -353,14 +366,14 @@ fun HomeScreen(
                                     ) {
                                         Text(
                                             text = "Income",
-                                            color = TextSecondary,
+                                            color = if (isLight) Color(0xFF047857) else TextSecondary,
                                             fontSize = 11.sp,
-                                            fontWeight = FontWeight.Medium
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                         Spacer(modifier = Modifier.height(1.dp))
                                         Text(
                                             text = "৳${currencyFormat.format(monthlyIncome)}",
-                                            color = TextPrimary,
+                                            color = if (isLight) Color(0xFF065F46) else TextPrimary,
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Bold,
                                             maxLines = 1,
@@ -374,33 +387,39 @@ fun HomeScreen(
                             Surface(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(64.dp)
+                                    .height(66.dp)
                                     .clickable(
                                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                                         indication = null
                                     ) { onExpenseClick() },
                                 shape = RoundedCornerShape(16.dp),
-                                color = CardDarker,
-                                border = BorderStroke(1.dp, DividerColor)
+                                color = if (isLight) Color(0xFFFFF1F2) else CardDarker,
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isLight) Color(0xFFFECDD3) else DividerColor
+                                )
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                        .padding(horizontal = 14.dp, vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(38.dp)
-                                            .clip(CircleShape)
-                                            .background(ExpenseRed.copy(alpha = 0.15f)),
+                                            .size(24.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(
+                                                if (isLight) Color(0xFFFFE4E6)
+                                                else ExpenseRed.copy(alpha = 0.15f)
+                                            ),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.ArrowUpward,
-                                            contentDescription = "Expenses",
-                                            tint = ExpenseRed,
-                                            modifier = Modifier.size(18.dp)
+                                            contentDescription = null,
+                                            tint = if (isLight) Color(0xFFE11D48) else ExpenseRed,
+                                            modifier = Modifier.size(14.dp)
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(10.dp))
@@ -409,14 +428,14 @@ fun HomeScreen(
                                     ) {
                                         Text(
                                             text = "Expenses",
-                                            color = TextSecondary,
+                                            color = if (isLight) Color(0xFFBE123C) else TextSecondary,
                                             fontSize = 11.sp,
-                                            fontWeight = FontWeight.Medium
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                         Spacer(modifier = Modifier.height(1.dp))
                                         Text(
                                             text = "৳${currencyFormat.format(monthlyExpenses)}",
-                                            color = TextPrimary,
+                                            color = if (isLight) Color(0xFF9F1239) else TextPrimary,
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Bold,
                                             maxLines = 1,
@@ -1225,19 +1244,33 @@ fun TransactionRowItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Semantic Indicator
+        val isLight = currentThemeModeState == "LIGHT"
         val bulletColor = when (tx.type) {
             "INCOME" -> IncomeGreen
             "EXPENSE" -> ExpenseRed
             else -> TransferYellow
         }
+        val bulletIcon = when (tx.type) {
+            "INCOME" -> Icons.Default.ArrowDownward
+            "EXPENSE" -> Icons.Default.ArrowUpward
+            else -> Icons.Default.Sync
+        }
         Box(
             modifier = Modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(bulletColor)
-        )
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(bulletColor.copy(alpha = if (isLight) 0.14f else 0.18f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = bulletIcon,
+                contentDescription = tx.type,
+                tint = bulletColor,
+                modifier = Modifier.size(18.dp)
+            )
+        }
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(14.dp))
 
         // Transaction Details
         Column(modifier = Modifier.weight(1f)) {

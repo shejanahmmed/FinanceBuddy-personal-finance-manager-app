@@ -37,16 +37,29 @@ import com.shejan.financebuddy.ui.theme.*
 // Custom 7-Day Expense Bar Chart — Premium Redesign
 // ─────────────────────────────────────────────────────────────
 
-// Curated per-bar color palette (7 harmonious accent colors)
-private val barPalette = listOf(
-    Color(0xFF00D4AA), // Teal
-    Color(0xFF0096FF), // Blue
-    Color(0xFF7C5CFC), // Purple
-    Color(0xFFFF5C7C), // Rose
-    Color(0xFFFFBD2E), // Amber
-    Color(0xFF00C897), // Green
-    Color(0xFFFF8C42), // Orange
-)
+// Curated per-bar color palette (harmonious accent colors adapted per theme)
+private val barPalette: List<Color>
+    get() = if (currentThemeModeState == "LIGHT") {
+        listOf(
+            Color(0xFF0D9488), // Matte Teal
+            Color(0xFF2563EB), // Royal Blue
+            Color(0xFF7C3AED), // Violet
+            Color(0xFFE11D48), // Rose
+            Color(0xFFD97706), // Amber
+            Color(0xFF059669), // Emerald
+            Color(0xFFEA580C), // Deep Orange
+        )
+    } else {
+        listOf(
+            Color(0xFF00D4AA), // Teal
+            Color(0xFF0096FF), // Blue
+            Color(0xFF7C5CFC), // Purple
+            Color(0xFFFF5C7C), // Rose
+            Color(0xFFFFBD2E), // Amber
+            Color(0xFF00C897), // Green
+            Color(0xFFFF8C42), // Orange
+        )
+    }
 
 @Composable
 fun ExpenseBarChart(

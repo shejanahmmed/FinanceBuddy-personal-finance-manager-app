@@ -16,7 +16,7 @@ var isDarkModeGlobal: Boolean
 // === Dynamic Background & Surface (Deep Charcoal/Black & Surface Gray Palette) ===
 val BackgroundDark: Color get() = when (currentThemeModeState) {
     "AMOLED" -> Color(0xFF000000) // Pure OLED Pitch Black
-    "LIGHT"  -> Color(0xFFF8FAFC) // Slate 50 ultra-clean modern canvas
+    "LIGHT"  -> Color(0xFFF1F5F9) // Slate 100 soft modern canvas with depth
     else     -> Color(0xFF0A0D14) // Deep Charcoal / Dark Canvas
 }
 
