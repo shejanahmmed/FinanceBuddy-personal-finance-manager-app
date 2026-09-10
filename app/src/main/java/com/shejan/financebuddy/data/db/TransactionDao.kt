@@ -42,6 +42,9 @@ abstract class TransactionDao {
     @Query("SELECT category, SUM(amount) as total FROM transactions WHERE type = 'EXPENSE' AND timestamp >= :start GROUP BY category")
     abstract fun getExpensesByCategoryFromDate(start: Long): Flow<List<CategoryExpenseSum>>
 
+    @Query("UPDATE transactions SET category = :newCategory WHERE LOWER(category) = LOWER(:oldCategory)")
+    abstract suspend fun updateCategoryName(oldCategory: String, newCategory: String)
+
     @Query("UPDATE accounts SET balance = balance + :amount WHERE id = :id")
     abstract suspend fun adjustAccountBalance(id: Int, amount: Double)
 

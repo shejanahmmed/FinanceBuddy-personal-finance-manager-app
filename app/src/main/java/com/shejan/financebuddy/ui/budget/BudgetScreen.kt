@@ -70,7 +70,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
+import com.shejan.financebuddy.ui.common.CategoryManager
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -747,9 +750,7 @@ fun MonthlyOverviewCard(
                     // Filled arc
                     if (sweepAngle > 0f) {
                         drawArc(
-                            brush      = Brush.sweepGradient(
-                                listOf(arcColor.copy(alpha = 0.6f), arcColor)
-                            ),
+                            color      = arcColor,
                             startAngle = 135f,
                             sweepAngle = sweepAngle,
                             useCenter  = false,
@@ -1115,14 +1116,7 @@ fun BudgetItemCard(
                         .fillMaxWidth(animatedProgress)
                         .height(8.dp)
                         .clip(RoundedCornerShape(50))
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = if (overBudget)
-                                    listOf(ExpenseRed.copy(alpha = 0.7f), ExpenseRed)
-                                else
-                                    listOf(accentColor.copy(alpha = 0.7f), barColor)
-                            )
-                        )
+                        .background(barColor)
                 )
             }
 
@@ -1201,6 +1195,7 @@ fun AddBudgetSheet(
         } ?: ""
     }
 
+    val coroutineScope = rememberCoroutineScope()
     var selectedCategory by remember(initialCategory) { mutableStateOf(initialCategory) }
     var limitAmount      by remember(initialAmount) { mutableStateOf(initialAmount) }
     var error            by remember { mutableStateOf<String?>(null) }
@@ -1208,8 +1203,12 @@ fun AddBudgetSheet(
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var showDeleteCategoryDialog by remember { mutableStateOf(false) }
     var showCannotDeleteDialog by remember { mutableStateOf(false) }
+    var showManageCategoryDialog by remember { mutableStateOf(false) }
+    var showRenameCategoryDialog by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf("") }
     var categoryCannotDelete by remember { mutableStateOf("") }
+    var categoryToManage by remember { mutableStateOf("") }
+    var renameCategoryInput by remember { mutableStateOf("") }
     var newCategoryName by remember { mutableStateOf("") }
 
     val isFormDirty = remember(limitAmount, selectedCategory, initialAmount, initialCategory) {
@@ -1303,15 +1302,8 @@ fun AddBudgetSheet(
                             .combinedClickable(
                                 onClick = { selectedCategory = cat },
                                 onLongClick = {
-                                    val isBudgeted = allBudgetedCategories.any { it.equals(cat, ignoreCase = true) } ||
-                                                     existingCategories.any { it.equals(cat, ignoreCase = true) }
-                                    if (isBudgeted) {
-                                        categoryCannotDelete = cat
-                                        showCannotDeleteDialog = true
-                                    } else {
-                                        categoryToDelete = cat
-                                        showDeleteCategoryDialog = true
-                                    }
+                                    categoryToManage = cat
+                                    showManageCategoryDialog = true
                                 }
                             )
                             .padding(horizontal = 14.dp, vertical = 8.dp)
@@ -1695,38 +1687,290 @@ fun AddBudgetSheet(
                         fontSize = 18.sp
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                                       }
+                }
+            }
+        }
 
-                    Text(
-                        text = "The category \"$categoryCannotDelete\" is currently assigned to a budget limit. Deleting it would affect your financial calculations.\n\nPlease remove or edit the budget for this category before deleting it.",
-                        color = TextSecondary,
-                        fontSize = 13.5.sp,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 19.sp
-                    )
+        // ── Manage Category (Action Sheet / Dialog) ──
+        if (showManageCategoryDialog) {
+            Dialog(
+                onDismissRequest = { showManageCategoryDialog = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth(0.92f)
+                        .wrapContentHeight(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = CardDark,
+                    border = BorderStroke(1.dp, DividerColor)
+                ) {
+                    val dotColor = try {
+                        Color(android.graphics.Color.parseColor(getCategoryColor(categoryToManage)))
+                    } catch (e: Exception) { AccentTeal }
+                    Column(
+                        modifier = Modifier.padding(22.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .clip(CircleShape)
+                                    .background(dotColor)
+                            )
+                            Text(
+                                text = categoryToManage,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
+                        }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(18.dp))
 
-                    Button(
-                        onClick = { showCannotDeleteDialog = false },
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, DividerColor),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = CardDarker,
-                            contentColor = TextPrimary
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
+                        // Option: Rename Category
+                        Surface(
+                            onClick = {
+                                showManageCategoryDialog = false
+                                renameCategoryInput = categoryToManage
+                                showRenameCategoryDialog = true
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = CardDarker,
+                            border = BorderStroke(1.dp, DividerColor),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = null,
+                                    tint = AccentTeal,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Column {
+                                    Text(
+                                        text = "Rename Category",
+                                        color = TextPrimary,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = "Syncs across all transactions & budgets",
+                                        color = TextSecondary,
+                                        fontSize = 11.5.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Option: Delete Category
+                        Surface(
+                            onClick = {
+                                showManageCategoryDialog = false
+                                val isBudgeted = allBudgetedCategories.any { it.equals(categoryToManage, ignoreCase = true) } ||
+                                                 existingCategories.any { it.equals(categoryToManage, ignoreCase = true) }
+                                if (isBudgeted) {
+                                    categoryCannotDelete = categoryToManage
+                                    showCannotDeleteDialog = true
+                                } else {
+                                    categoryToDelete = categoryToManage
+                                    showDeleteCategoryDialog = true
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = CardDarker,
+                            border = BorderStroke(1.dp, DividerColor),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = ExpenseRed,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Column {
+                                    Text(
+                                        text = "Delete Category",
+                                        color = ExpenseRed,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = "Remove category from selection",
+                                        color = TextSecondary,
+                                        fontSize = 11.5.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = { showManageCategoryDialog = false },
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, DividerColor),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = CardDarker,
+                                contentColor = TextPrimary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                        ) {
+                            Text(
+                                text = "Cancel",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.5.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Rename Category Dialog ──
+        if (showRenameCategoryDialog) {
+            Dialog(
+                onDismissRequest = {
+                    showRenameCategoryDialog = false
+                    renameCategoryInput = ""
+                },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth(0.92f)
+                        .wrapContentHeight(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = CardDark,
+                    border = BorderStroke(1.dp, DividerColor)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Close",
+                            text = "Rename Category",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextPrimary,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                            fontSize = 18.sp
                         )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Renaming \"$categoryToManage\" will automatically update all existing budgets, expense logs, and transactions.",
+                            color = TextSecondary,
+                            fontSize = 12.5.sp,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 17.sp
+                        )
+                        Spacer(modifier = Modifier.height(18.dp))
+                        OutlinedTextField(
+                            value = renameCategoryInput,
+                            onValueChange = { renameCategoryInput = it },
+                            textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
+                            label = { Text("New Category Name", color = TextSecondary) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor   = AccentTeal,
+                                unfocusedBorderColor = DividerColor,
+                                focusedTextColor     = TextPrimary,
+                                unfocusedTextColor   = TextPrimary,
+                                cursorColor          = AccentTeal
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = {
+                                    showRenameCategoryDialog = false
+                                    renameCategoryInput = ""
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, DividerColor),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = ExpenseRed,
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp)
+                            ) {
+                                Text(
+                                    text = "Cancel",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    val trimmed = renameCategoryInput.trim()
+                                    if (trimmed.isNotEmpty() && !trimmed.equals(categoryToManage, ignoreCase = true)) {
+                                        coroutineScope.launch {
+                                            CategoryManager.renameCategory(context, categoryToManage, trimmed, isExpense = true)
+                                            expenseCategories = expenseCategories.map {
+                                                if (it.equals(categoryToManage, ignoreCase = true)) trimmed else it
+                                            }
+                                            if (selectedCategory.equals(categoryToManage, ignoreCase = true)) {
+                                                selectedCategory = trimmed
+                                            }
+                                        }
+                                    }
+                                    showRenameCategoryDialog = false
+                                    renameCategoryInput = ""
+                                },
+                                enabled = renameCategoryInput.trim().isNotEmpty() && !renameCategoryInput.trim().equals(categoryToManage, ignoreCase = true),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (renameCategoryInput.trim().isNotEmpty()) AccentTeal.copy(alpha = 0.6f) else DividerColor
+                                ),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = AccentTeal,
+                                    contentColor = BackgroundDark,
+                                    disabledContainerColor = CardDarker,
+                                    disabledContentColor = TextMuted
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp)
+                            ) {
+                                Text(
+                                    text = "Save",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
     }
-}

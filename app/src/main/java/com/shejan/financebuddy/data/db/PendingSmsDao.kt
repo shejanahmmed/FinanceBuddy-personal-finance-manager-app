@@ -61,6 +61,9 @@ interface PendingSmsDao {
     @Query("DELETE FROM pending_sms_transactions")
     suspend fun clearAll()
 
+    @Query("UPDATE pending_sms_transactions SET category = :newCategory WHERE LOWER(category) = LOWER(:oldCategory)")
+    suspend fun updateCategoryName(oldCategory: String, newCategory: String)
+
     @Query("SELECT EXISTS(SELECT 1 FROM pending_sms_transactions WHERE rawSmsBody = :rawBody LIMIT 1)")
     suspend fun isSmsExists(rawBody: String): Boolean
 }

@@ -412,9 +412,7 @@ private fun GoalsSummaryCard(
                         // Fill
                         if (animProgress.value > 0f) {
                             drawArc(
-                                brush      = Brush.sweepGradient(
-                                    listOf(arcColor.copy(alpha = 0.5f), arcColor)
-                                ),
+                                color      = arcColor,
                                 startAngle = 135f,
                                 sweepAngle = animProgress.value * 270f,
                                 useCenter  = false,
@@ -626,7 +624,7 @@ fun GoalCard(
                         )
                         if (animProgress.value > 0f) {
                             drawArc(
-                                brush      = Brush.sweepGradient(listOf(accentColor.copy(alpha = 0.6f), accentColor)),
+                                color      = accentColor,
                                 startAngle = -90f,
                                 sweepAngle = animProgress.value * 360f,
                                 useCenter  = false,
