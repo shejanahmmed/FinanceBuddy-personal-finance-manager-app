@@ -37,6 +37,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -49,6 +51,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -227,14 +232,127 @@ fun BudgetScreen(
     }
 
     var showAddSheet by remember { mutableStateOf(false) }
+    var editingBudget by remember { mutableStateOf<BudgetEntity?>(null) }
+    var deletingBudget by remember { mutableStateOf<BudgetEntity?>(null) }
 
     LaunchedEffect(triggerAddSheet) {
         if (triggerAddSheet) {
+            editingBudget = null
             showAddSheet = true
             onResetTriggerAddSheet()
         }
     }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Delete Confirmation Dialog
+    deletingBudget?.let { budget ->
+        Dialog(onDismissRequest = { deletingBudget = null }) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = CardDark,
+                border = BorderStroke(1.dp, DividerColor),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Top Warning Icon Badge
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(CircleShape)
+                            .background(ExpenseRed.copy(alpha = 0.15f))
+                            .border(1.dp, ExpenseRed.copy(alpha = 0.35f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = ExpenseRed,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = "Delete Budget?",
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Are you sure you want to delete the spending limit for ${budget.category}?",
+                        fontSize = 13.5.sp,
+                        color = TextSecondary,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 19.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(22.dp))
+
+                    // Centered Equal-Sized Buttons Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Cancel Button
+                        Surface(
+                            onClick = { deletingBudget = null },
+                            shape = RoundedCornerShape(12.dp),
+                            color = CardDarker,
+                            border = BorderStroke(1.dp, DividerColor),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "Cancel",
+                                    color = TextPrimary,
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        // Delete Button
+                        Surface(
+                            onClick = {
+                                onDeleteBudget(budget)
+                                deletingBudget = null
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = ExpenseRed,
+                            border = BorderStroke(1.dp, ExpenseRed),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "Delete",
+                                    color = Color.White,
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     var isTopBarVisible by remember { mutableStateOf(true) }
     val nestedScrollConnection = remember {
@@ -360,7 +478,11 @@ fun BudgetScreen(
                         budget         = budget,
                         spent          = spent,
                         currencyFormat = currencyFormat,
-                        onDelete       = { onDeleteBudget(budget) }
+                        onEdit         = {
+                            editingBudget = budget
+                            showAddSheet = true
+                        },
+                        onDelete       = { deletingBudget = budget }
                     )
                 }
                 item {
@@ -369,15 +491,20 @@ fun BudgetScreen(
             }
         }
 
-        // Add Budget Bottom Sheet
+        // Add / Edit Budget Bottom Sheet
         if (showAddSheet) {
             AddBudgetSheet(
-                sheetState        = sheetState,
+                sheetState         = sheetState,
                 existingCategories = budgets.map { it.category },
-                onDismiss         = { showAddSheet = false },
-                onSave            = { budget ->
+                budgetToEdit       = editingBudget,
+                onDismiss          = {
+                    showAddSheet = false
+                    editingBudget = null
+                },
+                onSave             = { budget ->
                     onAddBudget(budget)
                     showAddSheet = false
+                    editingBudget = null
                 }
             )
         }
@@ -651,6 +778,7 @@ fun BudgetItemCard(
     budget: BudgetEntity,
     spent: Double,
     currencyFormat: DecimalFormat,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     val progress = if (budget.limitAmount > 0) (spent / budget.limitAmount).toFloat().coerceIn(0f, 1f) else 0f
@@ -674,6 +802,7 @@ fun BudgetItemCard(
 
     val overBudget = spent > budget.limitAmount
     val remaining  = (budget.limitAmount - spent).coerceAtLeast(0.0)
+    var showMenu by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier
@@ -728,16 +857,71 @@ fun BudgetItemCard(
                         }
                     }
                 }
-                IconButton(
-                    onClick  = onDelete,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector        = Icons.Default.Delete,
-                        contentDescription = "Delete budget",
-                        tint               = TextMuted,
-                        modifier           = Modifier.size(18.dp)
-                    )
+                Box {
+                    IconButton(
+                        onClick  = { showMenu = true },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector        = Icons.Default.MoreVert,
+                            contentDescription = "Options",
+                            tint               = TextMuted,
+                            modifier           = Modifier.size(20.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        modifier = Modifier
+                            .background(CardDarker)
+                            .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = null,
+                                        tint = AccentTeal,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = "Edit Budget",
+                                        color = TextPrimary,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                onEdit()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = ExpenseRed,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = "Delete Budget",
+                                        color = ExpenseRed,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                onDelete()
+                            }
+                        )
+                    }
                 }
             }
 
@@ -792,7 +976,7 @@ fun BudgetItemCard(
 }
 
 // ─────────────────────────────────────────────────────────────
-// Add Budget Bottom Sheet
+// Add / Edit Budget Bottom Sheet
 // ─────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -800,6 +984,7 @@ fun BudgetItemCard(
 fun AddBudgetSheet(
     sheetState: androidx.compose.material3.SheetState,
     existingCategories: List<String>,
+    budgetToEdit: BudgetEntity? = null,
     onDismiss: () -> Unit,
     onSave: (BudgetEntity) -> Unit
 ) {
@@ -818,16 +1003,35 @@ fun AddBudgetSheet(
         }
     }
 
-    var selectedCategory by remember(allExpenseCategories) {
-        val availableCats = allExpenseCategories.filter { it !in existingCategories }
-        mutableStateOf(if (availableCats.isNotEmpty()) availableCats.first() else "")
+    // Available categories = those not already budgeted, or the one being edited
+    val available = remember(allExpenseCategories, existingCategories, budgetToEdit) {
+        if (budgetToEdit != null) {
+            allExpenseCategories.filter { it.equals(budgetToEdit.category, ignoreCase = true) || it !in existingCategories }
+        } else {
+            allExpenseCategories.filter { it !in existingCategories }
+        }
     }
-    var limitAmount      by remember { mutableStateOf("") }
+
+    val initialCategory = remember(budgetToEdit, available) {
+        budgetToEdit?.category ?: (if (available.isNotEmpty()) available.first() else "")
+    }
+    val initialAmount = remember(budgetToEdit) {
+        budgetToEdit?.limitAmount?.let {
+            if (it % 1.0 == 0.0) it.toInt().toString() else it.toString()
+        } ?: ""
+    }
+
+    var selectedCategory by remember(initialCategory) { mutableStateOf(initialCategory) }
+    var limitAmount      by remember(initialAmount) { mutableStateOf(initialAmount) }
     var error            by remember { mutableStateOf<String?>(null) }
     var showDiscardDialog by remember { mutableStateOf(false) }
 
-    val isFormDirty = remember(limitAmount) {
-        limitAmount.trim().isNotEmpty()
+    val isFormDirty = remember(limitAmount, selectedCategory, initialAmount, initialCategory) {
+        if (budgetToEdit != null) {
+            limitAmount != initialAmount || selectedCategory != initialCategory
+        } else {
+            limitAmount.trim().isNotEmpty()
+        }
     }
 
     BackHandler(enabled = isFormDirty) {
@@ -837,7 +1041,7 @@ fun AddBudgetSheet(
     if (showDiscardDialog) {
         DiscardChangesDialog(
             title = "Discard Budget Changes?",
-            message = "Are you sure you want to discard this budget entry? Entered amount will be lost.",
+            message = "Are you sure you want to discard your changes? Entered amount will be lost.",
             onDismissRequest = { showDiscardDialog = false },
             onConfirmDiscard = {
                 showDiscardDialog = false
@@ -846,15 +1050,10 @@ fun AddBudgetSheet(
         )
     }
 
-    // Available categories = those not already budgeted
-    val available = remember(allExpenseCategories, existingCategories) {
-        allExpenseCategories.filter { it !in existingCategories }
-    }
-
-    // If all categories are budgeted, close the sheet
-    LaunchedEffect(available) {
-        if (available.isEmpty()) onDismiss()
-        else if (selectedCategory !in available) selectedCategory = available.first()
+    // If all categories are budgeted and not editing, close the sheet
+    LaunchedEffect(available, budgetToEdit) {
+        if (available.isEmpty() && budgetToEdit == null) onDismiss()
+        else if (selectedCategory !in available && available.isNotEmpty()) selectedCategory = available.first()
     }
 
     ModalBottomSheet(
@@ -876,7 +1075,7 @@ fun AddBudgetSheet(
                 .padding(bottom = 40.dp)
         ) {
             Text(
-                text      = "Set Budget Limit",
+                text      = if (budgetToEdit != null) "Edit Budget Limit" else "Set Budget Limit",
                 style     = MaterialTheme.typography.titleLarge,
                 color     = TextPrimary,
                 modifier  = Modifier.fillMaxWidth(),
@@ -899,7 +1098,7 @@ fun AddBudgetSheet(
                 verticalArrangement   = Arrangement.spacedBy(8.dp)
             ) {
                 available.forEach { cat ->
-                    val isSelected = selectedCategory == cat
+                    val isSelected = selectedCategory.equals(cat, ignoreCase = true)
                     val catColor = try {
                         Color(android.graphics.Color.parseColor(getCategoryColor(cat)))
                     } catch (e: Exception) { AccentTeal }
@@ -970,6 +1169,7 @@ fun AddBudgetSheet(
                         else -> {
                             onSave(
                                 BudgetEntity(
+                                    id          = budgetToEdit?.id ?: 0,
                                     category    = selectedCategory,
                                     limitAmount = amount,
                                     colorHex    = getCategoryColor(selectedCategory)
@@ -992,7 +1192,7 @@ fun AddBudgetSheet(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text  = "Save Budget",
+                        text  = if (budgetToEdit != null) "Update Budget" else "Save Budget",
                         style = MaterialTheme.typography.titleMedium,
                         color = BackgroundDark
                     )
