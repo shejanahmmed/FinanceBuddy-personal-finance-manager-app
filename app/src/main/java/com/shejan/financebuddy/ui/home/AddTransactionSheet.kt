@@ -42,8 +42,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import com.shejan.financebuddy.data.db.FinanceDatabase
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -278,9 +284,13 @@ fun AddTransactionSheet(
         }
     }
 
+    val database = remember { FinanceDatabase.getDatabase(context) }
+    val coroutineScope = rememberCoroutineScope()
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showCannotDeleteDialog by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf("") }
+    var categoryCannotDelete by remember { mutableStateOf("") }
     var newCategoryName by remember { mutableStateOf("") }
     var showCancelConfirmation by remember { mutableStateOf(false) }
 
@@ -529,8 +539,23 @@ fun AddTransactionSheet(
                                 .combinedClickable(
                                     onClick = { selectedCategory = cat },
                                     onLongClick = {
-                                        categoryToDelete = cat
-                                        showDeleteDialog = true
+                                        if (selectedType == "EXPENSE") {
+                                            coroutineScope.launch(Dispatchers.IO) {
+                                                val budget = database.budgetDao().getBudgetByCategory(cat)
+                                                withContext(Dispatchers.Main) {
+                                                    if (budget != null) {
+                                                        categoryCannotDelete = cat
+                                                        showCannotDeleteDialog = true
+                                                    } else {
+                                                        categoryToDelete = cat
+                                                        showDeleteDialog = true
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            categoryToDelete = cat
+                                            showDeleteDialog = true
+                                        }
                                     }
                                 )
                                 .padding(horizontal = 14.dp, vertical = 8.dp)
@@ -1476,6 +1501,85 @@ fun AddTransactionSheet(
                                     fontSize = 14.sp
                                 )
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Cannot Delete Category (Linked to Active Budget) Dialog ──
+        if (showCannotDeleteDialog) {
+            Dialog(
+                onDismissRequest = { showCannotDeleteDialog = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth(0.92f)
+                        .wrapContentHeight(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = CardDark,
+                    border = BorderStroke(1.dp, DividerColor)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(54.dp)
+                                .clip(CircleShape)
+                                .background(TransferYellow.copy(alpha = 0.15f))
+                                .border(1.dp, TransferYellow.copy(alpha = 0.35f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = TransferYellow,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Text(
+                            text = "Cannot Delete Category",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Text(
+                            text = "The category \"$categoryCannotDelete\" is currently assigned to an active budget limit. Deleting it would affect your financial calculations.\n\nPlease remove or edit the budget for this category before deleting it.",
+                            color = TextSecondary,
+                            fontSize = 13.5.sp,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 19.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Button(
+                            onClick = { showCannotDeleteDialog = false },
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, DividerColor),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = CardDarker,
+                                contentColor = TextPrimary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                        ) {
+                            Text(
+                                text = "Close",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
                         }
                     }
                 }

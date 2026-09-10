@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -523,16 +524,17 @@ fun BudgetScreen(
         // Add / Edit Budget Bottom Sheet
         if (showAddSheet) {
             AddBudgetSheet(
-                sheetState         = sheetState,
-                existingCategories = currentMonthBudgets.map { it.category },
-                budgetToEdit       = editingBudget,
-                targetMonthYear    = selectedMonthOption.monthYear,
-                monthLabel         = selectedMonthOption.label,
-                onDismiss          = {
+                sheetState            = sheetState,
+                existingCategories    = currentMonthBudgets.map { it.category },
+                allBudgetedCategories = budgets.map { it.category },
+                budgetToEdit          = editingBudget,
+                targetMonthYear       = selectedMonthOption.monthYear,
+                monthLabel            = selectedMonthOption.label,
+                onDismiss             = {
                     showAddSheet = false
                     editingBudget = null
                 },
-                onSave             = { budget ->
+                onSave                = { budget ->
                     onAddBudget(budget)
                     showAddSheet = false
                     editingBudget = null
@@ -1157,6 +1159,7 @@ fun BudgetItemCard(
 fun AddBudgetSheet(
     sheetState: androidx.compose.material3.SheetState,
     existingCategories: List<String>,
+    allBudgetedCategories: List<String> = emptyList(),
     budgetToEdit: BudgetEntity? = null,
     targetMonthYear: String = "",
     monthLabel: String = "This Month",
@@ -1204,7 +1207,9 @@ fun AddBudgetSheet(
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var showDeleteCategoryDialog by remember { mutableStateOf(false) }
+    var showCannotDeleteDialog by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf("") }
+    var categoryCannotDelete by remember { mutableStateOf("") }
     var newCategoryName by remember { mutableStateOf("") }
 
     val isFormDirty = remember(limitAmount, selectedCategory, initialAmount, initialCategory) {
@@ -1298,8 +1303,15 @@ fun AddBudgetSheet(
                             .combinedClickable(
                                 onClick = { selectedCategory = cat },
                                 onLongClick = {
-                                    categoryToDelete = cat
-                                    showDeleteCategoryDialog = true
+                                    val isBudgeted = allBudgetedCategories.any { it.equals(cat, ignoreCase = true) } ||
+                                                     existingCategories.any { it.equals(cat, ignoreCase = true) }
+                                    if (isBudgeted) {
+                                        categoryCannotDelete = cat
+                                        showCannotDeleteDialog = true
+                                    } else {
+                                        categoryToDelete = cat
+                                        showDeleteCategoryDialog = true
+                                    }
                                 }
                             )
                             .padding(horizontal = 14.dp, vertical = 8.dp)
@@ -1633,6 +1645,85 @@ fun AddBudgetSheet(
                                 fontSize = 14.sp
                             )
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Cannot Delete Category (Linked to Active Budget) Dialog ──
+    if (showCannotDeleteDialog) {
+        Dialog(
+            onDismissRequest = { showCannotDeleteDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .wrapContentHeight(),
+                shape = RoundedCornerShape(20.dp),
+                color = CardDark,
+                border = BorderStroke(1.dp, DividerColor)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(CircleShape)
+                            .background(TransferYellow.copy(alpha = 0.15f))
+                            .border(1.dp, TransferYellow.copy(alpha = 0.35f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = TransferYellow,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = "Cannot Delete Category",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = "The category \"$categoryCannotDelete\" is currently assigned to a budget limit. Deleting it would affect your financial calculations.\n\nPlease remove or edit the budget for this category before deleting it.",
+                        color = TextSecondary,
+                        fontSize = 13.5.sp,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 19.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Button(
+                        onClick = { showCannotDeleteDialog = false },
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, DividerColor),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = CardDarker,
+                            contentColor = TextPrimary
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text(
+                            text = "Close",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
                     }
                 }
             }
