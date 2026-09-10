@@ -32,16 +32,21 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -52,6 +57,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.ui.window.Dialog
 import com.shejan.financebuddy.ui.theme.*
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -119,6 +126,7 @@ fun GoalsScreen(
     goals: List<GoalEntity>,
     accounts: List<AccountEntity> = emptyList(),
     onAddGoal: (GoalEntity) -> Unit,
+    onUpdateGoal: (GoalEntity) -> Unit = onAddGoal,
     onDeposit: (goalId: Int, amount: Double, fromAccountId: Int?) -> Unit,
     onDeleteGoal: (GoalEntity) -> Unit,
     triggerAddSheet: Boolean = false,
@@ -131,10 +139,13 @@ fun GoalsScreen(
     val completed   = goals.count { it.savedAmount >= it.targetAmount }
 
     var showAddSheet     by remember { mutableStateOf(false) }
+    var editingGoal      by remember { mutableStateOf<GoalEntity?>(null) }
+    var deletingGoal     by remember { mutableStateOf<GoalEntity?>(null) }
     var depositGoal      by remember { mutableStateOf<GoalEntity?>(null) }
 
     LaunchedEffect(triggerAddSheet) {
         if (triggerAddSheet) {
+            editingGoal = null
             showAddSheet = true
             onResetTriggerAddSheet()
         }
@@ -142,6 +153,116 @@ fun GoalsScreen(
 
     val addSheetState     = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val depositSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Delete Confirmation Dialog
+    deletingGoal?.let { goal ->
+        Dialog(onDismissRequest = { deletingGoal = null }) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = CardDark,
+                border = BorderStroke(1.dp, DividerColor),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Top Warning Icon Badge
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(CircleShape)
+                            .background(ExpenseRed.copy(alpha = 0.15f))
+                            .border(1.dp, ExpenseRed.copy(alpha = 0.35f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = ExpenseRed,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = "Delete Goal?",
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Are you sure you want to delete your savings goal \"${goal.title}\"?",
+                        fontSize = 13.5.sp,
+                        color = TextSecondary,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 19.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(22.dp))
+
+                    // Centered Equal-Sized Buttons Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Cancel Button
+                        Surface(
+                            onClick = { deletingGoal = null },
+                            shape = RoundedCornerShape(12.dp),
+                            color = CardDarker,
+                            border = BorderStroke(1.dp, DividerColor),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "Cancel",
+                                    color = TextPrimary,
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        // Delete Button
+                        Surface(
+                            onClick = {
+                                onDeleteGoal(goal)
+                                deletingGoal = null
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = ExpenseRed,
+                            border = BorderStroke(1.dp, ExpenseRed),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "Delete",
+                                    color = androidx.compose.ui.graphics.Color.White,
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     var isTopBarVisible by remember { mutableStateOf(true) }
     val nestedScrollConnection = remember {
@@ -242,7 +363,11 @@ fun GoalsScreen(
                             goal           = goal,
                             currencyFormat = currencyFormat,
                             onDeposit      = { depositGoal = goal },
-                            onDelete       = { onDeleteGoal(goal) }
+                            onEdit         = {
+                                editingGoal = goal
+                                showAddSheet = true
+                            },
+                            onDelete       = { deletingGoal = goal }
                         )
                     }
                 }
@@ -252,14 +377,23 @@ fun GoalsScreen(
             }
         }
 
-        // Add Goal sheet
+        // Add / Edit Goal sheet
         if (showAddSheet) {
             AddGoalSheet(
                 sheetState = addSheetState,
-                onDismiss  = { showAddSheet = false },
-                onSave     = { goal ->
-                    onAddGoal(goal)
+                goalToEdit = editingGoal,
+                onDismiss  = {
                     showAddSheet = false
+                    editingGoal = null
+                },
+                onSave     = { goal ->
+                    if (editingGoal != null) {
+                        onUpdateGoal(goal)
+                    } else {
+                        onAddGoal(goal)
+                    }
+                    showAddSheet = false
+                    editingGoal = null
                 }
             )
         }
@@ -488,6 +622,7 @@ fun GoalCard(
     goal: GoalEntity,
     currencyFormat: DecimalFormat,
     onDeposit: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     val progress = if (goal.targetAmount > 0)
@@ -504,6 +639,7 @@ fun GoalCard(
 
     val isCompleted = goal.savedAmount >= goal.targetAmount
     val remaining   = (goal.targetAmount - goal.savedAmount).coerceAtLeast(0.0)
+    var showMenu    by remember { mutableStateOf(false) }
 
     // Deadline calculation
     val deadlineText = goal.deadline?.let { dl ->
@@ -585,13 +721,71 @@ fun GoalCard(
                     }
                 }
 
-                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        imageVector        = Icons.Default.Delete,
-                        contentDescription = "Delete goal",
-                        tint               = TextMuted,
-                        modifier           = Modifier.size(18.dp)
-                    )
+                Box {
+                    IconButton(
+                        onClick  = { showMenu = true },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector        = Icons.Default.MoreVert,
+                            contentDescription = "Goal Options",
+                            tint               = TextMuted,
+                            modifier           = Modifier.size(20.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        modifier = Modifier
+                            .background(CardDarker)
+                            .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = null,
+                                        tint = AccentPurple,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = "Edit Goal",
+                                        color = TextPrimary,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                onEdit()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = ExpenseRed,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = "Delete Goal",
+                                        color = ExpenseRed,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                onDelete()
+                            }
+                        )
+                    }
                 }
             }
 
@@ -725,25 +919,37 @@ private fun GoalsEmptyState() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Add Goal Bottom Sheet
+// Add / Edit Goal Bottom Sheet
 // ─────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddGoalSheet(
     sheetState: androidx.compose.material3.SheetState,
+    goalToEdit: GoalEntity? = null,
     onDismiss: () -> Unit,
     onSave: (GoalEntity) -> Unit
 ) {
-    var title          by remember { mutableStateOf("") }
-    var targetAmount   by remember { mutableStateOf("") }
-    var selectedEmoji  by remember { mutableStateOf(goalEmojis.first()) }
-    var selectedColor  by remember { mutableStateOf(goalColorOptions.first()) }
+    val initialTitle = remember(goalToEdit) { goalToEdit?.title ?: "" }
+    val initialTarget = remember(goalToEdit) {
+        goalToEdit?.targetAmount?.let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() } ?: ""
+    }
+    val initialEmoji = remember(goalToEdit) { goalToEdit?.emoji ?: goalEmojis.first() }
+    val initialColor = remember(goalToEdit) { goalToEdit?.colorHex ?: goalColorOptions.first() }
+
+    var title          by remember(initialTitle) { mutableStateOf(initialTitle) }
+    var targetAmount   by remember(initialTarget) { mutableStateOf(initialTarget) }
+    var selectedEmoji  by remember(initialEmoji) { mutableStateOf(initialEmoji) }
+    var selectedColor  by remember(initialColor) { mutableStateOf(initialColor) }
     var error          by remember { mutableStateOf<String?>(null) }
     var showDiscardDialog by remember { mutableStateOf(false) }
 
-    val isFormDirty = remember(title, targetAmount) {
-        title.trim().isNotEmpty() || targetAmount.trim().isNotEmpty()
+    val isFormDirty = remember(title, targetAmount, selectedEmoji, selectedColor, initialTitle, initialTarget, initialEmoji, initialColor) {
+        if (goalToEdit != null) {
+            title != initialTitle || targetAmount != initialTarget || selectedEmoji != initialEmoji || selectedColor != initialColor
+        } else {
+            title.trim().isNotEmpty() || targetAmount.trim().isNotEmpty()
+        }
     }
 
     BackHandler(enabled = isFormDirty) {
@@ -752,8 +958,8 @@ fun AddGoalSheet(
 
     if (showDiscardDialog) {
         DiscardChangesDialog(
-            title = "Discard Goal?",
-            message = "Are you sure you want to discard this savings goal? Any entered goal details will be lost.",
+            title = if (goalToEdit != null) "Discard Goal Changes?" else "Discard Goal?",
+            message = "Are you sure you want to discard your changes? Any entered goal details will be lost.",
             onDismissRequest = { showDiscardDialog = false },
             onConfirmDiscard = {
                 showDiscardDialog = false
@@ -781,7 +987,7 @@ fun AddGoalSheet(
                 .padding(bottom = 40.dp)
         ) {
             Text(
-                text      = "New Savings Goal",
+                text      = if (goalToEdit != null) "Edit Savings Goal" else "New Savings Goal",
                 style     = MaterialTheme.typography.titleLarge,
                 color     = TextPrimary,
                 modifier  = Modifier.fillMaxWidth(),
@@ -903,15 +1109,24 @@ fun AddGoalSheet(
                         amount == null || amount <= 0  -> error = "Please enter a valid target amount"
                         else -> {
                             onSave(
-                                GoalEntity(
-                                    title        = title.trim(),
-                                    targetAmount = amount,
-                                    savedAmount  = 0.0,
-                                    colorHex     = selectedColor,
-                                    emoji        = selectedEmoji,
-                                    deadline     = null,
-                                    createdAt    = System.currentTimeMillis()
-                                )
+                                if (goalToEdit != null) {
+                                    goalToEdit.copy(
+                                        title        = title.trim(),
+                                        targetAmount = amount,
+                                        colorHex     = selectedColor,
+                                        emoji        = selectedEmoji
+                                    )
+                                } else {
+                                    GoalEntity(
+                                        title        = title.trim(),
+                                        targetAmount = amount,
+                                        savedAmount  = 0.0,
+                                        colorHex     = selectedColor,
+                                        emoji        = selectedEmoji,
+                                        deadline     = null,
+                                        createdAt    = System.currentTimeMillis()
+                                    )
+                                }
                             )
                         }
                     }
@@ -930,7 +1145,7 @@ fun AddGoalSheet(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text  = "Create Goal",
+                        text  = if (goalToEdit != null) "Update Goal" else "Create Goal",
                         style = MaterialTheme.typography.titleMedium,
                         color = OnAccent
                     )

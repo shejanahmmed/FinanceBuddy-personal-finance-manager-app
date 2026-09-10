@@ -1024,6 +1024,9 @@ fun MainDashboardContainer(
                         onAddGoal    = { goal ->
                             scope.launch(Dispatchers.IO) { goalDao.insertGoal(goal) }
                         },
+                        onUpdateGoal = { goal ->
+                            scope.launch(Dispatchers.IO) { goalDao.updateGoal(goal) }
+                        },
                         onDeposit    = { goalId, amount, fromAccountId ->
                             scope.launch(Dispatchers.IO) {
                                 goalDao.depositToGoal(goalId, amount)
