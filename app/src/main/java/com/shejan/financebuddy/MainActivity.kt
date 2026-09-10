@@ -1004,6 +1004,7 @@ fun MainDashboardContainer(
                     "budget" -> BudgetScreen(
                         budgets           = budgets,
                         spentByCategory   = spentByCategory,
+                        allTransactions   = allTransactions,
                         onAddBudget       = { budget ->
                             scope.launch(Dispatchers.IO) { budgetDao.insertBudget(budget) }
                         },

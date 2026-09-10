@@ -1,6 +1,7 @@
 package com.shejan.financebuddy.ui.budget
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -86,7 +87,18 @@ import com.shejan.financebuddy.ui.theme.TextMuted
 import com.shejan.financebuddy.ui.theme.TextPrimary
 import com.shejan.financebuddy.ui.theme.TextSecondary
 import com.shejan.financebuddy.ui.theme.TransferYellow
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.foundation.border
+import com.shejan.financebuddy.data.db.TransactionEntity
 import java.text.DecimalFormat
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 // ─────────────────────────────────────────────────────────────
 // Budget Screen — per-category monthly spending limits
@@ -127,19 +139,92 @@ private fun getCategoryColor(category: String): String {
     return niceColors[index]
 }
 
+data class MonthOption(
+    val offset: Int,
+    val label: String,
+    val fullLabel: String,
+    val startTimestamp: Long,
+    val endTimestamp: Long
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BudgetScreen(
     budgets: List<BudgetEntity>,
-    spentByCategory: Map<String, Double>,
+    spentByCategory: Map<String, Double> = emptyMap(),
+    allTransactions: List<TransactionEntity> = emptyList(),
     onAddBudget: (BudgetEntity) -> Unit,
     onDeleteBudget: (BudgetEntity) -> Unit,
     triggerAddSheet: Boolean = false,
     onResetTriggerAddSheet: () -> Unit = {}
 ) {
     val currencyFormat = remember { DecimalFormat("##,##,##0.00") }
-    val totalBudgeted  = budgets.sumOf { it.limitAmount }
-    val totalSpent     = budgets.sumOf { spentByCategory[it.category] ?: 0.0 }
+
+    val monthOptions = remember {
+        val options = mutableListOf<MonthOption>()
+        val monthFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
+        val shortMonthFormat = SimpleDateFormat("MMM yyyy", Locale.getDefault())
+
+        for (offset in 0..23) {
+            val startCal = Calendar.getInstance().apply {
+                set(Calendar.DAY_OF_MONTH, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+                add(Calendar.MONTH, -offset)
+            }
+            val startTs = startCal.timeInMillis
+
+            val endCal = Calendar.getInstance().apply {
+                timeInMillis = startTs
+                set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
+                set(Calendar.HOUR_OF_DAY, 23)
+                set(Calendar.MINUTE, 59)
+                set(Calendar.SECOND, 59)
+                set(Calendar.MILLISECOND, 999)
+            }
+            val endTs = endCal.timeInMillis
+
+            val monthDate = Date(startTs)
+            val isCurrent = offset == 0
+            val label = if (isCurrent) "This Month" else shortMonthFormat.format(monthDate)
+            val fullLabel = if (isCurrent) "${monthFormat.format(monthDate)} (This Month)" else monthFormat.format(monthDate)
+
+            options.add(MonthOption(offset, label, fullLabel, startTs, endTs))
+        }
+        options
+    }
+
+    var selectedMonthOption by remember { mutableStateOf(monthOptions.first()) }
+    var showMonthDropdown by remember { mutableStateOf(false) }
+
+    val currentSpentByCategory = remember(selectedMonthOption, allTransactions, spentByCategory) {
+        if (allTransactions.isNotEmpty()) {
+            val map = mutableMapOf<String, Double>()
+            val filtered = allTransactions.filter { tx ->
+                tx.type.equals("EXPENSE", ignoreCase = true) &&
+                tx.timestamp >= selectedMonthOption.startTimestamp &&
+                tx.timestamp <= selectedMonthOption.endTimestamp
+            }
+            for (tx in filtered) {
+                val cat = tx.category.trim()
+                map[cat] = (map[cat] ?: 0.0) + tx.amount
+            }
+            map
+        } else if (selectedMonthOption.offset == 0) {
+            spentByCategory
+        } else {
+            emptyMap()
+        }
+    }
+
+    val totalBudgeted  = remember(budgets) { budgets.sumOf { it.limitAmount } }
+    val totalSpent     = remember(budgets, currentSpentByCategory) {
+        budgets.sumOf { b ->
+            currentSpentByCategory.entries.find { it.key.equals(b.category.trim(), ignoreCase = true) }?.value ?: 0.0
+        }
+    }
 
     var showAddSheet by remember { mutableStateOf(false) }
 
@@ -204,7 +289,8 @@ fun BudgetScreen(
                     MonthlyOverviewCard(
                         totalBudgeted  = totalBudgeted,
                         totalSpent     = totalSpent,
-                        currencyFormat = currencyFormat
+                        currencyFormat = currencyFormat,
+                        monthLabel     = selectedMonthOption.label
                     )
                     Spacer(modifier = Modifier.height(20.dp))
                 }
@@ -269,7 +355,7 @@ fun BudgetScreen(
 
                 // ── Budget item cards ───────────────────────────────
                 items(budgets, key = { it.id }) { budget ->
-                    val spent = spentByCategory[budget.category] ?: 0.0
+                    val spent = currentSpentByCategory.entries.find { it.key.equals(budget.category.trim(), ignoreCase = true) }?.value ?: 0.0
                     BudgetItemCard(
                         budget         = budget,
                         spent          = spent,
@@ -321,11 +407,79 @@ fun BudgetScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        text  = "This Month",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = TextSecondary
-                    )
+                    Box {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(CardDark)
+                                .border(1.dp, DividerColor, RoundedCornerShape(10.dp))
+                                .clickable { showMonthDropdown = true }
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = "Select Month",
+                                tint = AccentTeal,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text  = selectedMonthOption.label,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                tint = TextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = showMonthDropdown,
+                            onDismissRequest = { showMonthDropdown = false },
+                            modifier = Modifier
+                                .background(CardDarker)
+                                .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
+                        ) {
+                            monthOptions.forEach { option ->
+                                val isSelected = option.offset == selectedMonthOption.offset
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = option.fullLabel,
+                                                color = if (isSelected) AccentTeal else TextPrimary,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                fontSize = 13.sp
+                                            )
+                                            if (isSelected) {
+                                                Spacer(Modifier.width(8.dp))
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = null,
+                                                    tint = AccentTeal,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    },
+                                    onClick = {
+                                        selectedMonthOption = option
+                                        showMonthDropdown = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
@@ -363,13 +517,15 @@ fun BudgetScreen(
 fun MonthlyOverviewCard(
     totalBudgeted: Double,
     totalSpent: Double,
-    currencyFormat: DecimalFormat
+    currencyFormat: DecimalFormat,
+    monthLabel: String = "This Month"
 ) {
     val progress = if (totalBudgeted > 0) (totalSpent / totalBudgeted).toFloat().coerceIn(0f, 1f) else 0f
-    val animatedProgress = remember { Animatable(0f) }
-    LaunchedEffect(progress) {
-        animatedProgress.animateTo(progress, animationSpec = tween(1000))
-    }
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(600),
+        label = "MonthlyOverviewProgress"
+    )
 
     val arcColor = when {
         progress >= 1f  -> ExpenseRed
@@ -400,7 +556,7 @@ fun MonthlyOverviewCard(
                 contentAlignment = Alignment.Center
             ) {
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                    val sweepAngle = animatedProgress.value * 270f
+                    val sweepAngle = animatedProgress * 270f
                     val strokeW    = 18.dp.toPx()
 
                     // Background arc track
@@ -428,7 +584,7 @@ fun MonthlyOverviewCard(
                 // Center content
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text       = "${(animatedProgress.value * 100).toInt()}%",
+                        text       = "${(animatedProgress * 100).toInt()}%",
                         style      = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color      = arcColor
@@ -498,10 +654,11 @@ fun BudgetItemCard(
     onDelete: () -> Unit
 ) {
     val progress = if (budget.limitAmount > 0) (spent / budget.limitAmount).toFloat().coerceIn(0f, 1f) else 0f
-    val animatedProgress = remember(spent) { Animatable(0f) }
-    LaunchedEffect(progress) {
-        animatedProgress.animateTo(progress, animationSpec = tween(800))
-    }
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(600),
+        label = "BudgetItemProgress"
+    )
 
     val accentColor = remember {
         try { Color(android.graphics.Color.parseColor(budget.colorHex)) }
@@ -596,7 +753,7 @@ fun BudgetItemCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(animatedProgress.value)
+                        .fillMaxWidth(animatedProgress)
                         .height(8.dp)
                         .clip(RoundedCornerShape(50))
                         .background(
