@@ -40,6 +40,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -142,6 +143,7 @@ fun GoalsScreen(
     var editingGoal      by remember { mutableStateOf<GoalEntity?>(null) }
     var deletingGoal     by remember { mutableStateOf<GoalEntity?>(null) }
     var depositGoal      by remember { mutableStateOf<GoalEntity?>(null) }
+    var showInfoDialog   by remember { mutableStateOf(false) }
 
     LaunchedEffect(triggerAddSheet) {
         if (triggerAddSheet) {
@@ -153,6 +155,11 @@ fun GoalsScreen(
 
     val addSheetState     = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val depositSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Goal Info Dialog
+    if (showInfoDialog) {
+        GoalInfoDialog(onDismiss = { showInfoDialog = false })
+    }
 
     // Delete Confirmation Dialog
     deletingGoal?.let { goal ->
@@ -319,7 +326,8 @@ fun GoalsScreen(
                         totalSaved     = totalSaved,
                         activeCount    = goals.size - completed,
                         completedCount = completed,
-                        currencyFormat = currencyFormat
+                        currencyFormat = currencyFormat,
+                        onInfoClick    = { showInfoDialog = true }
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -492,7 +500,8 @@ private fun GoalsSummaryCard(
     totalSaved: Double,
     activeCount: Int,
     completedCount: Int,
-    currencyFormat: DecimalFormat
+    currencyFormat: DecimalFormat,
+    onInfoClick: () -> Unit = {}
 ) {
     val progress = if (totalTarget > 0) (totalSaved / totalTarget).toFloat().coerceIn(0f, 1f) else 0f
     val animProgress = remember { Animatable(0f) }
@@ -512,84 +521,225 @@ private fun GoalsSummaryCard(
         colors = CardDefaults.cardColors(containerColor = CardDark),
         border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor)
     ) {
-        Column(
-            modifier            = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Row(
-                modifier          = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+        Box(modifier = Modifier.fillMaxWidth()) {
+            IconButton(
+                onClick = onInfoClick,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 10.dp, end = 10.dp)
+                    .size(32.dp)
             ) {
-                // Circular arc
-                Box(
-                    modifier         = Modifier.size(110.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                        val strokeW    = 14.dp.toPx()
-                        val inset      = strokeW / 2
-                        val arcRect    = Size(size.width - inset * 2, size.height - inset * 2)
-                        val arcOffset  = Offset(inset, inset)
+                Icon(
+                    imageVector        = Icons.Default.Info,
+                    contentDescription = "Goals Information",
+                    tint               = TextMuted,
+                    modifier           = Modifier.size(18.dp)
+                )
+            }
 
-                        // Track
-                        drawArc(
-                            color      = CardDarker,
-                            startAngle = 135f,
-                            sweepAngle = 270f,
-                            useCenter  = false,
-                            topLeft    = arcOffset,
-                            size       = arcRect,
-                            style      = Stroke(width = strokeW, cap = StrokeCap.Round)
-                        )
-                        // Fill
-                        if (animProgress.value > 0f) {
+            Column(
+                modifier            = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier          = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Circular arc
+                    Box(
+                        modifier         = Modifier.size(110.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                            val strokeW    = 14.dp.toPx()
+                            val inset      = strokeW / 2
+                            val arcRect    = Size(size.width - inset * 2, size.height - inset * 2)
+                            val arcOffset  = Offset(inset, inset)
+
+                            // Track
                             drawArc(
-                                color      = arcColor,
+                                color      = CardDarker,
                                 startAngle = 135f,
-                                sweepAngle = animProgress.value * 270f,
+                                sweepAngle = 270f,
                                 useCenter  = false,
                                 topLeft    = arcOffset,
                                 size       = arcRect,
                                 style      = Stroke(width = strokeW, cap = StrokeCap.Round)
                             )
+                            // Fill
+                            if (animProgress.value > 0f) {
+                                drawArc(
+                                    color      = arcColor,
+                                    startAngle = 135f,
+                                    sweepAngle = animProgress.value * 270f,
+                                    useCenter  = false,
+                                    topLeft    = arcOffset,
+                                    size       = arcRect,
+                                    style      = Stroke(width = strokeW, cap = StrokeCap.Round)
+                                )
+                            }
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text       = "${(animProgress.value * 100).toInt()}%",
+                                style      = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color      = arcColor,
+                                fontSize   = 20.sp
+                            )
+                            Text(text = "saved", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
                         }
                     }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
+                    Spacer(modifier = Modifier.width(20.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text       = "${(animProgress.value * 100).toInt()}%",
-                            style      = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color      = arcColor,
-                            fontSize   = 20.sp
+                            text       = "Total Progress",
+                            style      = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color      = TextPrimary
                         )
-                        Text(text = "saved", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(20.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text       = "Total Progress",
-                        style      = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color      = TextPrimary
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    StatRow(label = "Saved",  value = "৳${currencyFormat.format(totalSaved)}",  color = arcColor)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    StatRow(label = "Target", value = "৳${currencyFormat.format(totalTarget)}", color = TextSecondary)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    HorizontalDivider(color = DividerColor)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        MiniStat(label = "Active",    value = "$activeCount",    color = AccentTeal)
-                        MiniStat(label = "Completed", value = "$completedCount", color = IncomeGreen)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        StatRow(label = "Saved",  value = "৳${currencyFormat.format(totalSaved)}",  color = arcColor)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        StatRow(label = "Target", value = "৳${currencyFormat.format(totalTarget)}", color = TextSecondary)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        HorizontalDivider(color = DividerColor)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            MiniStat(label = "Active",    value = "$activeCount",    color = AccentTeal)
+                            MiniStat(label = "Completed", value = "$completedCount", color = IncomeGreen)
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun GoalInfoDialog(
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = CardDark,
+            border = BorderStroke(1.dp, DividerColor)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "About Savings Goals",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Set targets, build savings, and track your financial milestones.",
+                    fontSize = 13.sp,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Feature bullet points
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(CardDarker)
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    GoalInfoRow(
+                        title = "Target Milestones",
+                        description = "Create customized savings targets with personalized emojis, deadlines, and visual themes."
+                    )
+                    GoalInfoRow(
+                        title = "Progress Tracking",
+                        description = "Monitor real-time saved percentages and remaining amounts toward completing each goal."
+                    )
+                    GoalInfoRow(
+                        title = "Seamless Deposits",
+                        description = "Deposit funds directly from your linked accounts with automated balance and transaction logging."
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Action button
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(46.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Brush.horizontalGradient(colors = listOf(AccentPurple, GradientEnd))),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Got It",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = OnAccent
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GoalInfoRow(title: String, description: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(top = 5.dp)
+                .size(6.dp)
+                .clip(CircleShape)
+                .background(AccentPurple)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Column {
+            Text(
+                text = title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = description,
+                fontSize = 12.sp,
+                color = TextSecondary,
+                lineHeight = 16.sp
+            )
         }
     }
 }
