@@ -122,6 +122,7 @@ import com.shejan.financebuddy.ui.payees.PayeesScreen
 import com.shejan.financebuddy.ui.payees.PayeeDetailScreen
 import com.shejan.financebuddy.sms.SmsPermissionHandler
 import com.shejan.financebuddy.ui.profile.EditProfileDialog
+import com.shejan.financebuddy.ui.profile.UserProfileScreen
 import com.shejan.financebuddy.ui.loans.LoansScreen
 import com.shejan.financebuddy.ui.notifications.NotificationHelper
 import androidx.compose.ui.layout.ContentScale
@@ -294,7 +295,8 @@ fun AppNavigation(
                     onNavigateToLoans = { navController.navigate("loans") },
                     onNavigateToHistory = { navController.navigate("transaction_history") },
                     onNavigateToStatistics = { navController.navigate("statistics") },
-                    onNavigateToInvestments = { navController.navigate("investments") }
+                    onNavigateToInvestments = { navController.navigate("investments") },
+                    onNavigateToProfile = { navController.navigate("user_profile") }
                 )
             }
 
@@ -515,6 +517,13 @@ fun AppNavigation(
                 )
             }
 
+            composable("user_profile") {
+                UserProfileScreen(
+                    preferencesManager = preferencesManager,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
             composable("income_list") {
                 val incomeTransactions = remember(allTransactions) {
                     allTransactions.filter { it.type == "INCOME" }
@@ -597,7 +606,8 @@ fun MainDashboardContainer(
     onNavigateToLoans: () -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
     onNavigateToStatistics: () -> Unit = {},
-    onNavigateToInvestments: () -> Unit = {}
+    onNavigateToInvestments: () -> Unit = {},
+    onNavigateToProfile: () -> Unit = {}
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope       = rememberCoroutineScope()
@@ -606,22 +616,6 @@ fun MainDashboardContainer(
     val profileName by preferencesManager.profileName.collectAsState(initial = "User")
     val profileImagePath by preferencesManager.profileImagePath.collectAsState(initial = "")
     val hideBalancesPref by preferencesManager.hideCardBalances.collectAsState(initial = false)
-    var showEditProfileDialog by remember { mutableStateOf(false) }
-
-    if (showEditProfileDialog) {
-        EditProfileDialog(
-            currentName = profileName,
-            currentImagePath = profileImagePath,
-            onDismiss = { showEditProfileDialog = false },
-            onSave = { name, path ->
-                scope.launch {
-                    preferencesManager.setProfileName(name)
-                    preferencesManager.setProfileImagePath(path)
-                    showEditProfileDialog = false
-                }
-            }
-        )
-    }
 
     // Use null as the initial sentinel value so we never render the SMS dialog
     // during the brief DataStore loading window. The dialog only appears once
@@ -760,7 +754,10 @@ fun MainDashboardContainer(
                             .clip(RoundedCornerShape(16.dp))
                             .background(Color(0xFF263045))
                             .border(1.dp, DividerColor, RoundedCornerShape(16.dp))
-                            .clickable { showEditProfileDialog = true }
+                            .clickable {
+                                scope.launch { drawerState.close() }
+                                onNavigateToProfile()
+                            }
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
