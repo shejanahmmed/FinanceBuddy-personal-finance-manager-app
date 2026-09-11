@@ -40,6 +40,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
@@ -134,11 +135,12 @@ fun GoalsScreen(
     val totalSaved  = goals.sumOf { it.savedAmount }
     val completed   = goals.count { it.savedAmount >= it.targetAmount }
 
-    var showAddSheet     by remember { mutableStateOf(false) }
-    var editingGoal      by remember { mutableStateOf<GoalEntity?>(null) }
-    var deletingGoal     by remember { mutableStateOf<GoalEntity?>(null) }
-    var depositGoal      by remember { mutableStateOf<GoalEntity?>(null) }
-    var showInfoDialog   by remember { mutableStateOf(false) }
+    var showAddSheet       by remember { mutableStateOf(false) }
+    var editingGoal        by remember { mutableStateOf<GoalEntity?>(null) }
+    var deletingGoal       by remember { mutableStateOf<GoalEntity?>(null) }
+    var depositGoal        by remember { mutableStateOf<GoalEntity?>(null) }
+    var showInfoDialog     by remember { mutableStateOf(false) }
+    var showHistoryScreen  by remember { mutableStateOf(false) }
 
     LaunchedEffect(triggerAddSheet) {
         if (triggerAddSheet) {
@@ -150,6 +152,42 @@ fun GoalsScreen(
 
     val addSheetState     = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val depositSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Goals History Screen overlay
+    if (showHistoryScreen) {
+        GoalsHistoryScreen(
+            completedGoals = goals.filter { it.savedAmount >= it.targetAmount },
+            currencyFormat = currencyFormat,
+            onBack         = { showHistoryScreen = false },
+            onEditGoal     = { goal ->
+                editingGoal = goal
+                showAddSheet = true
+            },
+            onDeleteGoal   = onDeleteGoal
+        )
+
+        // Add / Edit Goal Sheet if initiated while in History view
+        if (showAddSheet) {
+            AddGoalSheet(
+                sheetState = addSheetState,
+                goalToEdit = editingGoal,
+                onDismiss  = {
+                    showAddSheet = false
+                    editingGoal = null
+                },
+                onSave     = { goal ->
+                    if (editingGoal != null) {
+                        onUpdateGoal(goal)
+                    } else {
+                        onAddGoal(goal)
+                    }
+                    showAddSheet = false
+                    editingGoal = null
+                }
+            )
+        }
+        return
+    }
 
     // Goal Info Dialog
     if (showInfoDialog) {
@@ -439,27 +477,40 @@ fun GoalsScreen(
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (completed > 0) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(IncomeGreen.copy(alpha = 0.15f))
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
+                    // History Button (left side of + Goal)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(AccentTeal.copy(alpha = 0.15f))
+                            .border(1.dp, AccentTeal.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                            .clickable { showHistoryScreen = true }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = "Goals History",
+                                tint = AccentTeal,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text      = "🎉 $completed Completed",
-                                fontSize  = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color     = IncomeGreen
+                                text = if (completed > 0) "History ($completed)" else "History",
+                                color = AccentTeal,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
+
+                    // + Goal Button
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
                             .background(AccentPurple.copy(alpha = 0.15f))
+                            .border(1.dp, AccentPurple.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
                             .clickable { showAddSheet = true }
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
