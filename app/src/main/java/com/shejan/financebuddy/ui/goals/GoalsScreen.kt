@@ -112,11 +112,6 @@ private val goalEmojis = listOf(
     "🏖️", "🎮", "💪", "🏦", "🛒", "🎁", "⚕️", "🌟"
 )
 
-private val goalColorOptions = listOf(
-    "#00D4AA", "#0096FF", "#7C5CFC", "#FF5C7C",
-    "#FFBD2E", "#FF7A45", "#00C897", "#E040FB"
-)
-
 // ─────────────────────────────────────────────────────────────
 // Goals Screen Root
 // ─────────────────────────────────────────────────────────────
@@ -782,12 +777,10 @@ fun GoalCard(
     val animProgress = remember(goal.savedAmount) { Animatable(0f) }
     LaunchedEffect(progress) { animProgress.animateTo(progress, animationSpec = tween(900)) }
 
-    val accentColor = remember(goal.colorHex) {
-        try { Color(android.graphics.Color.parseColor(goal.colorHex)) }
-        catch (e: Exception) { AccentTeal }
-    }
-
     val isCompleted = goal.savedAmount >= goal.targetAmount
+    val accentColor = remember(isCompleted) {
+        if (isCompleted) IncomeGreen else AccentPurple
+    }
     val remaining   = (goal.targetAmount - goal.savedAmount).coerceAtLeast(0.0)
     var showMenu    by remember { mutableStateOf(false) }
 
@@ -1087,18 +1080,16 @@ fun AddGoalSheet(
         goalToEdit?.targetAmount?.let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() } ?: ""
     }
     val initialEmoji = remember(goalToEdit) { goalToEdit?.emoji ?: goalEmojis.first() }
-    val initialColor = remember(goalToEdit) { goalToEdit?.colorHex ?: goalColorOptions.first() }
 
     var title          by remember(initialTitle) { mutableStateOf(initialTitle) }
     var targetAmount   by remember(initialTarget) { mutableStateOf(initialTarget) }
     var selectedEmoji  by remember(initialEmoji) { mutableStateOf(initialEmoji) }
-    var selectedColor  by remember(initialColor) { mutableStateOf(initialColor) }
     var error          by remember { mutableStateOf<String?>(null) }
     var showDiscardDialog by remember { mutableStateOf(false) }
 
-    val isFormDirty = remember(title, targetAmount, selectedEmoji, selectedColor, initialTitle, initialTarget, initialEmoji, initialColor) {
+    val isFormDirty = remember(title, targetAmount, selectedEmoji, initialTitle, initialTarget, initialEmoji) {
         if (goalToEdit != null) {
-            title != initialTitle || targetAmount != initialTarget || selectedEmoji != initialEmoji || selectedColor != initialColor
+            title != initialTitle || targetAmount != initialTarget || selectedEmoji != initialEmoji
         } else {
             title.trim().isNotEmpty() || targetAmount.trim().isNotEmpty()
         }
@@ -1239,51 +1230,6 @@ fun AddGoalSheet(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Color picker
-            Text(
-                text       = "Pick a Color",
-                style      = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color      = TextSecondary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                goalColorOptions.forEach { hex ->
-                    val color = try { Color(android.graphics.Color.parseColor(hex)) } catch (e: Exception) { AccentTeal }
-                    val isSelected = selectedColor == hex
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF263045))
-                            .border(
-                                width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) color else DividerColor,
-                                shape = CircleShape
-                            )
-                            .clickable { selectedColor = hex },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(22.dp)
-                                .clip(CircleShape)
-                                .background(color)
-                        ) {
-                            if (isSelected) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(androidx.compose.ui.graphics.Color.White)
-                                        .align(Alignment.Center)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
             if (error != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = error!!, color = ExpenseRed, fontSize = 12.sp)
@@ -1304,7 +1250,6 @@ fun AddGoalSheet(
                                     goalToEdit.copy(
                                         title        = title.trim(),
                                         targetAmount = amount,
-                                        colorHex     = selectedColor,
                                         emoji        = selectedEmoji
                                     )
                                 } else {
@@ -1312,7 +1257,7 @@ fun AddGoalSheet(
                                         title        = title.trim(),
                                         targetAmount = amount,
                                         savedAmount  = 0.0,
-                                        colorHex     = selectedColor,
+                                        colorHex     = "#7C5CFC",
                                         emoji        = selectedEmoji,
                                         deadline     = null,
                                         createdAt    = System.currentTimeMillis()
@@ -1385,9 +1330,8 @@ fun DepositSheet(
         )
     }
 
-    val accentColor = remember(goal.colorHex) {
-        try { Color(android.graphics.Color.parseColor(goal.colorHex)) }
-        catch (e: Exception) { AccentTeal }
+    val accentColor = remember(goal.savedAmount >= goal.targetAmount) {
+        if (goal.savedAmount >= goal.targetAmount) IncomeGreen else AccentPurple
     }
 
     val currentProgress = if (goal.targetAmount > 0)
