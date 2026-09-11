@@ -1127,7 +1127,7 @@ fun AddGoalSheet(
             }
         },
         sheetState       = sheetState,
-        containerColor   = CardDarker,
+        containerColor   = DrawerBackground,
         shape            = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(
@@ -1137,17 +1137,23 @@ fun AddGoalSheet(
                 .padding(bottom = 40.dp)
         ) {
             Text(
-                text      = if (goalToEdit != null) "Edit Savings Goal" else "New Savings Goal",
-                style     = MaterialTheme.typography.titleLarge,
-                color     = TextPrimary,
-                modifier  = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
+                text       = if (goalToEdit != null) "Edit Savings Goal" else "New Savings Goal",
+                style      = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color      = TextPrimary,
+                modifier   = Modifier.fillMaxWidth(),
+                textAlign  = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(22.dp))
 
             // Goal name
-            Text("Goal Name", style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+            Text(
+                text       = "Goal Name",
+                style      = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color      = TextSecondary
+            )
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value         = title,
@@ -1159,8 +1165,8 @@ fun AddGoalSheet(
                 colors        = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor   = AccentPurple,
                     unfocusedBorderColor = DividerColor,
-                    focusedTextColor     = TextPrimary,
-                    unfocusedTextColor   = TextPrimary,
+                    focusedTextColor     = androidx.compose.ui.graphics.Color.White,
+                    unfocusedTextColor   = androidx.compose.ui.graphics.Color.White,
                     cursorColor          = AccentPurple
                 )
             )
@@ -1168,7 +1174,12 @@ fun AddGoalSheet(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Target amount
-            Text("Target Amount (৳)", style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+            Text(
+                text       = "Target Amount (৳)",
+                style      = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color      = TextSecondary
+            )
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value         = targetAmount,
@@ -1181,8 +1192,8 @@ fun AddGoalSheet(
                 colors        = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor   = AccentPurple,
                     unfocusedBorderColor = DividerColor,
-                    focusedTextColor     = TextPrimary,
-                    unfocusedTextColor   = TextPrimary,
+                    focusedTextColor     = androidx.compose.ui.graphics.Color.White,
+                    unfocusedTextColor   = androidx.compose.ui.graphics.Color.White,
                     cursorColor          = AccentPurple
                 )
             )
@@ -1190,7 +1201,12 @@ fun AddGoalSheet(
             Spacer(modifier = Modifier.height(18.dp))
 
             // Emoji picker
-            Text("Pick an Emoji", style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+            Text(
+                text       = "Pick an Emoji",
+                style      = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color      = TextSecondary
+            )
             Spacer(modifier = Modifier.height(8.dp))
             FlowRow(
                 modifier              = Modifier.fillMaxWidth(),
@@ -1204,7 +1220,12 @@ fun AddGoalSheet(
                             .size(44.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(
-                                if (isSelected) AccentPurple.copy(alpha = 0.25f) else CardDark
+                                if (isSelected) AccentPurple.copy(alpha = 0.25f) else Color(0xFF263045)
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (isSelected) AccentPurple else DividerColor,
+                                shape = RoundedCornerShape(12.dp)
                             )
                             .clickable { selectedEmoji = emoji },
                         contentAlignment = Alignment.Center
@@ -1217,7 +1238,12 @@ fun AddGoalSheet(
             Spacer(modifier = Modifier.height(18.dp))
 
             // Color picker
-            Text("Pick a Color", style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+            Text(
+                text       = "Pick a Color",
+                style      = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color      = TextSecondary
+            )
             Spacer(modifier = Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 goalColorOptions.forEach { hex ->
@@ -1225,19 +1251,32 @@ fun AddGoalSheet(
                     val isSelected = selectedColor == hex
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
-                            .background(color)
+                            .background(Color(0xFF263045))
+                            .border(
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = if (isSelected) color else DividerColor,
+                                shape = CircleShape
+                            )
                             .clickable { selectedColor = hex },
                         contentAlignment = Alignment.Center
                     ) {
-                        if (isSelected) {
-                            Box(
-                                modifier = Modifier
-                                    .size(12.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White)
-                            )
+                        Box(
+                            modifier = Modifier
+                                .size(22.dp)
+                                .clip(CircleShape)
+                                .background(color)
+                        ) {
+                            if (isSelected) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(androidx.compose.ui.graphics.Color.White)
+                                        .align(Alignment.Center)
+                                )
+                            }
                         }
                     }
                 }
@@ -1362,7 +1401,7 @@ fun DepositSheet(
             }
         },
         sheetState       = sheetState,
-        containerColor   = CardDarker,
+        containerColor   = DrawerBackground,
         shape            = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(
@@ -1375,10 +1414,11 @@ fun DepositSheet(
             Text(text = goal.emoji, fontSize = 36.sp)
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text      = "Add Savings",
-                style     = MaterialTheme.typography.titleLarge,
-                color     = TextPrimary,
-                textAlign = TextAlign.Center
+                text       = "Add Savings",
+                style      = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color      = TextPrimary,
+                textAlign  = TextAlign.Center
             )
             Text(
                 text      = goal.title,
@@ -1394,7 +1434,8 @@ fun DepositSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(CardDark)
+                    .background(Color(0xFF263045))
+                    .border(1.dp, DividerColor, RoundedCornerShape(16.dp))
                     .padding(16.dp)
             ) {
                 Row(
@@ -1422,7 +1463,7 @@ fun DepositSheet(
                         Text(
                             text       = "৳${currencyFormat.format(goal.targetAmount)}",
                             fontWeight = FontWeight.Bold,
-                            color      = TextPrimary
+                            color      = androidx.compose.ui.graphics.Color.White
                         )
                     }
                 }
@@ -1433,9 +1474,10 @@ fun DepositSheet(
             // Amount input
             Text(
                 "Deposit Amount (৳)",
-                style    = MaterialTheme.typography.labelMedium,
-                color    = TextSecondary,
-                modifier = Modifier.align(Alignment.Start)
+                style      = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color      = TextSecondary,
+                modifier   = Modifier.align(Alignment.Start)
             )
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
@@ -1449,8 +1491,8 @@ fun DepositSheet(
                 colors        = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor   = accentColor,
                     unfocusedBorderColor = DividerColor,
-                    focusedTextColor     = TextPrimary,
-                    unfocusedTextColor   = TextPrimary,
+                    focusedTextColor     = androidx.compose.ui.graphics.Color.White,
+                    unfocusedTextColor   = androidx.compose.ui.graphics.Color.White,
                     cursorColor          = accentColor
                 )
             )
@@ -1460,31 +1502,32 @@ fun DepositSheet(
                 Spacer(modifier = Modifier.height(14.dp))
                 Text(
                     "Deduct From Account",
-                    style    = MaterialTheme.typography.labelMedium,
-                    color    = TextSecondary,
-                    modifier = Modifier.align(Alignment.Start)
+                    style      = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color      = TextSecondary,
+                    modifier   = Modifier.align(Alignment.Start)
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 androidx.compose.foundation.layout.FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier              = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement   = Arrangement.spacedBy(8.dp)
                 ) {
                     // "None / Record Only" Chip
                     val isNoneSelected = selectedAccountId == null
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
-                            .background(if (isNoneSelected) AccentTeal.copy(alpha = 0.2f) else CardDark)
+                            .background(if (isNoneSelected) AccentTeal.copy(alpha = 0.25f) else Color(0xFF263045))
                             .border(1.dp, if (isNoneSelected) AccentTeal else DividerColor, RoundedCornerShape(10.dp))
                             .clickable { selectedAccountId = null; error = null }
                             .padding(horizontal = 12.dp, vertical = 7.dp)
                     ) {
                         Text(
-                            text = "Manual (No Account)",
-                            color = if (isNoneSelected) AccentTeal else TextSecondary,
-                            fontSize = 11.sp,
-                            fontWeight = if (isNoneSelected) FontWeight.Bold else FontWeight.Normal
+                            text       = "Manual (No Account)",
+                            color      = if (isNoneSelected) AccentTeal else androidx.compose.ui.graphics.Color.White,
+                            fontSize   = 11.sp,
+                            fontWeight = if (isNoneSelected) FontWeight.Bold else FontWeight.SemiBold
                         )
                     }
 
@@ -1493,16 +1536,16 @@ fun DepositSheet(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(if (isSelected) AccentTeal.copy(alpha = 0.2f) else CardDark)
+                                .background(if (isSelected) AccentTeal.copy(alpha = 0.25f) else Color(0xFF263045))
                                 .border(1.dp, if (isSelected) AccentTeal else DividerColor, RoundedCornerShape(10.dp))
                                 .clickable { selectedAccountId = acc.id; error = null }
                                 .padding(horizontal = 12.dp, vertical = 7.dp)
                         ) {
                             Text(
-                                text = "${acc.name} (৳${currencyFormat.format(acc.balance)})",
-                                color = if (isSelected) AccentTeal else TextSecondary,
-                                fontSize = 11.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                text       = "${acc.name} (৳${currencyFormat.format(acc.balance)})",
+                                color      = if (isSelected) AccentTeal else androidx.compose.ui.graphics.Color.White,
+                                fontSize   = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
                             )
                         }
                     }
