@@ -827,24 +827,26 @@ fun GoalCard(
                 modifier          = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Emoji bubble
+                // Emoji icon container with square border
                 Box(
                     modifier         = Modifier
-                        .size(46.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(accentColor.copy(alpha = 0.15f)),
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(accentColor.copy(alpha = 0.12f))
+                        .border(1.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = goal.emoji, fontSize = 22.sp)
+                    Text(text = goal.emoji, fontSize = 18.sp)
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text          = goal.title,
                         style         = MaterialTheme.typography.titleSmall,
-                        fontWeight    = FontWeight.Bold,
+                        fontSize      = 13.5.sp,
+                        fontWeight    = FontWeight.SemiBold,
                         color         = TextPrimary,
                         maxLines      = 1,
                         overflow      = TextOverflow.Ellipsis
