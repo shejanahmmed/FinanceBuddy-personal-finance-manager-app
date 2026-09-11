@@ -98,6 +98,7 @@ import androidx.compose.ui.unit.sp
 import com.shejan.financebuddy.data.db.AccountEntity
 import com.shejan.financebuddy.data.db.TransactionEntity
 import com.shejan.financebuddy.data.db.LoanEntity
+import com.shejan.financebuddy.data.db.BudgetEntity
 import com.shejan.financebuddy.data.db.PayeeEntity
 import com.shejan.financebuddy.data.db.PayeeAccountEntity
 import com.shejan.financebuddy.ui.home.components.BalanceTrendLineChart
@@ -137,8 +138,11 @@ fun HomeScreen(
     onSavePayee: (String, String, String, String) -> Unit = { _, _, _, _ -> },
     hideBalancesPref: Boolean = false,
     loans: List<LoanEntity> = emptyList(),
+    budgets: List<BudgetEntity> = emptyList(),
+    spentByCategory: Map<String, Double> = emptyMap(),
     onNavigateToLoans: () -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
+    onNavigateToBudget: () -> Unit = {},
     notifications: List<AppNotification> = emptyList(),
     onNotificationAction: (String) -> Unit = {},
     onMarkAllNotificationsRead: () -> Unit = {},
@@ -635,23 +639,167 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // ── 6. Upcoming Planned Payments ──────────────────────
-                SectionHeader(title = "Upcoming Planned Payments")
-                Box(
+                // ── 6. Monthly Budgets (Spending Limits) ──────────────
+                val currentMonthKey = remember { SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date()) }
+                val currentMonthBudgets = remember(budgets, currentMonthKey) {
+                    budgets.filter { it.monthYear.isEmpty() || it.monthYear == currentMonthKey }
+                }
+
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(CardDark)
-                        .border(1.dp, DividerColor, RoundedCornerShape(20.dp))
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
+                        .padding(horizontal = 20.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text     = "No upcoming planned payments scheduled.",
-                        color    = TextMuted,
-                        fontSize = 13.sp
+                        text = "Monthly Budgets",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
                     )
+                    Text(
+                        text = "View All →",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AccentTeal,
+                        modifier = Modifier.clickable { onNavigateToBudget() }
+                    )
+                }
+
+                if (currentMonthBudgets.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(CardDark)
+                            .border(1.dp, DividerColor, RoundedCornerShape(20.dp))
+                            .clickable { onNavigateToBudget() }
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text     = "No budget limits set for this month. Set budget →",
+                            color    = TextMuted,
+                            fontSize = 13.sp
+                        )
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        currentMonthBudgets.take(3).forEach { budget ->
+                            val spent = spentByCategory[budget.category] ?: 0.0
+                            val progress = if (budget.limitAmount > 0) (spent / budget.limitAmount).toFloat().coerceIn(0f, 1f) else 0f
+                            val overBudget = spent > budget.limitAmount
+                            val remaining = (budget.limitAmount - spent).coerceAtLeast(0.0)
+
+                            val accentColor = remember(budget.colorHex) {
+                                try { Color(android.graphics.Color.parseColor(budget.colorHex)) } catch (e: Exception) { AccentTeal }
+                            }
+
+                            val barColor = when {
+                                progress >= 1f   -> ExpenseRed
+                                progress >= 0.9f -> ExpenseRed.copy(alpha = 0.85f)
+                                progress >= 0.7f -> TransferYellow
+                                else             -> accentColor
+                            }
+
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onNavigateToBudget() },
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = CardDark),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (overBudget) ExpenseRed.copy(alpha = 0.4f) else DividerColor
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(10.dp)
+                                                    .clip(CircleShape)
+                                                    .background(accentColor)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = budget.category,
+                                                fontSize = 13.5.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = TextPrimary
+                                            )
+                                        }
+
+                                        Text(
+                                            text = if (overBudget) "⚠️ Over Budget" else "${(progress * 100).toInt()}%",
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (overBudget) ExpenseRed else TextSecondary
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    // Progress bar
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(6.dp)
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .background(CardDarker)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth(fraction = progress)
+                                                .height(6.dp)
+                                                .clip(RoundedCornerShape(3.dp))
+                                                .background(barColor)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "৳${currencyFormat.format(spent)} / ৳${currencyFormat.format(budget.limitAmount)}",
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = TextSecondary
+                                        )
+                                        Text(
+                                            text = if (overBudget) {
+                                                "Exceeded by ৳${currencyFormat.format(spent - budget.limitAmount)}"
+                                            } else {
+                                                "৳${currencyFormat.format(remaining)} remaining"
+                                            },
+                                            fontSize = 11.sp,
+                                            color = if (overBudget) ExpenseRed else TextMuted
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(18.dp))

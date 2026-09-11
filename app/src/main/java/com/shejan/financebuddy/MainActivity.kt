@@ -984,8 +984,11 @@ fun MainDashboardContainer(
                         },
                         hideBalancesPref = hideBalancesPref,
                         loans = loans,
+                        budgets = budgets,
+                        spentByCategory = spentByCategory,
                         onNavigateToLoans = onNavigateToLoans,
                         onNavigateToHistory = onNavigateToHistory,
+                        onNavigateToBudget = { currentTab = "budget" },
                         notifications = notifications,
                         onNotificationAction = { route ->
                             when (route) {
