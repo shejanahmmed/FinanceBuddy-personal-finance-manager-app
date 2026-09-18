@@ -141,7 +141,7 @@ fun AboutScreen(
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "v1.0.0 (Beta)",
+                            text = "v${com.shejan.financebuddy.BuildConfig.VERSION_NAME} (Beta)",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = AccentTeal
@@ -284,7 +284,7 @@ fun AboutScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                SpecInfoRow(label = "App Version", value = "v1.2.0")
+                SpecInfoRow(label = "App Version", value = "v${com.shejan.financebuddy.BuildConfig.VERSION_NAME}")
                 SpecInfoRow(label = "Developer", value = "Shejan Ahmmed")
                 SpecInfoRow(label = "UI Framework", value = "Jetpack Compose (Kotlin DSL)")
                 SpecInfoRow(label = "Database Engine", value = "Room SQLite (Encrypted)")

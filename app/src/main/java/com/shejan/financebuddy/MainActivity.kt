@@ -907,7 +907,7 @@ fun MainDashboardContainer(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "v1.0.0 (Beta) • Local AES-256",
+                            text = "v${com.shejan.financebuddy.BuildConfig.VERSION_NAME} (Beta) • Local AES-256",
                             color = TextSecondary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium
