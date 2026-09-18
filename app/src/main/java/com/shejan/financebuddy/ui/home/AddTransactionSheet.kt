@@ -5,6 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -78,6 +79,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -385,6 +388,53 @@ fun AddTransactionSheet(
         label = "dynamicBottomSpacer"
     )
 
+    val isAnyDropdownOpen = fromAccountExpanded || toAccountExpanded || payeeExpanded
+
+    val topSectionBlur by animateDpAsState(
+        targetValue = if (isAnyDropdownOpen) 6.dp else 0.dp,
+        label = "TopSectionBlur"
+    )
+    val topSectionAlpha by animateFloatAsState(
+        targetValue = if (isAnyDropdownOpen) 0.35f else 1f,
+        label = "TopSectionAlpha"
+    )
+
+    val fromAccountBlur by animateDpAsState(
+        targetValue = if (toAccountExpanded || payeeExpanded) 6.dp else 0.dp,
+        label = "FromAccountBlur"
+    )
+    val fromAccountAlpha by animateFloatAsState(
+        targetValue = if (toAccountExpanded || payeeExpanded) 0.35f else 1f,
+        label = "FromAccountAlpha"
+    )
+
+    val toAccountBlur by animateDpAsState(
+        targetValue = if (fromAccountExpanded || payeeExpanded) 6.dp else 0.dp,
+        label = "ToAccountBlur"
+    )
+    val toAccountAlpha by animateFloatAsState(
+        targetValue = if (fromAccountExpanded || payeeExpanded) 0.35f else 1f,
+        label = "ToAccountAlpha"
+    )
+
+    val payeeBlur by animateDpAsState(
+        targetValue = if (fromAccountExpanded || toAccountExpanded) 6.dp else 0.dp,
+        label = "PayeeBlur"
+    )
+    val payeeAlpha by animateFloatAsState(
+        targetValue = if (fromAccountExpanded || toAccountExpanded) 0.35f else 1f,
+        label = "PayeeAlpha"
+    )
+
+    val bottomSectionBlur by animateDpAsState(
+        targetValue = if (isAnyDropdownOpen) 6.dp else 0.dp,
+        label = "BottomSectionBlur"
+    )
+    val bottomSectionAlpha by animateFloatAsState(
+        targetValue = if (isAnyDropdownOpen) 0.35f else 1f,
+        label = "BottomSectionAlpha"
+    )
+
     Dialog(
         onDismissRequest = {
             if (isFormDirty) {
@@ -411,6 +461,13 @@ fun AddTransactionSheet(
                     .padding(horizontal = 24.dp)
                     .padding(top = 16.dp, bottom = 24.dp)
             ) {
+            // ── Top Section (Header, Tabs, Amount, Insufficient Warning, Category, Transfer-to tabs) ──
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .blur(topSectionBlur)
+                    .alpha(topSectionAlpha)
+            ) {
                 // ── Top Header Bar (Scrolls with page) ──────────────────────────────
                 Box(
                     modifier = Modifier
@@ -426,203 +483,204 @@ fun AddTransactionSheet(
                     )
                 }
 
-            // ── Tab Selector ────────────────────────────────────
-            // ── Minimal Dark Segmented Control (Expense / Income / Transfer) ───────
-            val types = remember { listOf("EXPENSE" to "Expense", "INCOME" to "Income", "TRANSFER" to "Transfer") }
-            val selectedTabIndex = remember(selectedType) {
-                types.indexOfFirst { it.first == selectedType }.coerceAtLeast(0)
-            }
-            val indicatorColor = when (selectedType) {
-                "INCOME" -> IncomeGreen
-                "EXPENSE" -> ExpenseRed
-                else -> TransferYellow
-            }
-
-            BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black)
-                    .border(1.dp, DividerColor, CircleShape)
-                    .padding(4.dp)
-            ) {
-                val segmentWidth = maxWidth / 3
-                val indicatorOffset by animateDpAsState(
-                    targetValue = segmentWidth * selectedTabIndex,
-                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                    label = "SegmentSlideAnimation"
-                )
-
-                // White sliding pill for selected segment
-                Box(
-                    modifier = Modifier
-                        .offset(x = indicatorOffset)
-                        .width(segmentWidth)
-                        .fillMaxHeight()
-                        .clip(CircleShape)
-                        .background(Color.White)
-                )
-
-                // Segment Labels Row
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    types.forEach { (typeKey, label) ->
-                        val isSelected = selectedType == typeKey
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clip(CircleShape)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) { selectedType = typeKey },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = label,
-                                color = if (isSelected) Color.Black else Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
-                            )
-                        }
-                    }
+                // ── Tab Selector ────────────────────────────────────
+                // ── Minimal Dark Segmented Control (Expense / Income / Transfer) ───────
+                val types = remember { listOf("EXPENSE" to "Expense", "INCOME" to "Income", "TRANSFER" to "Transfer") }
+                val selectedTabIndex = remember(selectedType) {
+                    types.indexOfFirst { it.first == selectedType }.coerceAtLeast(0)
                 }
-            }
+                val indicatorColor = when (selectedType) {
+                    "INCOME" -> IncomeGreen
+                    "EXPENSE" -> ExpenseRed
+                    else -> TransferYellow
+                }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // ── Amount Input (Typographic ৳ Field) ──────────────
-            OutlinedTextField(
-                value         = amount,
-                onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) amount = it },
-                label         = { Text("Amount in BDT (৳)", color = TextSecondary) },
-                prefix        = { Text("৳ ", color = indicatorColor, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
-                textStyle     = textStyleForAmount(indicatorColor),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                singleLine    = true,
-                shape         = RoundedCornerShape(12.dp),
-                modifier      = Modifier.fillMaxWidth(),
-                colors        = textFieldColors()
-            )
-
-            if (isInsufficient) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "Warning: Insufficient balance in ${selectedFromAccount?.name ?: fromAccountSearchText.text} (Available: ৳${String.format(Locale.getDefault(), "%,.2f", selectedBalance)})",
-                    color = ExpenseRed,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // ── Category Selector (Category Chips Grid) ─────────
-            if (selectedType != "TRANSFER") {
-                Text(text = "Category", style = MaterialTheme.typography.labelMedium, color = TextSecondary)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black)
+                        .border(1.dp, DividerColor, CircleShape)
+                        .padding(4.dp)
                 ) {
-                    activeCategories.forEach { cat ->
-                        val isSelected = selectedCategory == cat
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(if (isSelected) indicatorColor else CardDark)
-                                .border(
-                                    width = 1.dp,
-                                    color = if (isSelected) indicatorColor else DividerColor,
-                                    shape = RoundedCornerShape(20.dp)
-                                )
-                                .combinedClickable(
-                                    onClick = { selectedCategory = cat },
-                                    onLongClick = {
-                                        categoryToManage = cat
-                                        showManageCategoryDialog = true
-                                    }
-                                )
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text       = cat,
-                                color      = if (isSelected) BackgroundDark else TextPrimary,
-                                fontSize   = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                            )
-                        }
-                    }
+                    val segmentWidth = maxWidth / 3
+                    val indicatorOffset by animateDpAsState(
+                        targetValue = segmentWidth * selectedTabIndex,
+                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                        label = "SegmentSlideAnimation"
+                    )
 
-                    // Add Custom Category Chip
+                    // White sliding pill for selected segment
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(CardDark.copy(alpha = 0.6f))
-                            .border(1.dp, AccentTeal.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                            .clickable { showAddCategoryDialog = true }
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
-                        contentAlignment = Alignment.Center
+                            .offset(x = indicatorOffset)
+                            .width(segmentWidth)
+                            .fillMaxHeight()
+                            .clip(CircleShape)
+                            .background(Color.White)
+                    )
+
+                    // Segment Labels Row
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Add Category",
-                                tint = AccentTeal,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "New",
-                                color = AccentTeal,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(18.dp))
-            }
-
-            // ── Account Selector(s) ──────────────────────────────
-            if (selectedType == "TRANSFER") {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                ) {
-                    Text(text = "Transfer to", style = MaterialTheme.typography.labelMedium, color = TextSecondary)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("Own Account", "Other's Account").forEach { opt ->
-                            val selected = (opt == "Own Account" && isOwnAccount) || (opt == "Other's Account" && !isOwnAccount)
-                            val color = TransferYellow
+                        types.forEach { (typeKey, label) ->
+                            val isSelected = selectedType == typeKey
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(if (selected) color.copy(alpha = 0.15f) else CardDarker)
-                                    .border(
-                                        width = 1.dp,
-                                        color = if (selected) color else DividerColor,
-                                        shape = RoundedCornerShape(10.dp)
-                                    )
-                                    .clickable { isOwnAccount = (opt == "Own Account") }
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .clip(CircleShape)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) { selectedType = typeKey },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = opt,
-                                    color = if (selected) color else TextPrimary,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
+                                    text = label,
+                                    color = if (isSelected) Color.Black else Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
                                 )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // ── Amount Input (Typographic ৳ Field) ──────────────
+                OutlinedTextField(
+                    value         = amount,
+                    onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) amount = it },
+                    label         = { Text("Amount in BDT (৳)", color = TextSecondary) },
+                    prefix        = { Text("৳ ", color = indicatorColor, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                    textStyle     = textStyleForAmount(indicatorColor),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine    = true,
+                    shape         = RoundedCornerShape(12.dp),
+                    modifier      = Modifier.fillMaxWidth(),
+                    colors        = textFieldColors()
+                )
+
+                if (isInsufficient) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Warning: Insufficient balance in ${selectedFromAccount?.name ?: fromAccountSearchText.text} (Available: ৳${String.format(Locale.getDefault(), "%,.2f", selectedBalance)})",
+                        color = ExpenseRed,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // ── Category Selector (Category Chips Grid) ─────────
+                if (selectedType != "TRANSFER") {
+                    Text(text = "Category", style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        activeCategories.forEach { cat ->
+                            val isSelected = selectedCategory == cat
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(if (isSelected) indicatorColor else CardDark)
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isSelected) indicatorColor else DividerColor,
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                                    .combinedClickable(
+                                        onClick = { selectedCategory = cat },
+                                        onLongClick = {
+                                            categoryToManage = cat
+                                            showManageCategoryDialog = true
+                                        }
+                                    )
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text       = cat,
+                                    color      = if (isSelected) BackgroundDark else TextPrimary,
+                                    fontSize   = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                                )
+                            }
+                        }
+
+                        // Add Custom Category Chip
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(CardDark.copy(alpha = 0.6f))
+                                .border(1.dp, AccentTeal.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                            .clickable { showAddCategoryDialog = true }
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Add Category",
+                                    tint = AccentTeal,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "New",
+                                    color = AccentTeal,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+                }
+
+                // ── Account Selector(s) ──────────────────────────────
+                if (selectedType == "TRANSFER") {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    ) {
+                        Text(text = "Transfer to", style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("Own Account", "Other's Account").forEach { opt ->
+                                val selected = (opt == "Own Account" && isOwnAccount) || (opt == "Other's Account" && !isOwnAccount)
+                                val color = TransferYellow
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (selected) color.copy(alpha = 0.15f) else CardDarker)
+                                        .border(
+                                            width = 1.dp,
+                                            color = if (selected) color else DividerColor,
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                        .clickable { isOwnAccount = (opt == "Own Account") }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = opt,
+                                        color = if (selected) color else TextPrimary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                     }
@@ -641,191 +699,52 @@ fun AddTransactionSheet(
                 }
             }
 
-            // Source / From Account
-            ExposedDropdownMenuBox(
-                expanded = fromAccountExpanded,
-                onExpandedChange = { isExpanded ->
-                    fromAccountExpanded = isExpanded
-                },
+            // ── Source / From Account Section ───────────────────
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .blur(fromAccountBlur)
+                    .alpha(fromAccountAlpha)
             ) {
-                OutlinedTextField(
-                    value = fromAccountSearchText,
-                    onValueChange = { newTfv ->
-                        fromAccountSearchText = newTfv
-                        val typed = newTfv.text.trim()
-                        selectedFromAccount = accounts.firstOrNull { acc ->
-                            val disp = getAccountDisplayText(acc)
-                            disp.equals(typed, ignoreCase = true) || acc.name.equals(typed, ignoreCase = true)
-                        }
-                        fromAccountExpanded = true
-                    },
-                    readOnly = false,
-                    textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
-                    label = { Text(if (selectedType == "TRANSFER") "From Account" else "Account", color = TextSecondary) },
-                    placeholder = { Text("Select or type account/bank", color = TextMuted) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = null,
-                            tint = if (fromAccountExpanded) AccentTeal else TextMuted,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    trailingIcon = {
-                        val hasContent = selectedFromAccount != null || fromAccountSearchText.text.isNotEmpty()
-                        if (hasContent && !fromAccountExpanded) {
-                            IconButton(
-                                onClick = {
-                                    selectedFromAccount = null
-                                    fromAccountSearchText = TextFieldValue("")
-                                    fromAccountExpanded = true
-                                },
-                                modifier = Modifier.size(28.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Clear account",
-                                    tint = TextMuted,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        } else {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = fromAccountExpanded)
-                        }
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = textFieldColors(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onGloballyPositioned { coordinates ->
-                            fromAccountFieldWidth = with(density) { coordinates.size.width.toDp() }
-                        }
-                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
-                )
-
-                DropdownMenu(
-                    expanded = fromAccountExpanded,
-                    onDismissRequest = {
-                        fromAccountExpanded = false
-                        val displayText = getAccountDisplayText(selectedFromAccount)
-                        if (displayText.isNotEmpty()) {
-                            fromAccountSearchText = TextFieldValue(
-                                text = displayText,
-                                selection = TextRange(displayText.length)
-                            )
-                        }
-                    },
-                    properties = PopupProperties(focusable = false),
-                    offset = DpOffset(0.dp, (-306).dp),
-                    modifier = Modifier
-                        .then(if (fromAccountFieldWidth > 0.dp) Modifier.width(fromAccountFieldWidth) else Modifier.fillMaxWidth())
-                        .background(CardDarker)
-                        .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
-                        .heightIn(max = 260.dp)
-                ) {
-                    AccountDropdownItems(
-                        searchText = fromAccountSearchText.text,
-                        accountsList = accounts,
-                        selectedAccount = selectedFromAccount,
-                        allowPresetLinking = selectedType == "INCOME",
-                        allowCashOption = true,
-                        cashTagText = if (selectedType == "TRANSFER" && isOwnAccount) "Deposit" else "In Hand",
-                        onSelectExisting = { account ->
-                            selectedFromAccount = account
-                            val displayText = getAccountDisplayText(account)
-                            fromAccountSearchText = TextFieldValue(
-                                text = displayText,
-                                selection = TextRange(displayText.length)
-                            )
-                            fromAccountExpanded = false
-                            dismissKeyboard()
-                        },
-                        onSelectNew = { name ->
-                            selectedFromAccount = null
-                            fromAccountSearchText = TextFieldValue(
-                                text = name,
-                                selection = TextRange(name.length)
-                            )
-                            fromAccountExpanded = false
-                            dismissKeyboard()
-                        }
-                    )
-                }
-            }
-
-            AnimatedVisibility(visible = isFromAccountNew) {
-                OptionalNewAccountSection(
-                    accountType = fromNewAccType,
-                    onTypeChange = { newType ->
-                        fromNewAccType = newType
-                        fromNewAccSubtype = when (newType) {
-                            "CASH" -> "In Hand"
-                            "MFS"  -> "Personal"
-                            else   -> "Savings"
-                        }
-                    },
-                    accountSubtype = fromNewAccSubtype,
-                    onSubtypeChange = { fromNewAccSubtype = it },
-                    initialBalance = fromNewAccInitialBalance,
-                    onInitialBalanceChange = { fromNewAccInitialBalance = it },
-                    accountNumber = fromNewAccNumber,
-                    onAccountNumberChange = { fromNewAccNumber = it },
-                    nickname = fromNewAccNickname,
-                    onNicknameChange = { fromNewAccNickname = it }
-                )
-            }
-
-            // Destination / To Account (Visible only for TRANSFER and isOwnAccount)
-            if (selectedType == "TRANSFER" && isOwnAccount) {
-                Spacer(modifier = Modifier.height(12.dp))
-                val destAccounts = remember(accounts, selectedFromAccount, isFromAccountCash) {
-                    accounts.filter { account ->
-                        account.id != (selectedFromAccount?.id ?: -1) &&
-                        (!isFromAccountCash || (account.type != "CASH" && !account.name.contains("Cash", ignoreCase = true)))
-                    }
-                }
-
                 ExposedDropdownMenuBox(
-                    expanded = toAccountExpanded,
+                    expanded = fromAccountExpanded,
                     onExpandedChange = { isExpanded ->
-                        toAccountExpanded = isExpanded
+                        fromAccountExpanded = isExpanded
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                 ) {
                     OutlinedTextField(
-                        value = toAccountSearchText,
+                        value = fromAccountSearchText,
                         onValueChange = { newTfv ->
-                            toAccountSearchText = newTfv
+                            fromAccountSearchText = newTfv
                             val typed = newTfv.text.trim()
-                            selectedToAccount = destAccounts.firstOrNull { acc ->
+                            selectedFromAccount = accounts.firstOrNull { acc ->
                                 val disp = getAccountDisplayText(acc)
                                 disp.equals(typed, ignoreCase = true) || acc.name.equals(typed, ignoreCase = true)
                             }
-                            toAccountExpanded = true
+                            fromAccountExpanded = true
                         },
                         readOnly = false,
                         textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
-                        label = { Text(if (isOwnAccount) "To Account" else "To Bank/MFS", color = TextSecondary) },
-                        placeholder = { Text(if (isOwnAccount) "Select or type destination" else "Select or type bank", color = TextMuted) },
+                        label = { Text(if (selectedType == "TRANSFER") "From Account" else "Account", color = TextSecondary) },
+                        placeholder = { Text("Select or type account/bank", color = TextMuted) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = null,
-                                tint = if (toAccountExpanded) AccentTeal else TextMuted,
+                                tint = if (fromAccountExpanded) AccentTeal else TextMuted,
                                 modifier = Modifier.size(18.dp)
                             )
                         },
                         trailingIcon = {
-                            val hasContent = selectedToAccount != null || toAccountSearchText.text.isNotEmpty()
-                            if (hasContent && !toAccountExpanded) {
+                            val hasContent = selectedFromAccount != null || fromAccountSearchText.text.isNotEmpty()
+                            if (hasContent && !fromAccountExpanded) {
                                 IconButton(
                                     onClick = {
-                                        selectedToAccount = null
-                                        toAccountSearchText = TextFieldValue("")
-                                        toAccountExpanded = true
+                                        selectedFromAccount = null
+                                        fromAccountSearchText = TextFieldValue("")
+                                        fromAccountExpanded = true
                                     },
                                     modifier = Modifier.size(28.dp)
                                 ) {
@@ -837,7 +756,7 @@ fun AddTransactionSheet(
                                     )
                                 }
                             } else {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = toAccountExpanded)
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = fromAccountExpanded)
                             }
                         },
                         shape = RoundedCornerShape(12.dp),
@@ -845,18 +764,18 @@ fun AddTransactionSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .onGloballyPositioned { coordinates ->
-                                toAccountFieldWidth = with(density) { coordinates.size.width.toDp() }
+                                fromAccountFieldWidth = with(density) { coordinates.size.width.toDp() }
                             }
                             .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
                     )
 
                     DropdownMenu(
-                        expanded = toAccountExpanded,
+                        expanded = fromAccountExpanded,
                         onDismissRequest = {
-                            toAccountExpanded = false
-                            val displayText = getAccountDisplayText(selectedToAccount)
+                            fromAccountExpanded = false
+                            val displayText = getAccountDisplayText(selectedFromAccount)
                             if (displayText.isNotEmpty()) {
-                                toAccountSearchText = TextFieldValue(
+                                fromAccountSearchText = TextFieldValue(
                                     text = displayText,
                                     selection = TextRange(displayText.length)
                                 )
@@ -865,406 +784,576 @@ fun AddTransactionSheet(
                         properties = PopupProperties(focusable = false),
                         offset = DpOffset(0.dp, (-306).dp),
                         modifier = Modifier
-                            .then(if (toAccountFieldWidth > 0.dp) Modifier.width(toAccountFieldWidth) else Modifier.fillMaxWidth())
+                            .then(if (fromAccountFieldWidth > 0.dp) Modifier.width(fromAccountFieldWidth) else Modifier.fillMaxWidth())
                             .background(CardDarker)
                             .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
                             .heightIn(max = 260.dp)
                     ) {
                         AccountDropdownItems(
-                            searchText = toAccountSearchText.text,
-                            accountsList = destAccounts,
-                            selectedAccount = selectedToAccount,
-                            allowPresetLinking = true,
-                            allowCashOption = !isFromAccountCash,
-                            cashTagText = "Withdrawal",
+                            searchText = fromAccountSearchText.text,
+                            accountsList = accounts,
+                            selectedAccount = selectedFromAccount,
+                            allowPresetLinking = selectedType == "INCOME",
+                            allowCashOption = true,
+                            cashTagText = if (selectedType == "TRANSFER" && isOwnAccount) "Deposit" else "In Hand",
                             onSelectExisting = { account ->
-                                selectedToAccount = account
+                                selectedFromAccount = account
                                 val displayText = getAccountDisplayText(account)
-                                toAccountSearchText = TextFieldValue(
+                                fromAccountSearchText = TextFieldValue(
                                     text = displayText,
                                     selection = TextRange(displayText.length)
                                 )
-                                toAccountExpanded = false
+                                fromAccountExpanded = false
                                 dismissKeyboard()
                             },
                             onSelectNew = { name ->
-                                selectedToAccount = null
-                                toAccountSearchText = TextFieldValue(
+                                selectedFromAccount = null
+                                fromAccountSearchText = TextFieldValue(
                                     text = name,
                                     selection = TextRange(name.length)
                                 )
-                                toAccountExpanded = false
+                                fromAccountExpanded = false
                                 dismissKeyboard()
                             }
                         )
                     }
                 }
 
-                AnimatedVisibility(visible = isToAccountNew) {
+                AnimatedVisibility(visible = isFromAccountNew) {
                     OptionalNewAccountSection(
-                        accountType = toNewAccType,
+                        accountType = fromNewAccType,
                         onTypeChange = { newType ->
-                            toNewAccType = newType
-                            toNewAccSubtype = when (newType) {
+                            fromNewAccType = newType
+                            fromNewAccSubtype = when (newType) {
                                 "CASH" -> "In Hand"
                                 "MFS"  -> "Personal"
                                 else   -> "Savings"
                             }
                         },
-                        accountSubtype = toNewAccSubtype,
-                        onSubtypeChange = { toNewAccSubtype = it },
-                        initialBalance = toNewAccInitialBalance,
-                        onInitialBalanceChange = { toNewAccInitialBalance = it },
-                        accountNumber = toNewAccNumber,
-                        onAccountNumberChange = { toNewAccNumber = it },
-                        nickname = toNewAccNickname,
-                        onNicknameChange = { toNewAccNickname = it }
+                        accountSubtype = fromNewAccSubtype,
+                        onSubtypeChange = { fromNewAccSubtype = it },
+                        initialBalance = fromNewAccInitialBalance,
+                        onInitialBalanceChange = { fromNewAccInitialBalance = it },
+                        accountNumber = fromNewAccNumber,
+                        onAccountNumberChange = { fromNewAccNumber = it },
+                        nickname = fromNewAccNickname,
+                        onNicknameChange = { fromNewAccNickname = it }
                     )
                 }
             }
 
-            if (selectedType == "TRANSFER" && !isOwnAccount) {
-                Spacer(modifier = Modifier.height(14.dp))
-
-                val filteredPayeeAccounts = remember(recipientName.text, payees, payeeAccounts) {
-                    val nameText = recipientName.text
-                    if (nameText.trim().isEmpty()) {
-                        payeeAccounts
-                    } else {
-                        val matchingPayeeIds = payees
-                            .filter { it.name.contains(nameText, ignoreCase = true) }
-                            .map { it.id }
-                            .toSet()
-                        payeeAccounts.filter {
-                            it.payeeId in matchingPayeeIds ||
-                            it.recipientName.contains(nameText, ignoreCase = true) ||
-                            it.accountNumber.contains(nameText) ||
-                            it.bankName.contains(nameText, ignoreCase = true)
-                        }
-                    }
-                }
-
-                // ExposedDropdownMenuBox for Recipient Name Autocomplete
-                ExposedDropdownMenuBox(
-                    expanded = payeeExpanded,
-                    onExpandedChange = { isExpanded ->
-                        payeeExpanded = isExpanded
-                    },
+            // ── Destination / To Account Section (Visible only for TRANSFER and isOwnAccount) ──
+            if (selectedType == "TRANSFER" && isOwnAccount) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .blur(toAccountBlur)
+                        .alpha(toAccountAlpha)
                 ) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    val destAccounts = remember(accounts, selectedFromAccount, isFromAccountCash) {
+                        accounts.filter { account ->
+                            account.id != (selectedFromAccount?.id ?: -1) &&
+                            (!isFromAccountCash || (account.type != "CASH" && !account.name.contains("Cash", ignoreCase = true)))
+                        }
+                    }
+
+                    ExposedDropdownMenuBox(
+                        expanded = toAccountExpanded,
+                        onExpandedChange = { isExpanded ->
+                            toAccountExpanded = isExpanded
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = toAccountSearchText,
+                            onValueChange = { newTfv ->
+                                toAccountSearchText = newTfv
+                                val typed = newTfv.text.trim()
+                                selectedToAccount = destAccounts.firstOrNull { acc ->
+                                    val disp = getAccountDisplayText(acc)
+                                    disp.equals(typed, ignoreCase = true) || acc.name.equals(typed, ignoreCase = true)
+                                }
+                                toAccountExpanded = true
+                            },
+                            readOnly = false,
+                            textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
+                            label = { Text(if (isOwnAccount) "To Account" else "To Bank/MFS", color = TextSecondary) },
+                            placeholder = { Text(if (isOwnAccount) "Select or type destination" else "Select or type bank", color = TextMuted) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = null,
+                                    tint = if (toAccountExpanded) AccentTeal else TextMuted,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            trailingIcon = {
+                                val hasContent = selectedToAccount != null || toAccountSearchText.text.isNotEmpty()
+                                if (hasContent && !toAccountExpanded) {
+                                    IconButton(
+                                        onClick = {
+                                            selectedToAccount = null
+                                            toAccountSearchText = TextFieldValue("")
+                                            toAccountExpanded = true
+                                        },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Clear account",
+                                            tint = TextMuted,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                } else {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = toAccountExpanded)
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = textFieldColors(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onGloballyPositioned { coordinates ->
+                                    toAccountFieldWidth = with(density) { coordinates.size.width.toDp() }
+                                }
+                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
+                        )
+
+                        DropdownMenu(
+                            expanded = toAccountExpanded,
+                            onDismissRequest = {
+                                toAccountExpanded = false
+                                val displayText = getAccountDisplayText(selectedToAccount)
+                                if (displayText.isNotEmpty()) {
+                                    toAccountSearchText = TextFieldValue(
+                                        text = displayText,
+                                        selection = TextRange(displayText.length)
+                                    )
+                                }
+                            },
+                            properties = PopupProperties(focusable = false),
+                            offset = DpOffset(0.dp, (-306).dp),
+                            modifier = Modifier
+                                .then(if (toAccountFieldWidth > 0.dp) Modifier.width(toAccountFieldWidth) else Modifier.fillMaxWidth())
+                                .background(CardDarker)
+                                .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
+                                .heightIn(max = 260.dp)
+                        ) {
+                            AccountDropdownItems(
+                                searchText = toAccountSearchText.text,
+                                accountsList = destAccounts,
+                                selectedAccount = selectedToAccount,
+                                allowPresetLinking = true,
+                                allowCashOption = !isFromAccountCash,
+                                cashTagText = "Withdrawal",
+                                onSelectExisting = { account ->
+                                    selectedToAccount = account
+                                    val displayText = getAccountDisplayText(account)
+                                    toAccountSearchText = TextFieldValue(
+                                        text = displayText,
+                                        selection = TextRange(displayText.length)
+                                    )
+                                    toAccountExpanded = false
+                                    dismissKeyboard()
+                                },
+                                onSelectNew = { name ->
+                                    selectedToAccount = null
+                                    toAccountSearchText = TextFieldValue(
+                                        text = name,
+                                        selection = TextRange(name.length)
+                                    )
+                                    toAccountExpanded = false
+                                    dismissKeyboard()
+                                }
+                            )
+                        }
+                    }
+
+                    AnimatedVisibility(visible = isToAccountNew) {
+                        OptionalNewAccountSection(
+                            accountType = toNewAccType,
+                            onTypeChange = { newType ->
+                                toNewAccType = newType
+                                toNewAccSubtype = when (newType) {
+                                    "CASH" -> "In Hand"
+                                    "MFS"  -> "Personal"
+                                    else   -> "Savings"
+                                }
+                            },
+                            accountSubtype = toNewAccSubtype,
+                            onSubtypeChange = { toNewAccSubtype = it },
+                            initialBalance = toNewAccInitialBalance,
+                            onInitialBalanceChange = { toNewAccInitialBalance = it },
+                            accountNumber = toNewAccNumber,
+                            onAccountNumberChange = { toNewAccNumber = it },
+                            nickname = toNewAccNickname,
+                            onNicknameChange = { toNewAccNickname = it }
+                        )
+                    }
+                }
+            }
+
+            // ── Recipient / Payee Section (Visible only for TRANSFER and !isOwnAccount) ──
+            if (selectedType == "TRANSFER" && !isOwnAccount) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .blur(payeeBlur)
+                        .alpha(payeeAlpha)
+                ) {
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    val filteredPayeeAccounts = remember(recipientName.text, payees, payeeAccounts) {
+                        val nameText = recipientName.text
+                        if (nameText.trim().isEmpty()) {
+                            payeeAccounts
+                        } else {
+                            val matchingPayeeIds = payees
+                                .filter { it.name.contains(nameText, ignoreCase = true) }
+                                .map { it.id }
+                                .toSet()
+                            payeeAccounts.filter {
+                                it.payeeId in matchingPayeeIds ||
+                                it.recipientName.contains(nameText, ignoreCase = true) ||
+                                it.accountNumber.contains(nameText) ||
+                                it.bankName.contains(nameText, ignoreCase = true)
+                            }
+                        }
+                    }
+
+                    // ExposedDropdownMenuBox for Recipient Name Autocomplete
+                    ExposedDropdownMenuBox(
+                        expanded = payeeExpanded,
+                        onExpandedChange = { isExpanded ->
+                            payeeExpanded = isExpanded
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = recipientName,
+                            onValueChange = {
+                                recipientName = it
+                                payeeExpanded = true
+                            },
+                            textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
+                            label = { Text("Recipient Name *", color = TextSecondary) },
+                            placeholder = { Text("Enter or select recipient name", color = TextMuted) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = null,
+                                    tint = if (payeeExpanded) AccentTeal else TextMuted,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = textFieldColors(),
+                            singleLine = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onGloballyPositioned { coordinates ->
+                                    payeeFieldWidth = with(density) { coordinates.size.width.toDp() }
+                                }
+                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
+                        )
+
+                        if (filteredPayeeAccounts.isNotEmpty()) {
+                            DropdownMenu(
+                                expanded = payeeExpanded,
+                                onDismissRequest = { payeeExpanded = false },
+                                properties = PopupProperties(focusable = false),
+                                offset = DpOffset(0.dp, (-296).dp),
+                                modifier = Modifier
+                                    .then(if (payeeFieldWidth > 0.dp) Modifier.width(payeeFieldWidth) else Modifier.fillMaxWidth())
+                                    .background(CardDarker)
+                                    .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
+                                    .heightIn(max = 240.dp)
+                            ) {
+                                filteredPayeeAccounts.forEach { acc ->
+                                    val parentPayee = payees.firstOrNull { it.id == acc.payeeId }
+                                    val nameToShow = parentPayee?.name ?: acc.recipientName
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                // Recipient profile avatar
+                                                PayeeAvatar(
+                                                    name = parentPayee?.name ?: acc.recipientName,
+                                                    imageUri = parentPayee?.imageUri,
+                                                    size = 34.dp,
+                                                    fontSize = 14.sp
+                                                )
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(nameToShow, color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                                                    val accLast4 = if (acc.accountNumber.length > 4) {
+                                                        val last4 = acc.accountNumber.takeLast(4)
+                                                        if (acc.accountNumber.length == 16) "•••• •••• •••• $last4" else "•".repeat(acc.accountNumber.length - 4) + " $last4"
+                                                    } else acc.accountNumber
+                                                    Text(
+                                                        text = "${acc.bankName} • $accLast4",
+                                                        color = TextSecondary,
+                                                        fontSize = 12.sp
+                                                    )
+                                                }
+                                                if (acc.nickname.isNotBlank()) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(6.dp))
+                                                            .background(AccentTeal.copy(alpha = 0.12f))
+                                                            .border(1.dp, AccentTeal.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = acc.nickname,
+                                                            color = AccentTeal,
+                                                            fontSize = 10.sp,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        onClick = {
+                                            recipientName = TextFieldValue(
+                                                text = nameToShow,
+                                                selection = TextRange(nameToShow.length)
+                                            )
+                                            recipientAccountNumber = TextFieldValue(
+                                                text = acc.accountNumber,
+                                                selection = TextRange(acc.accountNumber.length)
+                                            )
+                                            saveToPayees = false
+                                            payeeExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val isAccountAlreadySaved = remember(recipientAccountNumber.text, payeeAccounts) {
+                        val cleanNum = recipientAccountNumber.text.trim()
+                        cleanNum.isNotEmpty() && payeeAccounts.any { it.accountNumber.trim() == cleanNum }
+                    }
+
+                    // Editable Recipient Account Number Field
                     OutlinedTextField(
-                        value = recipientName,
+                        value = recipientAccountNumber,
                         onValueChange = {
-                            recipientName = it
-                            payeeExpanded = true
+                            recipientAccountNumber = it
+                            val cleanNum = it.text.trim()
+                            if (cleanNum.isNotEmpty() && payeeAccounts.any { acc -> acc.accountNumber.trim() == cleanNum }) {
+                                saveToPayees = false
+                            }
                         },
                         textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
-                        label = { Text("Recipient Name *", color = TextSecondary) },
-                        placeholder = { Text("Enter or select recipient name", color = TextMuted) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = null,
-                                tint = if (payeeExpanded) AccentTeal else TextMuted,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        },
+                        label = { Text("Recipient Account/Mobile Number *", color = TextSecondary) },
+                        placeholder = { Text("Enter account or phone number", color = TextMuted) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         shape = RoundedCornerShape(12.dp),
                         colors = textFieldColors(),
                         singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Switch to toggle saving to profiles
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .onGloballyPositioned { coordinates ->
-                                payeeFieldWidth = with(density) { coordinates.size.width.toDp() }
-                            }
-                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
-                    )
-
-                    if (filteredPayeeAccounts.isNotEmpty()) {
-                        DropdownMenu(
-                            expanded = payeeExpanded,
-                            onDismissRequest = { payeeExpanded = false },
-                            properties = PopupProperties(focusable = false),
-                            offset = DpOffset(0.dp, (-296).dp),
-                            modifier = Modifier
-                                .then(if (payeeFieldWidth > 0.dp) Modifier.width(payeeFieldWidth) else Modifier.fillMaxWidth())
-                                .background(CardDarker)
-                                .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
-                                .heightIn(max = 240.dp)
-                        ) {
-                            filteredPayeeAccounts.forEach { acc ->
-                                val parentPayee = payees.firstOrNull { it.id == acc.payeeId }
-                                val nameToShow = parentPayee?.name ?: acc.recipientName
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            // Recipient profile avatar
-                                            PayeeAvatar(
-                                                name = parentPayee?.name ?: acc.recipientName,
-                                                imageUri = parentPayee?.imageUri,
-                                                size = 34.dp,
-                                                fontSize = 14.sp
-                                            )
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(nameToShow, color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-                                                val accLast4 = if (acc.accountNumber.length > 4) {
-                                                    val last4 = acc.accountNumber.takeLast(4)
-                                                    if (acc.accountNumber.length == 16) "•••• •••• •••• $last4" else "•".repeat(acc.accountNumber.length - 4) + " $last4"
-                                                } else acc.accountNumber
-                                                Text(
-                                                    text = "${acc.bankName} • $accLast4",
-                                                    color = TextSecondary,
-                                                    fontSize = 12.sp
-                                                )
-                                            }
-                                            if (acc.nickname.isNotBlank()) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .clip(RoundedCornerShape(6.dp))
-                                                        .background(AccentTeal.copy(alpha = 0.12f))
-                                                        .border(1.dp, AccentTeal.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                                ) {
-                                                    Text(
-                                                        text = acc.nickname,
-                                                        color = AccentTeal,
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    },
-                                    onClick = {
-                                        recipientName = TextFieldValue(
-                                            text = nameToShow,
-                                            selection = TextRange(nameToShow.length)
-                                        )
-                                        recipientAccountNumber = TextFieldValue(
-                                            text = acc.accountNumber,
-                                            selection = TextRange(acc.accountNumber.length)
-                                        )
-                                        saveToPayees = false
-                                        payeeExpanded = false
-                                    }
-                                )
-                            }
-                        }
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(enabled = !isAccountAlreadySaved) { saveToPayees = !saveToPayees }
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Switch(
+                            checked = saveToPayees,
+                            onCheckedChange = { saveToPayees = it },
+                            enabled = !isAccountAlreadySaved,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = OnAccent,
+                                checkedTrackColor = AccentTeal,
+                                checkedBorderColor = Color.Transparent,
+                                uncheckedThumbColor = SwitchThumbUnchecked,
+                                uncheckedTrackColor = SwitchTrackUnchecked,
+                                uncheckedBorderColor = SwitchBorderUnchecked
+                            )
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = if (isAccountAlreadySaved) "Save to Recipient Profiles (Already Saved)" else "Save to Recipient Profiles",
+                            color = if (isAccountAlreadySaved) TextMuted else TextSecondary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                val isAccountAlreadySaved = remember(recipientAccountNumber.text, payeeAccounts) {
-                    val cleanNum = recipientAccountNumber.text.trim()
-                    cleanNum.isNotEmpty() && payeeAccounts.any { it.accountNumber.trim() == cleanNum }
-                }
-
-                // Editable Recipient Account Number Field
+            // ── Bottom Section (Notes, Save Button, Cancel Button) ──
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .blur(bottomSectionBlur)
+                    .alpha(bottomSectionAlpha)
+            ) {
+                // ── Notes ──────────────────────────────────────────
+                Spacer(modifier = Modifier.height(if (selectedType == "TRANSFER") 14.dp else 18.dp))
                 OutlinedTextField(
-                    value = recipientAccountNumber,
-                    onValueChange = {
-                        recipientAccountNumber = it
-                        val cleanNum = it.text.trim()
-                        if (cleanNum.isNotEmpty() && payeeAccounts.any { acc -> acc.accountNumber.trim() == cleanNum }) {
-                            saveToPayees = false
-                        }
-                    },
-                    textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
-                    label = { Text("Recipient Account/Mobile Number *", color = TextSecondary) },
-                    placeholder = { Text("Enter account or phone number", color = TextMuted) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = textFieldColors(),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    value         = note,
+                    onValueChange = { note = it },
+                    textStyle     = TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
+                    label         = { Text("Add Note (Optional)", color = TextSecondary) },
+                    singleLine    = true,
+                    shape         = RoundedCornerShape(12.dp),
+                    modifier      = Modifier
+                        .fillMaxWidth(),
+                    colors        = textFieldColors()
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
-                // Switch to toggle saving to profiles
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                // ── Save Button ────────────────────────────────────
+                val isValid = amount.isNotEmpty() && amount.toDoubleOrNull() != null && amount.toDouble() > 0 &&
+                        (selectedFromAccount != null || isFromAccountNew) && !isInsufficient &&
+                        (selectedType != "TRANSFER" || 
+                            ((isOwnAccount && (selectedToAccount != null || isToAccountNew) && 
+                              (selectedFromAccount?.id != selectedToAccount?.id || fromAccountSearchText.text.trim().lowercase() != toAccountSearchText.text.trim().lowercase())) ||
+                              (!isOwnAccount && recipientName.text.trim().isNotEmpty() && recipientAccountNumber.text.trim().isNotEmpty())))
+
+                Button(
+                    onClick = {
+                        if (isValid) {
+                            val finalNote = if (selectedType == "TRANSFER" && !isOwnAccount) {
+                                "To: ${recipientName.text.trim()} (${recipientAccountNumber.text.trim()})" + (if (note.trim().isNotEmpty()) " - ${note.trim()}" else "")
+                            } else {
+                                note
+                            }
+                            if (selectedType == "TRANSFER" && !isOwnAccount && saveToPayees) {
+                                val cleanNumber = recipientAccountNumber.text.trim()
+                                val guessedType = if (cleanNumber.length == 11 && cleanNumber.startsWith("01")) "MFS" else "BANK"
+                                val guessedBank = if (guessedType == "MFS") "Mobile Wallet" else "Bank Account"
+                                onSavePayee(
+                                    recipientName.text.trim(),
+                                    guessedBank,
+                                    cleanNumber,
+                                    guessedType
+                                )
+                            }
+                            
+                            val newFromAcc = if (isFromAccountNew) {
+                                createNewAccountEntity(
+                                    name = fromAccountSearchText.text.trim(),
+                                    customType = fromNewAccType,
+                                    customSubtype = fromNewAccSubtype,
+                                    initialBalance = fromNewAccInitialBalance.toDoubleOrNull() ?: 0.0,
+                                    accountNumber = fromNewAccNumber,
+                                    nickname = fromNewAccNickname
+                                )
+                            } else null
+
+                            val newToAcc = if (selectedType == "TRANSFER" && isOwnAccount && isToAccountNew) {
+                                createNewAccountEntity(
+                                    name = toAccountSearchText.text.trim(),
+                                    customType = toNewAccType,
+                                    customSubtype = toNewAccSubtype,
+                                    initialBalance = toNewAccInitialBalance.toDoubleOrNull() ?: 0.0,
+                                    accountNumber = toNewAccNumber,
+                                    nickname = toNewAccNickname
+                                )
+                            } else null
+
+                            onSaveTransaction(
+                                TransactionEntity(
+                                    amount        = amount.toDouble(),
+                                    type          = selectedType,
+                                    category      = if (selectedType == "TRANSFER") "Transfer" else selectedCategory,
+                                    timestamp     = System.currentTimeMillis(),
+                                    fromAccountId = selectedFromAccount?.id ?: 0,
+                                    toAccountId   = if (selectedType == "TRANSFER" && isOwnAccount) (selectedToAccount?.id ?: 0) else null,
+                                    note          = finalNote
+                                ),
+                                newFromAcc,
+                                newToAcc
+                            )
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onDismiss()
+                        }
+                    },
+                    enabled  = isValid,
+                    shape    = RoundedCornerShape(12.dp),
+                    border   = BorderStroke(1.dp, if (isValid) AccentTeal.copy(alpha = 0.6f) else DividerColor),
+                    colors   = ButtonDefaults.buttonColors(
+                        containerColor = Color.Transparent,
+                        disabledContainerColor = CardDarker
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable(enabled = !isAccountAlreadySaved) { saveToPayees = !saveToPayees }
-                        .padding(vertical = 4.dp)
+                        .height(56.dp),
+                    contentPadding = PaddingValues(0.dp)
                 ) {
-                    Switch(
-                        checked = saveToPayees,
-                        onCheckedChange = { saveToPayees = it },
-                        enabled = !isAccountAlreadySaved,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = OnAccent,
-                            checkedTrackColor = AccentTeal,
-                            checkedBorderColor = Color.Transparent,
-                            uncheckedThumbColor = SwitchThumbUnchecked,
-                            uncheckedTrackColor = SwitchTrackUnchecked,
-                            uncheckedBorderColor = SwitchBorderUnchecked
-                        )
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = if (isAccountAlreadySaved) "Save to Recipient Profiles (Already Saved)" else "Save to Recipient Profiles",
-                        color = if (isAccountAlreadySaved) TextMuted else TextSecondary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-
-            // ── Notes ──────────────────────────────────────────
-            OutlinedTextField(
-                value         = note,
-                onValueChange = { note = it },
-                textStyle     = TextStyle(color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium),
-                label         = { Text("Add Note (Optional)", color = TextSecondary) },
-                singleLine    = true,
-                shape         = RoundedCornerShape(12.dp),
-                modifier      = Modifier
-                    .fillMaxWidth(),
-                colors        = textFieldColors()
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // ── Save Button ────────────────────────────────────
-            val isValid = amount.isNotEmpty() && amount.toDoubleOrNull() != null && amount.toDouble() > 0 &&
-                    (selectedFromAccount != null || isFromAccountNew) && !isInsufficient &&
-                    (selectedType != "TRANSFER" || 
-                        ((isOwnAccount && (selectedToAccount != null || isToAccountNew) && 
-                          (selectedFromAccount?.id != selectedToAccount?.id || fromAccountSearchText.text.trim().lowercase() != toAccountSearchText.text.trim().lowercase())) ||
-                          (!isOwnAccount && recipientName.text.trim().isNotEmpty() && recipientAccountNumber.text.trim().isNotEmpty())))
-
-            Button(
-                onClick = {
-                    if (isValid) {
-                        val finalNote = if (selectedType == "TRANSFER" && !isOwnAccount) {
-                            "To: ${recipientName.text.trim()} (${recipientAccountNumber.text.trim()})" + (if (note.trim().isNotEmpty()) " - ${note.trim()}" else "")
-                        } else {
-                            note
-                        }
-                        if (selectedType == "TRANSFER" && !isOwnAccount && saveToPayees) {
-                            val cleanNumber = recipientAccountNumber.text.trim()
-                            val guessedType = if (cleanNumber.length == 11 && cleanNumber.startsWith("01")) "MFS" else "BANK"
-                            val guessedBank = if (guessedType == "MFS") "Mobile Wallet" else "Bank Account"
-                            onSavePayee(
-                                recipientName.text.trim(),
-                                guessedBank,
-                                cleanNumber,
-                                guessedType
-                            )
-                        }
-                        
-                        val newFromAcc = if (isFromAccountNew) {
-                            createNewAccountEntity(
-                                name = fromAccountSearchText.text.trim(),
-                                customType = fromNewAccType,
-                                customSubtype = fromNewAccSubtype,
-                                initialBalance = fromNewAccInitialBalance.toDoubleOrNull() ?: 0.0,
-                                accountNumber = fromNewAccNumber,
-                                nickname = fromNewAccNickname
-                            )
-                        } else null
-
-                        val newToAcc = if (selectedType == "TRANSFER" && isOwnAccount && isToAccountNew) {
-                            createNewAccountEntity(
-                                name = toAccountSearchText.text.trim(),
-                                customType = toNewAccType,
-                                customSubtype = toNewAccSubtype,
-                                initialBalance = toNewAccInitialBalance.toDoubleOrNull() ?: 0.0,
-                                accountNumber = toNewAccNumber,
-                                nickname = toNewAccNickname
-                            )
-                        } else null
-
-                        onSaveTransaction(
-                            TransactionEntity(
-                                amount        = amount.toDouble(),
-                                type          = selectedType,
-                                category      = if (selectedType == "TRANSFER") "Transfer" else selectedCategory,
-                                timestamp     = System.currentTimeMillis(),
-                                fromAccountId = selectedFromAccount?.id ?: 0,
-                                toAccountId   = if (selectedType == "TRANSFER" && isOwnAccount) (selectedToAccount?.id ?: 0) else null,
-                                note          = finalNote
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                if (isValid) {
+                                    Brush.horizontalGradient(colors = listOf(GradientStart, GradientEnd))
+                                } else {
+                                    Brush.horizontalGradient(colors = listOf(CardDark, CardDark))
+                                }
                             ),
-                            newFromAcc,
-                            newToAcc
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text  = "Save Transaction",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (isValid) BackgroundDark else TextMuted
                         )
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onDismiss()
                     }
-                },
-                enabled  = isValid,
-                shape    = RoundedCornerShape(12.dp),
-                border   = BorderStroke(1.dp, if (isValid) AccentTeal.copy(alpha = 0.6f) else DividerColor),
-                colors   = ButtonDefaults.buttonColors(
-                    containerColor = Color.Transparent,
-                    disabledContainerColor = CardDarker
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            if (isValid) {
-                                Brush.horizontalGradient(colors = listOf(GradientStart, GradientEnd))
-                            } else {
-                                Brush.horizontalGradient(colors = listOf(CardDark, CardDark))
-                            }
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text  = "Save Transaction",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (isValid) BackgroundDark else TextMuted
-                    )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // ── Cancel Button ──────────────────────────────────
-            Button(
-                onClick = {
-                    if (amount.isNotEmpty() || note.isNotEmpty()) {
-                        showCancelConfirmation = true
-                    } else {
-                        onDismiss()
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, DividerColor),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = ExpenseRed
-                ),
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Box(
+                // ── Cancel Button ──────────────────────────────────
+                Button(
+                    onClick = {
+                        if (amount.isNotEmpty() || note.isNotEmpty()) {
+                            showCancelConfirmation = true
+                        } else {
+                            onDismiss()
+                        }
+                    },
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(ExpenseRed),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, DividerColor),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ExpenseRed
+                    ),
+                    contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text(
-                        text = "Cancel",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(ExpenseRed),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Cancel",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
