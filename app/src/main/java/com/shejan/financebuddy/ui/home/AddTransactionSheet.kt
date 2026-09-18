@@ -82,7 +82,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -155,6 +157,11 @@ fun AddTransactionSheet(
 
     var fromAccountExpanded by remember { mutableStateOf(false) }
     var toAccountExpanded by remember { mutableStateOf(false) }
+
+    val density = LocalDensity.current
+    var fromAccountFieldWidth by remember { mutableStateOf(0.dp) }
+    var toAccountFieldWidth by remember { mutableStateOf(0.dp) }
+    var payeeFieldWidth by remember { mutableStateOf(0.dp) }
 
     var fromAccountSearchText by remember(selectedFromAccount) {
         val displayText = getAccountDisplayText(selectedFromAccount)
@@ -400,12 +407,15 @@ fun AddTransactionSheet(
                     .fillMaxSize()
                     .statusBarsPadding()
                     .imePadding()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 16.dp, bottom = 24.dp)
             ) {
-                // ── Full Screen Top Header Bar ──────────────────────────────
+                // ── Top Header Bar (Scrolls with page) ──────────────────────────────
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 12.dp),
+                        .padding(bottom = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -415,16 +425,6 @@ fun AddTransactionSheet(
                         color = TextPrimary
                     )
                 }
-
-                // ── Scrollable Body ────────────────────────────────────
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .verticalScroll(scrollState)
-                        .padding(horizontal = 24.dp, vertical = 16.dp)
-                        .padding(bottom = 24.dp)
-                ) {
 
             // ── Tab Selector ────────────────────────────────────
             // ── Minimal Dark Segmented Control (Expense / Income / Transfer) ───────
@@ -699,6 +699,9 @@ fun AddTransactionSheet(
                     colors = textFieldColors(),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .onGloballyPositioned { coordinates ->
+                            fromAccountFieldWidth = with(density) { coordinates.size.width.toDp() }
+                        }
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
                 )
 
@@ -717,10 +720,10 @@ fun AddTransactionSheet(
                     properties = PopupProperties(focusable = false),
                     offset = DpOffset(0.dp, (-306).dp),
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .then(if (fromAccountFieldWidth > 0.dp) Modifier.width(fromAccountFieldWidth) else Modifier.fillMaxWidth())
                         .background(CardDarker)
                         .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
-                        .heightIn(max = 250.dp)
+                        .heightIn(max = 260.dp)
                 ) {
                     AccountDropdownItems(
                         searchText = fromAccountSearchText.text,
@@ -841,6 +844,9 @@ fun AddTransactionSheet(
                         colors = textFieldColors(),
                         modifier = Modifier
                             .fillMaxWidth()
+                            .onGloballyPositioned { coordinates ->
+                                toAccountFieldWidth = with(density) { coordinates.size.width.toDp() }
+                            }
                             .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
                     )
 
@@ -859,10 +865,10 @@ fun AddTransactionSheet(
                         properties = PopupProperties(focusable = false),
                         offset = DpOffset(0.dp, (-306).dp),
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .then(if (toAccountFieldWidth > 0.dp) Modifier.width(toAccountFieldWidth) else Modifier.fillMaxWidth())
                             .background(CardDarker)
                             .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
-                            .heightIn(max = 250.dp)
+                            .heightIn(max = 260.dp)
                     ) {
                         AccountDropdownItems(
                             searchText = toAccountSearchText.text,
@@ -969,6 +975,9 @@ fun AddTransactionSheet(
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
+                            .onGloballyPositioned { coordinates ->
+                                payeeFieldWidth = with(density) { coordinates.size.width.toDp() }
+                            }
                             .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
                     )
 
@@ -979,7 +988,7 @@ fun AddTransactionSheet(
                             properties = PopupProperties(focusable = false),
                             offset = DpOffset(0.dp, (-296).dp),
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .then(if (payeeFieldWidth > 0.dp) Modifier.width(payeeFieldWidth) else Modifier.fillMaxWidth())
                                 .background(CardDarker)
                                 .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
                                 .heightIn(max = 240.dp)
@@ -1874,7 +1883,6 @@ fun AddTransactionSheet(
     }
 }
 }
-}
 
 // ─────────────────────────────────────────────────────────────
 // Styles Helpers
@@ -1985,6 +1993,8 @@ private fun OptionalNewAccountSection(
     nickname: String,
     onNicknameChange: (String) -> Unit
 ) {
+    val density = LocalDensity.current
+    var subtypeFieldWidth by remember { mutableStateOf(0.dp) }
     var subtypeExpanded by remember { mutableStateOf(false) }
 
     val subtypes = when (accountType) {
@@ -2090,14 +2100,18 @@ private fun OptionalNewAccountSection(
                 textStyle = TextStyle(color = TextPrimary, fontSize = 13.sp),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .onGloballyPositioned { coordinates ->
+                        subtypeFieldWidth = with(density) { coordinates.size.width.toDp() }
+                    }
                     .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
             )
             DropdownMenu(
                 expanded = subtypeExpanded,
                 onDismissRequest = { subtypeExpanded = false },
+                properties = PopupProperties(focusable = false),
                 offset = DpOffset(0.dp, (-256).dp),
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .then(if (subtypeFieldWidth > 0.dp) Modifier.width(subtypeFieldWidth) else Modifier.fillMaxWidth())
                     .background(CardDarker)
                     .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
                     .heightIn(max = 200.dp)
@@ -2216,6 +2230,7 @@ private fun AccountDropdownItems(
     matchingExistingCash.forEach { account ->
         val isSelected = selectedAccount?.id == account.id
         DropdownMenuItem(
+            modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 3.dp),
             text = {
                 AccountDropdownItemView(
@@ -2238,6 +2253,7 @@ private fun AccountDropdownItems(
             else -> "+ Link Cash"
         }
         DropdownMenuItem(
+            modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 3.dp),
             text = {
                 PresetDropdownItemView(
@@ -2261,6 +2277,7 @@ private fun AccountDropdownItems(
     matchingExistingBanks.forEach { account ->
         val isSelected = selectedAccount?.id == account.id
         DropdownMenuItem(
+            modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 3.dp),
             text = {
                 AccountDropdownItemView(
@@ -2276,6 +2293,7 @@ private fun AccountDropdownItems(
     // 4. Preset Banks
     matchingPresetBanks.forEach { preset ->
         DropdownMenuItem(
+            modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 3.dp),
             text = {
                 PresetDropdownItemView(
@@ -2292,6 +2310,7 @@ private fun AccountDropdownItems(
     matchingExistingMfs.forEach { account ->
         val isSelected = selectedAccount?.id == account.id
         DropdownMenuItem(
+            modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 3.dp),
             text = {
                 AccountDropdownItemView(
@@ -2307,6 +2326,7 @@ private fun AccountDropdownItems(
     // 6. Preset MFS
     matchingPresetMfs.forEach { preset ->
         DropdownMenuItem(
+            modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 3.dp),
             text = {
                 PresetDropdownItemView(
@@ -2328,6 +2348,7 @@ private fun AccountDropdownItems(
         !PRESET_MFS.any { it.equals(typedTrimmed, ignoreCase = true) }
     ) {
         DropdownMenuItem(
+            modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 3.dp),
             text = {
                 PresetDropdownItemView(
