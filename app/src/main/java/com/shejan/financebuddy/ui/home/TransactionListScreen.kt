@@ -204,18 +204,11 @@ fun TransactionListScreen(
             ) {
                 // Left side: Back Button & Page Title
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
+                    com.shejan.financebuddy.ui.common.AppBackButton(
                         onClick = { onBack() }
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = TextPrimary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                    )
 
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
 
                     Column {
                         Text(

@@ -242,13 +242,11 @@ fun AddTransactionSheet(
 
     var payeeExpanded by remember { mutableStateOf(false) }
 
-    val isFromAccountNew = remember(selectedFromAccount, fromAccountSearchText, accounts, selectedType) {
-        selectedType == "INCOME" && selectedFromAccount == null && fromAccountSearchText.text.trim().isNotEmpty() &&
-                accounts.none { it.name.equals(fromAccountSearchText.text.trim(), ignoreCase = true) }
+    val isFromAccountNew = remember(selectedFromAccount, fromAccountSearchText.text, accounts, selectedType) {
+        selectedType == "INCOME" && selectedFromAccount == null && fromAccountSearchText.text.trim().isNotEmpty()
     }
-    val isToAccountNew = remember(selectedToAccount, toAccountSearchText, accounts) {
-        selectedToAccount == null && toAccountSearchText.text.trim().isNotEmpty() &&
-                accounts.none { it.name.equals(toAccountSearchText.text.trim(), ignoreCase = true) }
+    val isToAccountNew = remember(selectedToAccount, toAccountSearchText.text, accounts) {
+        selectedToAccount == null && toAccountSearchText.text.trim().isNotEmpty()
     }
 
     val selectedBalance = selectedFromAccount?.balance ?: 0.0
@@ -721,7 +719,7 @@ fun AddTransactionSheet(
                             val typed = newTfv.text.trim()
                             selectedFromAccount = accounts.firstOrNull { acc ->
                                 val disp = getAccountDisplayText(acc)
-                                disp.equals(typed, ignoreCase = true) || acc.name.equals(typed, ignoreCase = true)
+                                disp.equals(typed, ignoreCase = true)
                             }
                             fromAccountExpanded = true
                         },
@@ -873,7 +871,7 @@ fun AddTransactionSheet(
                                 val typed = newTfv.text.trim()
                                 selectedToAccount = destAccounts.firstOrNull { acc ->
                                     val disp = getAccountDisplayText(acc)
-                                    disp.equals(typed, ignoreCase = true) || acc.name.equals(typed, ignoreCase = true)
+                                    disp.equals(typed, ignoreCase = true)
                                 }
                                 toAccountExpanded = true
                             },
@@ -2287,21 +2285,19 @@ private fun AccountDropdownItems(
 
     val matchingExistingBanks = accountsList.filter { it.type == "BANK" && !it.name.contains("Cash", ignoreCase = true) && (it.name.contains(searchText, ignoreCase = true) || it.accountNumber.contains(searchText, ignoreCase = true)) }
     val matchingExistingMfs = accountsList.filter { it.type == "MFS" && !it.name.contains("Cash", ignoreCase = true) && (it.name.contains(searchText, ignoreCase = true) || it.accountNumber.contains(searchText, ignoreCase = true)) }
-    val existingNames = accountsList.map { it.name.lowercase() }
-
     val matchingPresetCash = if (allowPresetLinking && allowCashOption) {
         PRESET_CASH.filter {
-            !existingNames.contains(it.lowercase()) && it.contains(searchText, ignoreCase = true)
+            it.contains(searchText, ignoreCase = true)
         }
     } else emptyList()
     val matchingPresetBanks = if (allowPresetLinking) {
         PRESET_BANKS.filter {
-            !existingNames.contains(it.lowercase()) && it.contains(searchText, ignoreCase = true)
+            it.contains(searchText, ignoreCase = true)
         }
     } else emptyList()
     val matchingPresetMfs = if (allowPresetLinking) {
         PRESET_MFS.filter {
-            !existingNames.contains(it.lowercase()) && it.contains(searchText, ignoreCase = true)
+            it.contains(searchText, ignoreCase = true)
         }
     } else emptyList()
 
@@ -2431,7 +2427,6 @@ private fun AccountDropdownItems(
     val typedTrimmed = searchText.trim()
     if (allowPresetLinking &&
         typedTrimmed.isNotEmpty() &&
-        !accountsList.any { it.name.equals(typedTrimmed, ignoreCase = true) } &&
         !PRESET_CASH.any { it.equals(typedTrimmed, ignoreCase = true) } &&
         !PRESET_BANKS.any { it.equals(typedTrimmed, ignoreCase = true) } &&
         !PRESET_MFS.any { it.equals(typedTrimmed, ignoreCase = true) }

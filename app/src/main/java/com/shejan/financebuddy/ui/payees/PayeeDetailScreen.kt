@@ -400,16 +400,9 @@ fun PayeeDetailScreen(
                     .padding(horizontal = 12.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = { onBack() }
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "Back",
-                        tint = TextPrimary,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
+                com.shejan.financebuddy.ui.common.AppBackButton(
+                    onClick = onBack
+                )
                 Spacer(modifier = Modifier.weight(1f))
 
                 // Plain 3-Dots Options Button (Not inside circle)

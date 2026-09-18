@@ -58,16 +58,9 @@ fun AboutScreen(
                     .fillMaxWidth()
                     .padding(bottom = 20.dp)
             ) {
-                IconButton(
+                com.shejan.financebuddy.ui.common.AppBackButton(
                     onClick = onBack
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "Back",
-                        tint = TextPrimary,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
+                )
 
                 Spacer(modifier = Modifier.width(14.dp))
 

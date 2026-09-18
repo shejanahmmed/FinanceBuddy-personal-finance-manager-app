@@ -149,14 +149,9 @@ fun UserProfileScreen(
                     .padding(horizontal = 12.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "Back",
-                        tint = TextPrimary,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
+                com.shejan.financebuddy.ui.common.AppBackButton(
+                    onClick = onBack
+                )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
