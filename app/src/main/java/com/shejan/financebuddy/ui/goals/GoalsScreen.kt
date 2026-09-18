@@ -933,8 +933,10 @@ fun GoalCard(
                     DropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
+                        shape = RoundedCornerShape(12.dp),
+                        containerColor = CardDarker,
                         modifier = Modifier
-                            .background(CardDarker)
+                            .clip(RoundedCornerShape(12.dp))
                             .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
                     ) {
                         DropdownMenuItem(
