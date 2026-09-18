@@ -780,10 +780,12 @@ fun AddTransactionSheet(
                             }
                         },
                         properties = PopupProperties(focusable = false),
-                        offset = DpOffset(0.dp, (-306).dp),
+                        offset = DpOffset(0.dp, (-328).dp),
+                        shape = RoundedCornerShape(12.dp),
+                        containerColor = CardDarker,
                         modifier = Modifier
                             .then(if (fromAccountFieldWidth > 0.dp) Modifier.width(fromAccountFieldWidth) else Modifier.fillMaxWidth())
-                            .background(CardDarker)
+                            .clip(RoundedCornerShape(12.dp))
                             .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
                             .heightIn(max = 260.dp)
                     ) {
