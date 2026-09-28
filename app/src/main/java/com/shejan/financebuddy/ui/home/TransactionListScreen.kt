@@ -85,6 +85,7 @@ fun TransactionListScreen(
                 cal.get(Calendar.MONTH),
                 cal.get(Calendar.DAY_OF_MONTH)
             )
+            dialog.datePicker.maxDate = System.currentTimeMillis()
             dialog.setOnCancelListener { showDatePicker = false }
             dialog.show()
             onDispose { dialog.dismiss() }

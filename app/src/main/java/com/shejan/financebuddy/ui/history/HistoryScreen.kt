@@ -102,6 +102,7 @@ fun HistoryScreen(
                 cal.get(Calendar.MONTH),
                 cal.get(Calendar.DAY_OF_MONTH)
             )
+            dialog.datePicker.maxDate = System.currentTimeMillis()
             dialog.setOnCancelListener { showDatePicker = false }
             dialog.show()
             onDispose { dialog.dismiss() }
@@ -133,6 +134,7 @@ fun HistoryScreen(
                 cal.get(Calendar.MONTH),
                 cal.get(Calendar.DAY_OF_MONTH)
             )
+            dialog.datePicker.maxDate = customEndDateMillis?.coerceAtMost(System.currentTimeMillis()) ?: System.currentTimeMillis()
             dialog.setOnCancelListener { showStartDatePicker = false }
             dialog.show()
             onDispose { dialog.dismiss() }
@@ -166,6 +168,10 @@ fun HistoryScreen(
                 cal.get(Calendar.MONTH),
                 cal.get(Calendar.DAY_OF_MONTH)
             )
+            dialog.datePicker.maxDate = System.currentTimeMillis()
+            if (customStartDateMillis != null) {
+                dialog.datePicker.minDate = customStartDateMillis!!
+            }
             dialog.setOnCancelListener { showEndDatePicker = false }
             dialog.show()
             onDispose { dialog.dismiss() }
