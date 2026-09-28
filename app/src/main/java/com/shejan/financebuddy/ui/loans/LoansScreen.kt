@@ -50,8 +50,12 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.LazyRow
 import com.shejan.financebuddy.data.db.LoanEntity
@@ -3487,7 +3491,12 @@ fun AddLoanFormSheet(
             )
 
             // Account Selection Dropdown
-            Box(modifier = Modifier.fillMaxWidth()) {
+            @OptIn(ExperimentalMaterial3Api::class)
+            ExposedDropdownMenuBox(
+                expanded = expandedDropdown,
+                onExpandedChange = { expandedDropdown = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 OutlinedTextField(
                     value = selectedAccount?.let { "${it.name} [${it.accountSubtype}]" } ?: "Select Bank Account",
                     onValueChange = {},
@@ -3499,20 +3508,17 @@ fun AddLoanFormSheet(
                     shape = RoundedCornerShape(14.dp),
                     colors = loanTextFieldColors(),
                     trailingIcon = {
-                        IconButton(onClick = { expandedDropdown = !expandedDropdown }) {
-                            Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown Options", tint = TextPrimary)
-                        }
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedDropdown)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { expandedDropdown = !expandedDropdown }
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                 )
 
-                DropdownMenu(
+                ExposedDropdownMenu(
                     expanded = expandedDropdown,
                     onDismissRequest = { expandedDropdown = false },
                     modifier = Modifier
-                        .fillMaxWidth()
                         .background(CardDarker)
                         .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
                 ) {
@@ -3748,7 +3754,12 @@ fun RepayLoanFormSheet(
         )
 
         // Payment Account Information
-        Box(modifier = Modifier.fillMaxWidth()) {
+        @OptIn(ExperimentalMaterial3Api::class)
+        ExposedDropdownMenuBox(
+            expanded = expandedDropdown,
+            onExpandedChange = { expandedDropdown = it },
+            modifier = Modifier.fillMaxWidth()
+        ) {
             OutlinedTextField(
                 value = selectedAccount?.let { "${it.name} [Bal: ৳${currencyFormat.format(it.balance)}]" } ?: "Select Payment Account",
                 onValueChange = {},
@@ -3760,20 +3771,17 @@ fun RepayLoanFormSheet(
                 shape = RoundedCornerShape(14.dp),
                 colors = loanTextFieldColors(),
                 trailingIcon = {
-                    IconButton(onClick = { expandedDropdown = !expandedDropdown }) {
-                        Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown Options", tint = TextPrimary)
-                    }
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedDropdown)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { expandedDropdown = !expandedDropdown }
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
             )
 
-            DropdownMenu(
+            ExposedDropdownMenu(
                 expanded = expandedDropdown,
                 onDismissRequest = { expandedDropdown = false },
                 modifier = Modifier
-                    .fillMaxWidth()
                     .background(CardDarker)
                     .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
             ) {
@@ -4044,7 +4052,12 @@ fun AddPersonalLoanFormSheet(
             )
 
             // Account Selection Dropdown
-            Box(modifier = Modifier.fillMaxWidth()) {
+            @OptIn(ExperimentalMaterial3Api::class)
+            ExposedDropdownMenuBox(
+                expanded = expandedDropdown,
+                onExpandedChange = { expandedDropdown = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 OutlinedTextField(
                     value = selectedAccount?.let { "${it.name} [${it.accountSubtype}]" } ?: "Select Account",
                     onValueChange = {},
@@ -4056,20 +4069,17 @@ fun AddPersonalLoanFormSheet(
                     shape = RoundedCornerShape(14.dp),
                     colors = loanTextFieldColors(),
                     trailingIcon = {
-                        IconButton(onClick = { expandedDropdown = !expandedDropdown }) {
-                            Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown Options", tint = TextPrimary)
-                        }
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedDropdown)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { expandedDropdown = !expandedDropdown }
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                 )
 
-                DropdownMenu(
+                ExposedDropdownMenu(
                     expanded = expandedDropdown,
                     onDismissRequest = { expandedDropdown = false },
                     modifier = Modifier
-                        .fillMaxWidth()
                         .background(CardDarker)
                         .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
                 ) {
@@ -4092,61 +4102,157 @@ fun AddPersonalLoanFormSheet(
                 }
             }
 
-            // Person Name Input
-            OutlinedTextField(
-                value = lenderInput,
-                onValueChange = { lenderInput = it },
-                label = { Text(if (isLent) "Borrower Name (Friend / Family)" else "Lender Name (Friend / Family)", color = TextSecondary) },
-                leadingIcon = {
-                    Icon(Icons.Default.Person, null, tint = AccentTeal, modifier = Modifier.size(20.dp))
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                colors = loanTextFieldColors(),
-                modifier = Modifier.fillMaxWidth()
-            )
+            var expandedPayeeDropdown by remember { mutableStateOf(false) }
 
-            // Saved Recipient / Friend Suggestions
-            if (payees.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = "SAVED RECIPIENTS / FRIENDS",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextMuted
-                    )
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        items(payees) { payee ->
-                            val isSelected = lenderInput.equals(payee.name, ignoreCase = true)
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { lenderInput = payee.name },
-                                label = { Text(payee.name, fontSize = 12.sp) },
-                                leadingIcon = {
-                                    PayeeAvatar(
-                                        name = payee.name,
-                                        imageUri = payee.imageUri,
-                                        size = 22.dp,
-                                        fontSize = 10.sp
+            val filteredPayees = remember(payees, lenderInput) {
+                val query = lenderInput.trim()
+                if (query.isEmpty()) {
+                    payees
+                } else {
+                    payees.filter {
+                        it.name.contains(query, ignoreCase = true) ||
+                        it.uniqueId.contains(query, ignoreCase = true)
+                    }
+                }
+            }
+
+            // Person Name Input & Dropdown Menu Box
+            @OptIn(ExperimentalMaterial3Api::class)
+            ExposedDropdownMenuBox(
+                expanded = expandedPayeeDropdown,
+                onExpandedChange = { expandedPayeeDropdown = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = lenderInput,
+                    onValueChange = {
+                        lenderInput = it
+                        expandedPayeeDropdown = true
+                    },
+                    label = { Text(if (isLent) "Borrower Name (Friend / Family)" else "Lender Name (Friend / Family)", color = TextSecondary) },
+                    placeholder = { Text("Select or type name", color = TextMuted) },
+                    leadingIcon = {
+                        Icon(Icons.Default.Person, null, tint = AccentTeal, modifier = Modifier.size(20.dp))
+                    },
+                    trailingIcon = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (lenderInput.isNotEmpty()) {
+                                IconButton(
+                                    onClick = {
+                                        lenderInput = ""
+                                        expandedPayeeDropdown = true
+                                    },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear",
+                                        tint = TextMuted,
+                                        modifier = Modifier.size(16.dp)
                                     )
+                                }
+                            }
+                            if (payees.isNotEmpty()) {
+                                IconButton(
+                                    onClick = { expandedPayeeDropdown = !expandedPayeeDropdown },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = "Dropdown Options",
+                                        tint = if (expandedPayeeDropdown) AccentTeal else TextPrimary
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = loanTextFieldColors(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
+                )
+
+                if (payees.isNotEmpty()) {
+                    ExposedDropdownMenu(
+                        expanded = expandedPayeeDropdown,
+                        onDismissRequest = { expandedPayeeDropdown = false },
+                        modifier = Modifier
+                            .background(CardDarker)
+                            .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
+                            .heightIn(max = 240.dp)
+                    ) {
+                        if (filteredPayees.isEmpty()) {
+                            DropdownMenuItem(
+                                text = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    ) {
+                                        Icon(Icons.Default.Add, null, tint = AccentTeal, modifier = Modifier.size(18.dp))
+                                        Text(
+                                            text = "Use \"${lenderInput.trim()}\"",
+                                            color = AccentTeal,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 13.5.sp
+                                        )
+                                    }
                                 },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = AccentTeal.copy(alpha = 0.2f),
-                                    selectedLabelColor = AccentTeal,
-                                    containerColor = CardDarker,
-                                    labelColor = TextPrimary
-                                ),
-                                border = FilterChipDefaults.filterChipBorder(
-                                    borderColor = if (isSelected) AccentTeal else DividerColor,
-                                    selectedBorderColor = AccentTeal,
-                                    enabled = true,
-                                    selected = isSelected
-                                ),
-                                shape = RoundedCornerShape(10.dp)
+                                onClick = {
+                                    expandedPayeeDropdown = false
+                                }
                             )
+                        } else {
+                            filteredPayees.forEach { payee ->
+                                val isSelected = lenderInput.equals(payee.name, ignoreCase = true)
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 4.dp)
+                                        ) {
+                                            PayeeAvatar(
+                                                name = payee.name,
+                                                imageUri = payee.imageUri,
+                                                size = 32.dp,
+                                                fontSize = 13.sp
+                                            )
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = payee.name,
+                                                    color = if (isSelected) AccentTeal else TextPrimary,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                    fontSize = 14.sp
+                                                )
+                                                if (payee.uniqueId.isNotBlank()) {
+                                                    Text(
+                                                        text = payee.uniqueId,
+                                                        color = TextMuted,
+                                                        fontSize = 11.5.sp
+                                                    )
+                                                }
+                                            }
+                                            if (isSelected) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = null,
+                                                    tint = AccentTeal,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    },
+                                    onClick = {
+                                        lenderInput = payee.name
+                                        expandedPayeeDropdown = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
