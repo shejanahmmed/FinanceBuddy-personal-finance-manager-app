@@ -14,7 +14,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreditCard
@@ -24,8 +25,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.TrendingDown
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -61,9 +60,11 @@ fun HistoryScreen(
     // Type filter state: "ALL", "INCOME", "EXPENSE", "TRANSFER", "LOAN_REPAYMENT"
     var selectedTypeFilter by remember { mutableStateOf("ALL") }
 
-    // Period filter state: "ALL", "WEEK", "MONTH", "YEAR", "CUSTOM"
+    // Period filter state: "ALL", "WEEK", "MONTH", "YEAR", "CUSTOM", "CUSTOM_RANGE"
     var selectedPeriodFilter by remember { mutableStateOf("ALL") }
     var customDateMillis by remember { mutableStateOf<Long?>(null) }
+    var customStartDateMillis by remember { mutableStateOf<Long?>(null) }
+    var customEndDateMillis by remember { mutableStateOf<Long?>(null) }
 
     // Account filter state: 0 for All, or account ID
     var selectedAccountIdFilter by remember { mutableIntStateOf(0) }
@@ -72,12 +73,14 @@ fun HistoryScreen(
     var expandedTxId by remember { mutableStateOf<Int?>(null) }
 
     var showDatePicker by remember { mutableStateOf(false) }
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
 
     // Accounts map for quick lookup
     val accountMap = remember(accounts) { accounts.associateBy { it.id } }
 
-    // Date Picker launcher for Custom Date selection
+    // Date Picker launcher for Single Custom Date selection
     if (showDatePicker) {
         val cal = Calendar.getInstance()
         if (customDateMillis != null) {
@@ -105,8 +108,98 @@ fun HistoryScreen(
         }
     }
 
+    // Date Picker launcher for Range Start Date selection
+    if (showStartDatePicker) {
+        val cal = Calendar.getInstance()
+        if (customStartDateMillis != null) {
+            cal.timeInMillis = customStartDateMillis!!
+        }
+        DisposableEffect(Unit) {
+            val dialog = DatePickerDialog(
+                context,
+                { _, year, month, dayOfMonth ->
+                    val selectedCal = Calendar.getInstance().apply {
+                        set(year, month, dayOfMonth, 0, 0, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }
+                    customStartDateMillis = selectedCal.timeInMillis
+                    if (customEndDateMillis != null && customEndDateMillis!! < selectedCal.timeInMillis) {
+                        customEndDateMillis = selectedCal.timeInMillis
+                    }
+                    selectedPeriodFilter = "CUSTOM_RANGE"
+                    showStartDatePicker = false
+                },
+                cal.get(Calendar.YEAR),
+                cal.get(Calendar.MONTH),
+                cal.get(Calendar.DAY_OF_MONTH)
+            )
+            dialog.setOnCancelListener { showStartDatePicker = false }
+            dialog.show()
+            onDispose { dialog.dismiss() }
+        }
+    }
+
+    // Date Picker launcher for Range End Date selection
+    if (showEndDatePicker) {
+        val cal = Calendar.getInstance()
+        if (customEndDateMillis != null) {
+            cal.timeInMillis = customEndDateMillis!!
+        } else if (customStartDateMillis != null) {
+            cal.timeInMillis = customStartDateMillis!!
+        }
+        DisposableEffect(Unit) {
+            val dialog = DatePickerDialog(
+                context,
+                { _, year, month, dayOfMonth ->
+                    val selectedCal = Calendar.getInstance().apply {
+                        set(year, month, dayOfMonth, 23, 59, 59)
+                        set(Calendar.MILLISECOND, 999)
+                    }
+                    customEndDateMillis = selectedCal.timeInMillis
+                    if (customStartDateMillis != null && customStartDateMillis!! > selectedCal.timeInMillis) {
+                        customStartDateMillis = selectedCal.timeInMillis
+                    }
+                    selectedPeriodFilter = "CUSTOM_RANGE"
+                    showEndDatePicker = false
+                },
+                cal.get(Calendar.YEAR),
+                cal.get(Calendar.MONTH),
+                cal.get(Calendar.DAY_OF_MONTH)
+            )
+            dialog.setOnCancelListener { showEndDatePicker = false }
+            dialog.show()
+            onDispose { dialog.dismiss() }
+        }
+    }
+
+    // Helper to format date range
+    fun formatDateRange(startMillis: Long?, endMillis: Long?): String {
+        val dayFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+        val shortFormat = SimpleDateFormat("dd MMM", Locale.getDefault())
+        if (startMillis == null && endMillis == null) return "Date Range"
+        if (startMillis != null && endMillis == null) return "From ${dayFormat.format(Date(startMillis))}"
+        if (startMillis == null && endMillis != null) return "Until ${dayFormat.format(Date(endMillis))}"
+        val s = startMillis ?: return "Date Range"
+        val e = endMillis ?: return "Date Range"
+        val cal1 = Calendar.getInstance().apply { timeInMillis = s }
+        val cal2 = Calendar.getInstance().apply { timeInMillis = e }
+        return if (cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR)) {
+            "${shortFormat.format(Date(s))} – ${dayFormat.format(Date(e))}"
+        } else {
+            "${dayFormat.format(Date(s))} – ${dayFormat.format(Date(e))}"
+        }
+    }
+
     // Filtered transaction list
-    val filteredTransactions = remember(transactions, selectedTypeFilter, selectedPeriodFilter, selectedAccountIdFilter, customDateMillis) {
+    val filteredTransactions = remember(
+        transactions,
+        selectedTypeFilter,
+        selectedPeriodFilter,
+        selectedAccountIdFilter,
+        customDateMillis,
+        customStartDateMillis,
+        customEndDateMillis
+    ) {
         transactions.filter { tx ->
             // 1. Type Filter
             val isLoanRepayment = tx.category.contains("Loan Repayment", ignoreCase = true) || tx.note.contains("Repayment to", ignoreCase = true)
@@ -165,6 +258,32 @@ fun HistoryScreen(
                         tx.timestamp in startOfDay..endOfDay
                     }
                 }
+                "CUSTOM_RANGE" -> {
+                    if (customStartDateMillis == null && customEndDateMillis == null) true
+                    else {
+                        val startOfDay = customStartDateMillis?.let {
+                            Calendar.getInstance().apply {
+                                timeInMillis = it
+                                set(Calendar.HOUR_OF_DAY, 0)
+                                set(Calendar.MINUTE, 0)
+                                set(Calendar.SECOND, 0)
+                                set(Calendar.MILLISECOND, 0)
+                            }.timeInMillis
+                        } ?: Long.MIN_VALUE
+
+                        val endOfDay = customEndDateMillis?.let {
+                            Calendar.getInstance().apply {
+                                timeInMillis = it
+                                set(Calendar.HOUR_OF_DAY, 23)
+                                set(Calendar.MINUTE, 59)
+                                set(Calendar.SECOND, 59)
+                                set(Calendar.MILLISECOND, 999)
+                            }.timeInMillis
+                        } ?: Long.MAX_VALUE
+
+                        tx.timestamp in startOfDay..endOfDay
+                    }
+                }
                 else -> true
             }
 
@@ -196,8 +315,7 @@ fun HistoryScreen(
         val yesterdayStr = dateFormat.format(cal.time)
 
         filteredTransactions.groupBy { tx ->
-            val dateStr = dateFormat.format(Date(tx.timestamp))
-            when (dateStr) {
+            when (val dateStr = dateFormat.format(Date(tx.timestamp))) {
                 todayStr -> "Today"
                 yesterdayStr -> "Yesterday"
                 else -> dateStr
@@ -220,7 +338,10 @@ fun HistoryScreen(
         "YEAR" to "This Year",
         "CUSTOM" to if (selectedPeriodFilter == "CUSTOM" && customDateMillis != null) {
             SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(customDateMillis!!))
-        } else "Select Date"
+        } else "Single Date",
+        "CUSTOM_RANGE" to if (selectedPeriodFilter == "CUSTOM_RANGE" && (customStartDateMillis != null || customEndDateMillis != null)) {
+            formatDateRange(customStartDateMillis, customEndDateMillis)
+        } else "Date Range"
     )
 
     val hasActiveFilters = selectedTypeFilter != "ALL" || selectedPeriodFilter != "ALL" || selectedAccountIdFilter != 0
@@ -263,17 +384,28 @@ fun HistoryScreen(
             selectedPeriod = selectedPeriodFilter,
             selectedAccountId = selectedAccountIdFilter,
             customDateMillis = customDateMillis,
+            customStartDateMillis = customStartDateMillis,
+            customEndDateMillis = customEndDateMillis,
             typeFilters = typeFilters,
             periodFilters = periodFilters,
             onSelectType = { selectedTypeFilter = it },
             onSelectPeriod = { selectedPeriodFilter = it },
             onSelectAccount = { selectedAccountIdFilter = it },
             onPickCustomDate = { showDatePicker = true },
+            onPickStartDate = { showStartDatePicker = true },
+            onPickEndDate = { showEndDatePicker = true },
+            onSelectPresetRange = { start, end ->
+                customStartDateMillis = start
+                customEndDateMillis = end
+                selectedPeriodFilter = "CUSTOM_RANGE"
+            },
             onReset = {
                 selectedTypeFilter = "ALL"
                 selectedPeriodFilter = "ALL"
                 selectedAccountIdFilter = 0
                 customDateMillis = null
+                customStartDateMillis = null
+                customEndDateMillis = null
             },
             onDismiss = { showFilterSheet = false }
         )
@@ -355,15 +487,23 @@ fun HistoryScreen(
                     }
                     if (selectedPeriodFilter != "ALL") {
                         item {
-                            val periodLabel = if (selectedPeriodFilter == "CUSTOM" && customDateMillis != null) {
-                                SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(customDateMillis!!))
-                            } else periodFilters.firstOrNull { it.first == selectedPeriodFilter }?.second ?: selectedPeriodFilter
+                            val periodLabel = when {
+                                selectedPeriodFilter == "CUSTOM" && customDateMillis != null -> {
+                                    SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(customDateMillis!!))
+                                }
+                                selectedPeriodFilter == "CUSTOM_RANGE" -> {
+                                    formatDateRange(customStartDateMillis, customEndDateMillis)
+                                }
+                                else -> periodFilters.firstOrNull { it.first == selectedPeriodFilter }?.second ?: selectedPeriodFilter
+                            }
 
                             ActiveFilterBadge(
                                 label = periodLabel,
                                 onClear = {
                                     selectedPeriodFilter = "ALL"
                                     customDateMillis = null
+                                    customStartDateMillis = null
+                                    customEndDateMillis = null
                                 }
                             )
                         }
@@ -389,6 +529,8 @@ fun HistoryScreen(
                                     selectedPeriodFilter = "ALL"
                                     selectedAccountIdFilter = 0
                                     customDateMillis = null
+                                    customStartDateMillis = null
+                                    customEndDateMillis = null
                                 }
                                 .padding(horizontal = 4.dp, vertical = 4.dp)
                         )
@@ -465,7 +607,7 @@ fun HistoryScreen(
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.TrendingUp,
+                                                imageVector = Icons.AutoMirrored.Filled.TrendingUp,
                                                 contentDescription = null,
                                                 tint = IncomeGreen,
                                                 modifier = Modifier.size(15.dp)
@@ -508,7 +650,7 @@ fun HistoryScreen(
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.TrendingDown,
+                                                imageVector = Icons.AutoMirrored.Filled.TrendingDown,
                                                 contentDescription = null,
                                                 tint = ExpenseRed,
                                                 modifier = Modifier.size(15.dp)
@@ -785,8 +927,8 @@ private fun HistoryTransactionCard(
 
     val (badgeText, badgeColor, icon) = when {
         isLoanRepayment -> Triple("LOAN REPAY", AccentTeal, Icons.Default.CreditCard)
-        tx.type == "INCOME" -> Triple("INCOME", IncomeGreen, Icons.Default.TrendingUp)
-        tx.type == "EXPENSE" -> Triple("EXPENSE", ExpenseRed, Icons.Default.TrendingDown)
+        tx.type == "INCOME" -> Triple("INCOME", IncomeGreen, Icons.AutoMirrored.Filled.TrendingUp)
+        tx.type == "EXPENSE" -> Triple("EXPENSE", ExpenseRed, Icons.AutoMirrored.Filled.TrendingDown)
         else -> Triple("TRANSFER", TransferYellow, Icons.Default.SwapHoriz)
     }
 
@@ -1001,12 +1143,17 @@ private fun HistoryFilterSheet(
     selectedPeriod: String,
     selectedAccountId: Int,
     customDateMillis: Long?,
+    customStartDateMillis: Long?,
+    customEndDateMillis: Long?,
     typeFilters: List<Pair<String, String>>,
     periodFilters: List<Pair<String, String>>,
     onSelectType: (String) -> Unit,
     onSelectPeriod: (String) -> Unit,
     onSelectAccount: (Int) -> Unit,
     onPickCustomDate: () -> Unit,
+    onPickStartDate: () -> Unit,
+    onPickEndDate: () -> Unit,
+    onSelectPresetRange: (Long, Long) -> Unit,
     onReset: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -1100,10 +1247,15 @@ private fun HistoryFilterSheet(
                                 .background(chipBg)
                                 .border(1.dp, chipBorder, RoundedCornerShape(20.dp))
                                 .clickable {
-                                    if (key == "CUSTOM") {
-                                        onPickCustomDate()
-                                    } else {
-                                        onSelectPeriod(key)
+                                    when (key) {
+                                        "CUSTOM" -> onPickCustomDate()
+                                        "CUSTOM_RANGE" -> {
+                                            onSelectPeriod("CUSTOM_RANGE")
+                                            if (customStartDateMillis == null && customEndDateMillis == null) {
+                                                onPickStartDate()
+                                            }
+                                        }
+                                        else -> onSelectPeriod(key)
                                     }
                                 }
                                 .padding(horizontal = 14.dp, vertical = 7.dp)
@@ -1112,8 +1264,13 @@ private fun HistoryFilterSheet(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                if (key == "CUSTOM") {
-                                    Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = chipTextColor, modifier = Modifier.size(14.dp))
+                                if (key == "CUSTOM" || key == "CUSTOM_RANGE") {
+                                    Icon(
+                                        imageVector = Icons.Default.CalendarMonth,
+                                        contentDescription = null,
+                                        tint = chipTextColor,
+                                        modifier = Modifier.size(14.dp)
+                                    )
                                 }
                                 Text(
                                     text = label,
@@ -1123,6 +1280,118 @@ private fun HistoryFilterSheet(
                                 )
                             }
                         }
+                    }
+                }
+
+                // Range / Custom Date Controls
+                if (selectedPeriod == "CUSTOM_RANGE") {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onPickStartDate,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, if (customStartDateMillis != null) AccentBlue else DividerColor),
+                            colors = ButtonDefaults.outlinedButtonColors(containerColor = CardDarker),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Start Date", fontSize = 10.sp, color = TextSecondary)
+                                Text(
+                                    text = customStartDateMillis?.let {
+                                        SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(it))
+                                    } ?: "Pick Date",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (customStartDateMillis != null) AccentBlue else TextPrimary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = onPickEndDate,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, if (customEndDateMillis != null) AccentBlue else DividerColor),
+                            colors = ButtonDefaults.outlinedButtonColors(containerColor = CardDarker),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("End Date", fontSize = 10.sp, color = TextSecondary)
+                                Text(
+                                    text = customEndDateMillis?.let {
+                                        SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(it))
+                                    } ?: "Pick Date",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (customEndDateMillis != null) AccentBlue else TextPrimary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+
+                    // Quick presets
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(7 to "Last 7D", 30 to "Last 30D", 90 to "Last 90D").forEach { (days, label) ->
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(CardDarker)
+                                    .border(1.dp, DividerColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        val endCal = Calendar.getInstance().apply {
+                                            set(Calendar.HOUR_OF_DAY, 23)
+                                            set(Calendar.MINUTE, 59)
+                                            set(Calendar.SECOND, 59)
+                                            set(Calendar.MILLISECOND, 999)
+                                        }
+                                        val startCal = Calendar.getInstance().apply {
+                                            add(Calendar.DAY_OF_YEAR, -days)
+                                            set(Calendar.HOUR_OF_DAY, 0)
+                                            set(Calendar.MINUTE, 0)
+                                            set(Calendar.SECOND, 0)
+                                            set(Calendar.MILLISECOND, 0)
+                                        }
+                                        onSelectPresetRange(startCal.timeInMillis, endCal.timeInMillis)
+                                    }
+                                    .padding(vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(label, fontSize = 11.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+                            }
+                        }
+                    }
+                } else if (selectedPeriod == "CUSTOM" && customDateMillis != null) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(CardDarker)
+                            .border(1.dp, AccentBlue.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                            .clickable { onPickCustomDate() }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Selected: ${SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(Date(customDateMillis))}",
+                            fontSize = 12.sp,
+                            color = AccentBlue,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text("Change", fontSize = 11.sp, color = TextSecondary)
                     }
                 }
             }
