@@ -57,6 +57,9 @@ import com.shejan.financebuddy.data.db.PayeeAccountEntity
 import com.shejan.financebuddy.data.db.PayeeEntity
 import com.shejan.financebuddy.data.db.TransactionEntity
 import com.shejan.financebuddy.data.db.AccountEntity
+import com.shejan.financebuddy.data.db.LoanEntity
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import com.shejan.financebuddy.ui.theme.*
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
@@ -101,12 +104,14 @@ fun PayeeDetailScreen(
     accounts: List<PayeeAccountEntity>,
     allTransactions: List<TransactionEntity> = emptyList(),
     allAccounts: List<AccountEntity> = emptyList(),
+    allLoans: List<LoanEntity> = emptyList(),
     onBack: () -> Unit,
     onUpdatePayee: (PayeeEntity) -> Unit,
     onDeletePayee: () -> Unit,
     onAddAccount: (PayeeAccountEntity) -> Unit,
     onUpdateAccount: (PayeeAccountEntity) -> Unit,
-    onDeleteAccount: (PayeeAccountEntity) -> Unit
+    onDeleteAccount: (PayeeAccountEntity) -> Unit,
+    onNavigateToLoans: (() -> Unit)? = null
 ) {
     if (payee == null) {
         Box(modifier = Modifier.fillMaxSize().background(BackgroundDark), contentAlignment = Alignment.Center) {
@@ -132,6 +137,28 @@ fun PayeeDetailScreen(
             accNums.any { num -> tx.note.contains(num, ignoreCase = true) }
         }.sortedByDescending { it.timestamp }
     }
+
+    val matchedLoans = remember(allLoans, payee) {
+        allLoans.filter { loan ->
+            val lender = loan.lenderName.trim()
+            val bank = loan.bankName.trim()
+            val pName = payee.name.trim()
+            val uId = payee.uniqueId.trim()
+
+            (lender.isNotBlank() && (lender.equals(pName, ignoreCase = true) || lender.contains(pName, ignoreCase = true) || pName.contains(lender, ignoreCase = true))) ||
+            (uId.isNotBlank() && (lender.contains(uId, ignoreCase = true) || bank.contains(uId, ignoreCase = true))) ||
+            (bank.isNotBlank() && bank.equals(pName, ignoreCase = true))
+        }
+    }
+
+    val totalLentLoan = remember(matchedLoans) {
+        matchedLoans.filter { it.isLent }.sumOf { (it.loanAmount - it.repaidAmount).coerceAtLeast(0.0) }
+    }
+
+    val totalBorrowed = remember(matchedLoans) {
+        matchedLoans.filter { !it.isLent }.sumOf { (it.loanAmount - it.repaidAmount).coerceAtLeast(0.0) }
+    }
+
     val currencyFormat = remember { DecimalFormat("#,##0.00") }
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
 
@@ -590,6 +617,88 @@ fun PayeeDetailScreen(
                             Text(
                                 text = if (showHistory) "View Accounts" else "View History",
                                 color = toggleColor,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                // Loan & Borrow Summary Boxes Row
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Loan (Lent) Box
+                    val loanActive = totalLentLoan > 0
+                    val loanColor = if (loanActive) IncomeGreen else TextSecondary
+                    val loanBg = if (loanActive) IncomeGreen.copy(alpha = 0.12f) else CardDarker
+                    val loanBorder = if (loanActive) IncomeGreen.copy(alpha = 0.35f) else DividerColor
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(loanBg)
+                            .border(1.dp, loanBorder, RoundedCornerShape(8.dp))
+                            .then(
+                                if (onNavigateToLoans != null) {
+                                    Modifier.clickable { onNavigateToLoans() }
+                                } else Modifier
+                            )
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                                contentDescription = null,
+                                tint = loanColor,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = "Loan: ৳${currencyFormat.format(totalLentLoan)}",
+                                color = loanColor,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    // Borrow (Debt) Box
+                    val borrowActive = totalBorrowed > 0
+                    val borrowColor = if (borrowActive) ExpenseRed else TextSecondary
+                    val borrowBg = if (borrowActive) ExpenseRed.copy(alpha = 0.12f) else CardDarker
+                    val borrowBorder = if (borrowActive) ExpenseRed.copy(alpha = 0.35f) else DividerColor
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(borrowBg)
+                            .border(1.dp, borrowBorder, RoundedCornerShape(8.dp))
+                            .then(
+                                if (onNavigateToLoans != null) {
+                                    Modifier.clickable { onNavigateToLoans() }
+                                } else Modifier
+                            )
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.TrendingDown,
+                                contentDescription = null,
+                                tint = borrowColor,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = "Borrow: ৳${currencyFormat.format(totalBorrowed)}",
+                                color = borrowColor,
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold
                             )

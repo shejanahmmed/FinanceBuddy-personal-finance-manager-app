@@ -480,12 +480,15 @@ fun AppNavigation(
                 val currentAccounts = remember(payeeAccounts, payeeId) { payeeAccounts.filter { it.payeeId == payeeId } }
                 val scope = rememberCoroutineScope()
                 val payeeDao = remember { database.payeeDao() }
+                val loanDao = remember { database.loanDao() }
+                val loans by loanDao.getAllLoans().collectAsState(initial = emptyList())
 
                 PayeeDetailScreen(
                     payee = payee,
                     accounts = currentAccounts,
                     allTransactions = allTransactions,
                     allAccounts = accounts,
+                    allLoans = loans,
                     onBack = { navController.popBackStack() },
                     onUpdatePayee = { updated ->
                         scope.launch(Dispatchers.IO) { payeeDao.updatePayee(updated) }
@@ -504,7 +507,8 @@ fun AppNavigation(
                     },
                     onDeleteAccount = { acc ->
                         scope.launch(Dispatchers.IO) { payeeDao.deletePayeeAccount(acc) }
-                    }
+                    },
+                    onNavigateToLoans = { navController.navigate("loans") }
                 )
             }
 
