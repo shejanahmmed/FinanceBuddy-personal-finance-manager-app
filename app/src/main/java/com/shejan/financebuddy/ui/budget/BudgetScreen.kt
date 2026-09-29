@@ -1,8 +1,8 @@
 package com.shejan.financebuddy.ui.budget
 
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,6 +10,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,7 +50,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -60,6 +60,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.text.TextStyle
 import androidx.core.content.edit
+import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Scaffold
@@ -87,23 +88,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shejan.financebuddy.data.db.BudgetEntity
-import com.shejan.financebuddy.ui.theme.AccentBlue
-import com.shejan.financebuddy.ui.theme.AccentTeal
-import com.shejan.financebuddy.ui.theme.BackgroundDark
-import com.shejan.financebuddy.ui.theme.CardDark
-import com.shejan.financebuddy.ui.theme.CardDarker
-import com.shejan.financebuddy.ui.theme.DividerColor
-import com.shejan.financebuddy.ui.theme.DrawerBackground
-import com.shejan.financebuddy.ui.theme.ExpenseRed
-import com.shejan.financebuddy.ui.theme.GradientEnd
-import com.shejan.financebuddy.ui.theme.GradientStart
+import com.shejan.financebuddy.ui.theme.*
 import android.content.Context
 import androidx.compose.ui.platform.LocalContext
-import com.shejan.financebuddy.ui.theme.IncomeGreen
-import com.shejan.financebuddy.ui.theme.TextMuted
-import com.shejan.financebuddy.ui.theme.TextPrimary
-import com.shejan.financebuddy.ui.theme.TextSecondary
-import com.shejan.financebuddy.ui.theme.TransferYellow
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
@@ -121,9 +108,9 @@ import java.util.Locale
 // Budget Screen — per-category monthly spending limits
 // ─────────────────────────────────────────────────────────────
 
-private val expenseCategories = listOf(
+private val defaultExpenseCategories = listOf(
     "Food", "Groceries", "Rent", "Utilities", "Travel",
-    "Shopping", "Entertainment", "Medical", "Other"
+    "Shopping", "Entertainment", "Medical"
 )
 
 private val categoryColors = mapOf(
@@ -152,7 +139,7 @@ private val niceColors = listOf(
 private fun getCategoryColor(category: String): String {
     val existingColor = categoryColors[category]
     if (existingColor != null) return existingColor
-    val index = Math.abs(category.hashCode()) % niceColors.size
+    val index = kotlin.math.abs(category.hashCode()) % niceColors.size
     return niceColors[index]
 }
 
@@ -439,8 +426,6 @@ fun BudgetScreen(
                     MonthlyOverviewCard(
                         totalBudgeted  = totalBudgeted,
                         totalSpent     = totalSpent,
-                        currencyFormat = currencyFormat,
-                        monthLabel     = selectedMonthOption.label,
                         onInfoClick    = { showInfoDialog = true }
                     )
                     Spacer(modifier = Modifier.height(20.dp))
@@ -675,15 +660,21 @@ fun BudgetScreen(
 }
 
 // ─────────────────────────────────────────────────────────────
-// Monthly Overview Arc Card
+// Monthly Overview Ring Card
 // ─────────────────────────────────────────────────────────────
+
+private fun formatOverviewAmount(amount: Double, forceDecimals: Boolean = false): String {
+    return if (forceDecimals || amount % 1.0 != 0.0) {
+        DecimalFormat("#,##,##0.00").format(amount)
+    } else {
+        DecimalFormat("#,##,##0").format(amount)
+    }
+}
 
 @Composable
 fun MonthlyOverviewCard(
     totalBudgeted: Double,
     totalSpent: Double,
-    currencyFormat: DecimalFormat,
-    monthLabel: String = "This Month",
     onInfoClick: () -> Unit = {}
 ) {
     val progress = if (totalBudgeted > 0) (totalSpent / totalBudgeted).toFloat().coerceIn(0f, 1f) else 0f
@@ -694,10 +685,10 @@ fun MonthlyOverviewCard(
     )
 
     val arcColor = when {
-        progress >= 1f  -> ExpenseRed
+        progress >= 1f   -> ExpenseRed
         progress >= 0.9f -> ExpenseRed.copy(alpha = 0.85f)
         progress >= 0.7f -> TransferYellow
-        else            -> IncomeGreen
+        else             -> IncomeGreen
     }
 
     val remaining = (totalBudgeted - totalSpent).coerceAtLeast(0.0)
@@ -708,7 +699,7 @@ fun MonthlyOverviewCard(
             .padding(horizontal = 20.dp, vertical = 8.dp),
         shape  = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = CardDark),
-        border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor)
+        border = BorderStroke(1.dp, DividerColor)
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             IconButton(
@@ -722,87 +713,121 @@ fun MonthlyOverviewCard(
                     imageVector        = Icons.Default.Info,
                     contentDescription = "Budget Information",
                     tint               = TextMuted,
-                    modifier           = Modifier.size(18.dp)
+                    modifier           = Modifier.size(20.dp)
                 )
             }
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
+                    .padding(horizontal = 20.dp, vertical = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-            // Arc chart
-            Box(
-                modifier         = Modifier.size(160.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                    val sweepAngle = animatedProgress * 270f
-                    val strokeW    = 18.dp.toPx()
+                // Circular Progress Ring
+                Box(
+                    modifier         = Modifier.size(175.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val trackColor = if (isDarkModeGlobal) Color(0xFF1E2D42) else Color(0xFFE2E8F0)
 
-                    // Background arc track
-                    drawArc(
-                        color      = CardDarker,
-                        startAngle = 135f,
-                        sweepAngle = 270f,
-                        useCenter  = false,
-                        style      = Stroke(width = strokeW, cap = StrokeCap.Round)
-                    )
-                    // Filled arc
-                    if (sweepAngle > 0f) {
-                        drawArc(
-                            color      = arcColor,
-                            startAngle = 135f,
-                            sweepAngle = sweepAngle,
-                            useCenter  = false,
-                            style      = Stroke(width = strokeW, cap = StrokeCap.Round)
+                    Canvas(modifier = Modifier.fillMaxSize().padding(10.dp)) {
+                        val strokeW = 16.dp.toPx()
+                        val diameter = size.minDimension - strokeW
+                        val radius = diameter / 2f
+                        val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
+                        val arcSize = androidx.compose.ui.geometry.Size(diameter, diameter)
+
+                        // 360° Background Ring Track
+                        drawCircle(
+                            color  = trackColor,
+                            radius = radius,
+                            center = center,
+                            style  = Stroke(width = strokeW)
+                        )
+
+                        // Active Progress Arc starting from top (-90 degrees)
+                        if (animatedProgress > 0f) {
+                            drawArc(
+                                color      = arcColor,
+                                startAngle = -90f,
+                                sweepAngle = animatedProgress * 360f,
+                                useCenter  = false,
+                                topLeft    = topLeft,
+                                size       = arcSize,
+                                style      = Stroke(width = strokeW, cap = StrokeCap.Round)
+                            )
+                        }
+                    }
+
+                    // Center Percentage Content
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text       = "${(animatedProgress * 100).toInt()}%",
+                            fontSize   = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            color      = if (animatedProgress == 0f) IncomeGreen else arcColor
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text       = "used",
+                            fontSize   = 14.sp,
+                            fontWeight = FontWeight.Normal,
+                            color      = TextSecondary
                         )
                     }
                 }
 
-                // Center content
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text       = "${(animatedProgress * 100).toInt()}%",
-                        style      = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color      = arcColor
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Horizontal Divider Line
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(DividerColor.copy(alpha = 0.5f))
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Stats row with vertical separators
+                Row(
+                    modifier          = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    BudgetStatItem(
+                        label    = "Budgeted",
+                        value    = "৳${formatOverviewAmount(totalBudgeted)}",
+                        color    = TextPrimary,
+                        modifier = Modifier.weight(1f)
                     )
-                    Text(
-                        text  = "used",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(34.dp)
+                            .background(DividerColor.copy(alpha = 0.5f))
+                    )
+                    BudgetStatItem(
+                        label    = "Spent",
+                        value    = "৳${formatOverviewAmount(totalSpent, forceDecimals = true)}",
+                        color    = if (totalSpent > 0 && progress >= 1f) ExpenseRed else IncomeGreen,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(34.dp)
+                            .background(DividerColor.copy(alpha = 0.5f))
+                    )
+                    BudgetStatItem(
+                        label    = "Remaining",
+                        value    = "৳${formatOverviewAmount(remaining)}",
+                        color    = IncomeGreen,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Stats row
-            Row(
-                modifier              = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                BudgetStatItem(label = "Budgeted",  value = "৳${currencyFormat.format(totalBudgeted)}", color = TextPrimary)
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(40.dp)
-                        .background(DividerColor)
-                )
-                BudgetStatItem(label = "Spent",     value = "৳${currencyFormat.format(totalSpent)}",    color = arcColor)
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(40.dp)
-                        .background(DividerColor)
-                )
-                BudgetStatItem(label = "Remaining", value = "৳${currencyFormat.format(remaining)}",     color = IncomeGreen)
-            }
         }
     }
-}
 }
 
 @Composable
@@ -930,19 +955,28 @@ private fun BudgetInfoRow(title: String, description: String) {
 }
 
 @Composable
-private fun BudgetStatItem(label: String, value: String, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun BudgetStatItem(
+    label: String,
+    value: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Text(
             text       = value,
-            style      = MaterialTheme.typography.titleSmall,
+            fontSize   = 18.sp,
             fontWeight = FontWeight.Bold,
             color      = color
         )
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text  = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = TextSecondary
+            text       = label,
+            fontSize   = 13.sp,
+            fontWeight = FontWeight.Normal,
+            color      = TextSecondary
         )
     }
 }
@@ -966,9 +1000,9 @@ fun BudgetItemCard(
         label = "BudgetItemProgress"
     )
 
-    val accentColor = remember {
-        try { Color(android.graphics.Color.parseColor(budget.colorHex)) }
-        catch (e: Exception) { AccentTeal }
+    val accentColor = remember(budget.colorHex) {
+        try { Color(budget.colorHex.toColorInt()) }
+        catch (_: Exception) { AccentTeal }
     }
 
     val barColor = when {
@@ -989,9 +1023,9 @@ fun BudgetItemCard(
         shape  = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = CardDark),
         border = if (overBudget)
-            androidx.compose.foundation.BorderStroke(1.dp, ExpenseRed.copy(alpha = 0.4f))
+            BorderStroke(1.dp, ExpenseRed.copy(alpha = 0.4f))
         else
-            androidx.compose.foundation.BorderStroke(1.dp, DividerColor)
+            BorderStroke(1.dp, DividerColor)
     ) {
         Column(
             modifier = Modifier
@@ -1166,7 +1200,6 @@ fun AddBudgetSheet(
 ) {
     val context = LocalContext.current
     val sharedPreferences = remember { context.getSharedPreferences("finance_buddy_prefs", Context.MODE_PRIVATE) }
-    val defaultExpenseCategories = listOf("Food", "Groceries", "Rent", "Utilities", "Travel", "Shopping", "Entertainment", "Medical")
 
     var expenseCategories by remember {
         val saved = sharedPreferences.getString("active_expense_categories", null)
@@ -1281,7 +1314,7 @@ fun AddBudgetSheet(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            androidx.compose.foundation.layout.FlowRow(
+            FlowRow(
                 modifier              = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement   = Arrangement.spacedBy(8.dp)
@@ -1289,8 +1322,8 @@ fun AddBudgetSheet(
                 available.forEach { cat ->
                     val isSelected = selectedCategory.equals(cat, ignoreCase = true)
                     val catColor = try {
-                        Color(android.graphics.Color.parseColor(getCategoryColor(cat)))
-                    } catch (e: Exception) { AccentTeal }
+                        Color(getCategoryColor(cat).toColorInt())
+                    } catch (_: Exception) { AccentTeal }
 
                     Box(
                         modifier = Modifier
@@ -1711,8 +1744,8 @@ fun AddBudgetSheet(
                     border = BorderStroke(1.dp, DividerColor)
                 ) {
                     val dotColor = try {
-                        Color(android.graphics.Color.parseColor(getCategoryColor(categoryToManage)))
-                    } catch (e: Exception) { AccentTeal }
+                        Color(getCategoryColor(categoryToManage).toColorInt())
+                    } catch (_: Exception) { AccentTeal }
                     Column(
                         modifier = Modifier.padding(22.dp)
                     ) {
