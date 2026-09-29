@@ -208,14 +208,6 @@ class PreferencesManager(private val context: Context) {
         }
     }
 
-    /** Marks a single notification ID as read. */
-    suspend fun markNotificationAsRead(id: String) {
-        context.dataStore.edit { prefs ->
-            val current = prefs[READ_NOTIFICATION_IDS] ?: emptySet()
-            prefs[READ_NOTIFICATION_IDS] = current + id
-        }
-    }
-
     /** Dismisses a single notification ID. */
     suspend fun dismissNotification(id: String) {
         context.dataStore.edit { prefs ->
@@ -272,10 +264,6 @@ class PreferencesManager(private val context: Context) {
         prefs[DAILY_REMINDER_1_MINUTE] ?: (prefs[DAILY_REMINDER_MINUTE] ?: 0)
     }
 
-    // Legacy backwards compatibility aliases for Slot 1
-    val dailyReminderHour: Flow<Int> = reminder1Hour
-    val dailyReminderMinute: Flow<Int> = reminder1Minute
-
     // --- Slot 2 (Default: 2:00 PM / 14:00) ---
     val reminder2Enabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[DAILY_REMINDER_2_ENABLED] ?: false
@@ -300,31 +288,6 @@ class PreferencesManager(private val context: Context) {
 
     val reminder3Minute: Flow<Int> = context.dataStore.data.map { prefs ->
         prefs[DAILY_REMINDER_3_MINUTE] ?: 0
-    }
-
-    /** Updates a specific reminder slot's enabled state and time. */
-    suspend fun setReminderSlot(slotIndex: Int, enabled: Boolean, hour: Int, minute: Int) {
-        context.dataStore.edit { prefs ->
-            when (slotIndex) {
-                1 -> {
-                    prefs[DAILY_REMINDER_1_ENABLED] = enabled
-                    prefs[DAILY_REMINDER_1_HOUR] = hour
-                    prefs[DAILY_REMINDER_1_MINUTE] = minute
-                    prefs[DAILY_REMINDER_HOUR] = hour
-                    prefs[DAILY_REMINDER_MINUTE] = minute
-                }
-                2 -> {
-                    prefs[DAILY_REMINDER_2_ENABLED] = enabled
-                    prefs[DAILY_REMINDER_2_HOUR] = hour
-                    prefs[DAILY_REMINDER_2_MINUTE] = minute
-                }
-                3 -> {
-                    prefs[DAILY_REMINDER_3_ENABLED] = enabled
-                    prefs[DAILY_REMINDER_3_HOUR] = hour
-                    prefs[DAILY_REMINDER_3_MINUTE] = minute
-                }
-            }
-        }
     }
 
     /** Updates only the enabled state of a specific reminder slot. */
@@ -358,22 +321,5 @@ class PreferencesManager(private val context: Context) {
                 }
             }
         }
-    }
-
-    /** Legacy helper for slot 1 */
-    suspend fun setDailyReminder(enabled: Boolean, hour: Int, minute: Int) {
-        context.dataStore.edit { prefs ->
-            prefs[DAILY_REMINDER_ENABLED] = enabled
-            prefs[DAILY_REMINDER_1_ENABLED] = enabled
-            prefs[DAILY_REMINDER_1_HOUR] = hour
-            prefs[DAILY_REMINDER_1_MINUTE] = minute
-            prefs[DAILY_REMINDER_HOUR] = hour
-            prefs[DAILY_REMINDER_MINUTE] = minute
-        }
-    }
-
-    /** Legacy helper for slot 1 time */
-    suspend fun setDailyReminderTime(hour: Int, minute: Int) {
-        setReminderSlotTime(1, hour, minute)
     }
 }

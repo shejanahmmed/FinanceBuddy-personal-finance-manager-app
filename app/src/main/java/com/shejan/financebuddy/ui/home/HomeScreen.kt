@@ -103,19 +103,12 @@ import com.shejan.financebuddy.data.db.PayeeEntity
 import com.shejan.financebuddy.data.db.PayeeAccountEntity
 import com.shejan.financebuddy.ui.home.components.BalanceTrendLineChart
 import com.shejan.financebuddy.ui.home.components.ExpenseBarChart
-import com.shejan.financebuddy.ui.theme.AccentBlue
-import com.shejan.financebuddy.ui.theme.AccentTeal
-import com.shejan.financebuddy.ui.theme.BackgroundDark
-import com.shejan.financebuddy.ui.theme.CardDark
-import com.shejan.financebuddy.ui.theme.CardDarker
-import com.shejan.financebuddy.ui.theme.DividerColor
-import com.shejan.financebuddy.ui.theme.ExpenseRed
-import com.shejan.financebuddy.ui.theme.IncomeGreen
-import com.shejan.financebuddy.ui.theme.TextMuted
-import com.shejan.financebuddy.ui.theme.TextPrimary
-import com.shejan.financebuddy.ui.theme.TextSecondary
-import com.shejan.financebuddy.ui.theme.TransferYellow
-import com.shejan.financebuddy.ui.theme.currentThemeModeState
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.style.TextAlign
+import com.shejan.financebuddy.ui.theme.*
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -525,13 +518,13 @@ fun HomeScreen(
                 // ── 3. Expense Graph (Weekly Chart) ───────────────────
                 SectionHeader(title = "Weekly Spending", onViewAllClick = onNavigateToHistory)
                 Card(
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = CardDark),
                     border = BorderStroke(1.dp, DividerColor),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 8.dp)
-                        .height(200.dp)
+                        .height(205.dp)
                 ) {
                     val weeklyExpenses = remember(allTransactions) { getActualWeeklyExpenses(allTransactions) }
                     val hasWeeklyExpenses = remember(weeklyExpenses) { weeklyExpenses.any { it > 0.0 } }
@@ -545,14 +538,117 @@ fun HomeScreen(
                         )
                     } else {
                         Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
+                            modifier = Modifier.fillMaxSize()
                         ) {
-                            Text(
-                                text     = "No spending data for this week.",
-                                color    = TextMuted,
-                                fontSize = 14.sp
-                            )
+                            // Dot Grid and Sinusoidal Dashed Curve Background
+                            Canvas(modifier = Modifier.fillMaxSize()) {
+                                val spacing = 22.dp.toPx()
+                                val dotRadius = 1.1.dp.toPx()
+                                val dotColor = if (isDarkModeGlobal) Color.White.copy(alpha = 0.05f) else Color.Black.copy(alpha = 0.04f)
+
+                                var x = spacing / 2f
+                                while (x < size.width) {
+                                    var y = spacing / 2f
+                                    while (y < size.height) {
+                                        drawCircle(
+                                            color = dotColor,
+                                            radius = dotRadius,
+                                            center = Offset(x, y)
+                                        )
+                                        y += spacing
+                                    }
+                                    x += spacing
+                                }
+
+                                // Wavy sinusoidal dashed curve
+                                val path = Path().apply {
+                                    moveTo(-10f, size.height * 0.65f)
+                                    cubicTo(
+                                        size.width * 0.22f, size.height * 0.65f,
+                                        size.width * 0.35f, size.height * 0.36f,
+                                        size.width * 0.50f, size.height * 0.36f
+                                    )
+                                    cubicTo(
+                                        size.width * 0.65f, size.height * 0.36f,
+                                        size.width * 0.78f, size.height * 0.65f,
+                                        size.width + 10f, size.height * 0.58f
+                                    )
+                                }
+
+                                drawPath(
+                                    path = path,
+                                    color = AccentTeal.copy(alpha = 0.35f),
+                                    style = Stroke(
+                                        width = 2.dp.toPx(),
+                                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 6.dp.toPx()), 0f)
+                                    )
+                                )
+                            }
+
+                            // Foreground Content: Mini squircle bar icon and descriptive texts
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(54.dp)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(CardDarker)
+                                        .border(1.dp, DividerColor.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalAlignment = Alignment.Bottom,
+                                        modifier = Modifier.height(20.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .width(3.dp)
+                                                .height(10.dp)
+                                                .clip(RoundedCornerShape(2.dp))
+                                                .background(TextMuted)
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .width(3.dp)
+                                                .height(20.dp)
+                                                .clip(RoundedCornerShape(2.dp))
+                                                .background(TextMuted)
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .width(3.dp)
+                                                .height(14.dp)
+                                                .clip(RoundedCornerShape(2.dp))
+                                                .background(TextMuted)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(14.dp))
+
+                                Text(
+                                    text = "No spending data for this week.",
+                                    fontSize = 15.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = TextPrimary,
+                                    textAlign = TextAlign.Center
+                                )
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                Text(
+                                    text = "Transactions you make will appear here",
+                                    fontSize = 13.sp,
+                                    color = TextSecondary,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                     }
                 }
