@@ -87,20 +87,14 @@ object DailyReminderManager {
                         pendingIntent
                     )
                 }
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            } else {
                 alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
                     triggerTime,
                     pendingIntent
                 )
-            } else {
-                alarmManager.setExact(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerTime,
-                    pendingIntent
-                )
             }
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             // Fallback for strict permission environments
             alarmManager.set(
                 AlarmManager.RTC_WAKEUP,
@@ -184,15 +178,6 @@ object DailyReminderManager {
         }
     }
 
-    /** Legacy helper for slot 1 / primary reminder */
-    fun scheduleDailyReminder(context: Context, hour: Int, minute: Int) {
-        scheduleSlotReminder(context, 1, hour, minute)
-    }
-
-    /** Legacy helper to cancel all reminders */
-    fun cancelDailyReminder(context: Context) {
-        cancelAllReminders(context)
-    }
 
     /**
      * Displays the daily finance check-in notification for a specific [slotIndex].
