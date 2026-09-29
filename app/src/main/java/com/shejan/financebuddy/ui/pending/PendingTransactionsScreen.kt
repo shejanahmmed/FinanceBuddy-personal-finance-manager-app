@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Check
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Tune
@@ -32,6 +34,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SwapVert
+import android.app.DatePickerDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.shejan.financebuddy.ui.common.AccountDropdownItemView
@@ -171,19 +174,37 @@ fun PendingTransactionsScreen(
         }
     }
 
-    fun startSyncProcess(daysLimit: Int?) {
+    fun startSyncProcess(daysLimit: Int? = null, fromTimestampMillis: Long? = null, customDateLabel: String? = null) {
         isScanning = true
         scope.launch {
             val startTime = System.currentTimeMillis()
-            val count = com.shejan.financebuddy.sms.SmsSyncHelper.syncPreviousSms(context, database, daysLimit)
+            val count = com.shejan.financebuddy.sms.SmsSyncHelper.syncPreviousSms(
+                context = context,
+                database = database,
+                daysLimit = daysLimit,
+                fromTimestampMillis = fromTimestampMillis
+            )
             val elapsed = System.currentTimeMillis() - startTime
             if (elapsed < 800) {
                 delay(800 - elapsed)
             }
             isScanning = false
+            val toastMsg = if (count > 0) {
+                if (customDateLabel != null) {
+                    "Imported $count message(s) from $customDateLabel onwards!"
+                } else {
+                    "Imported $count transaction messages!"
+                }
+            } else {
+                if (customDateLabel != null) {
+                    "No new transaction messages found from $customDateLabel onwards."
+                } else {
+                    "No new transaction messages found."
+                }
+            }
             android.widget.Toast.makeText(
                 context,
-                if (count > 0) "Imported $count transaction messages!" else "No new transaction messages found.",
+                toastMsg,
                 android.widget.Toast.LENGTH_LONG
             ).show()
         }
@@ -194,6 +215,7 @@ fun PendingTransactionsScreen(
     var showDismissAllDialog by remember { mutableStateOf(false) }
     var showConfirmAllDialog by remember { mutableStateOf(false) }
     var showMappingConfigSheet by remember { mutableStateOf(false) }
+    var showCustomDatePicker by remember { mutableStateOf(false) }
     val configSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // Filter tab selection: "PENDING", "CONFIRMED", "DISMISSED"
@@ -234,7 +256,7 @@ fun PendingTransactionsScreen(
         }
     }
 
-    val isAnyDialogActive = showSyncOptionsDialog || showConfirmAllDialog || showDismissAllDialog || showMappingConfigSheet
+    val isAnyDialogActive = showSyncOptionsDialog || showCustomDatePicker || showConfirmAllDialog || showDismissAllDialog || showMappingConfigSheet
     val blurRadius by animateDpAsState(
         targetValue = if (isAnyDialogActive) 6.dp else 0.dp,
         animationSpec = tween(durationMillis = 200),
@@ -834,12 +856,21 @@ fun PendingTransactionsScreen(
                 shape            = RoundedCornerShape(20.dp),
                 modifier         = Modifier.border(1.dp, DividerColor.copy(alpha = 0.7f), RoundedCornerShape(20.dp)),
                 title = {
-                    Text(
-                        "Sync SMS History",
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = null,
+                            tint = AccentTeal,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            "Sync SMS History",
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                    }
                 },
                 text = {
                     Column(
@@ -868,7 +899,7 @@ fun PendingTransactionsScreen(
                                     .border(1.dp, DividerColor.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                                     .clickable {
                                         showSyncOptionsDialog = false
-                                        startSyncProcess(days)
+                                        startSyncProcess(daysLimit = days)
                                     }
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -888,6 +919,48 @@ fun PendingTransactionsScreen(
                                 )
                             }
                         }
+
+                        // Option to Sync from a specific custom start date onwards
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(CardDarker)
+                                .border(1.dp, AccentTeal.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                                .clickable {
+                                    showSyncOptionsDialog = false
+                                    showCustomDatePicker = true
+                                }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = null,
+                                tint = AccentTeal,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "From Specific Date...",
+                                    color = TextPrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "Pick a starting date to sync onwards",
+                                    color = TextMuted,
+                                    fontSize = 11.5.sp
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = TextMuted,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 },
                 confirmButton = {
@@ -905,6 +978,33 @@ fun PendingTransactionsScreen(
                     }
                 }
             )
+        }
+
+        // Custom Start Date Picker for SMS Sync
+        if (showCustomDatePicker) {
+            val cal = Calendar.getInstance()
+            DisposableEffect(Unit) {
+                val dialog = DatePickerDialog(
+                    context,
+                    { _, year, month, dayOfMonth ->
+                        val selectedCal = Calendar.getInstance().apply {
+                            set(year, month, dayOfMonth, 0, 0, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }
+                        val fromDateMillis = selectedCal.timeInMillis
+                        val dateStr = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(fromDateMillis))
+                        showCustomDatePicker = false
+                        startSyncProcess(daysLimit = null, fromTimestampMillis = fromDateMillis, customDateLabel = dateStr)
+                    },
+                    cal.get(Calendar.YEAR),
+                    cal.get(Calendar.MONTH),
+                    cal.get(Calendar.DAY_OF_MONTH)
+                )
+                dialog.datePicker.maxDate = System.currentTimeMillis()
+                dialog.setOnCancelListener { showCustomDatePicker = false }
+                dialog.show()
+                onDispose { dialog.dismiss() }
+            }
         }
 
         if (showMappingConfigSheet) {

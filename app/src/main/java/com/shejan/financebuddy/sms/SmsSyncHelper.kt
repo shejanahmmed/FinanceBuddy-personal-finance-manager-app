@@ -18,9 +18,16 @@ object SmsSyncHelper {
      * Scans the system SMS inbox for transaction messages from the last 30 days.
      * Filters, parses, and inserts them into the pending database.
      * 
+     * @param daysLimit Optional number of days to look back.
+     * @param fromTimestampMillis Optional start timestamp in millis (e.g. from custom date picker). Takes priority over daysLimit.
      * @return The number of newly imported transactions.
      */
-    suspend fun syncPreviousSms(context: Context, database: FinanceDatabase, daysLimit: Int? = 30): Int = withContext(Dispatchers.IO) {
+    suspend fun syncPreviousSms(
+        context: Context,
+        database: FinanceDatabase,
+        daysLimit: Int? = 30,
+        fromTimestampMillis: Long? = null
+    ): Int = withContext(Dispatchers.IO) {
         if (!isReadSmsPermissionGranted(context)) {
             Log.w(TAG, "READ_SMS permission not granted. Aborting sync.")
             return@withContext 0
@@ -37,13 +44,18 @@ object SmsSyncHelper {
         val uri = Uri.parse("content://sms/inbox")
         val projection = arrayOf("address", "body", "date")
 
-        // Build selection dynamically based on daysLimit
+        // Build selection dynamically based on fromTimestampMillis or daysLimit
+        val minTimestamp: Long? = when {
+            fromTimestampMillis != null && fromTimestampMillis > 0 -> fromTimestampMillis
+            daysLimit != null && daysLimit > 0 -> System.currentTimeMillis() - (daysLimit.toLong() * 24 * 60 * 60 * 1000)
+            else -> null
+        }
+
         val selection: String?
         val selectionArgs: Array<String>?
-        if (daysLimit != null && daysLimit > 0) {
-            val limitMillis = System.currentTimeMillis() - (daysLimit.toLong() * 24 * 60 * 60 * 1000)
+        if (minTimestamp != null) {
             selection = "date >= ?"
-            selectionArgs = arrayOf(limitMillis.toString())
+            selectionArgs = arrayOf(minTimestamp.toString())
         } else {
             selection = null
             selectionArgs = null
