@@ -360,7 +360,7 @@ fun BalanceTrendLineChart(
             val leftPadding = 20.dp.toPx()
             val rightPadding = 20.dp.toPx()
             val topPadding = 34.dp.toPx()
-            val bottomPadding = 42.dp.toPx()
+            val bottomPadding = 30.dp.toPx()
 
             val chartW = w - leftPadding - rightPadding
             val chartH = h - topPadding - bottomPadding
@@ -522,33 +522,25 @@ fun BalanceTrendLineChart(
                 strokeWidth = 1.dp.toPx()
             )
 
-            // ── X-Axis Date Labels (Day on top, Month centered below) ──
+            // ── X-Axis Day of Week Labels (e.g. Wed, Thu, Fri, Sat...) ──
             balances.forEachIndexed { idx, _ ->
-                val dateLabel = dates.getOrNull(idx) ?: ""
-                if (dateLabel.isNotBlank()) {
+                val dayLabel = dates.getOrNull(idx) ?: ""
+                if (dayLabel.isNotBlank()) {
                     val isHighlighted = idx == activeIdx || (activeIdx == -1 && idx == pointsCount - 1)
-                    val parts = dateLabel.trim().split(" ")
-                    val dayText = parts.getOrNull(0) ?: dateLabel
-                    val monthText = parts.getOrNull(1) ?: ""
-
-                    val centerX = leftPadding + idx * xStep
-
-                    // Top: Day number (e.g. "20", "30")
-                    val dayResult = textMeasurer.measure(
-                        text = dayText,
+                    val labelResult = textMeasurer.measure(
+                        text = dayLabel,
                         style = TextStyle(
                             color = if (isHighlighted) AccentTeal else ChartLabel,
                             fontSize = 10.sp,
                             fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Medium
                         )
                     )
-                    val dayTop = topPadding + chartH + 6.dp.toPx()
                     drawText(
                         textMeasurer = textMeasurer,
-                        text = dayText,
+                        text = dayLabel,
                         topLeft = Offset(
-                            (centerX - dayResult.size.width / 2f).coerceIn(0f, w - dayResult.size.width),
-                            dayTop
+                            (leftPadding + idx * xStep - labelResult.size.width / 2f).coerceIn(0f, w - labelResult.size.width),
+                            topPadding + chartH + 8.dp.toPx()
                         ),
                         style = TextStyle(
                             color = if (isHighlighted) AccentTeal else ChartLabel,
@@ -556,32 +548,6 @@ fun BalanceTrendLineChart(
                             fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Medium
                         )
                     )
-
-                    // Bottom: Month abbreviation centered below day (e.g. "Sep")
-                    if (monthText.isNotBlank()) {
-                        val monthResult = textMeasurer.measure(
-                            text = monthText,
-                            style = TextStyle(
-                                color = if (isHighlighted) AccentTeal.copy(alpha = 0.85f) else ChartLabel.copy(alpha = 0.7f),
-                                fontSize = 8.5.sp,
-                                fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Normal
-                            )
-                        )
-                        val monthTop = dayTop + dayResult.size.height - 1.dp.toPx()
-                        drawText(
-                            textMeasurer = textMeasurer,
-                            text = monthText,
-                            topLeft = Offset(
-                                (centerX - monthResult.size.width / 2f).coerceIn(0f, w - monthResult.size.width),
-                                monthTop
-                            ),
-                            style = TextStyle(
-                                color = if (isHighlighted) AccentTeal.copy(alpha = 0.85f) else ChartLabel.copy(alpha = 0.7f),
-                                fontSize = 8.5.sp,
-                                fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Normal
-                            )
-                        )
-                    }
                 }
             }
         }

@@ -801,16 +801,16 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 8.dp)
-                        .height(210.dp)
+                        .height(205.dp)
                 ) {
                     val hasTrendData = remember(allTransactions) { allTransactions.isNotEmpty() }
                     if (hasTrendData) {
                         BalanceTrendLineChart(
                             balances = trendBalances,
-                            dates    = getLast7DateLabels(),
+                            dates    = getLast7DayNames(),
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(top = 8.dp, bottom = 10.dp, start = 6.dp, end = 6.dp)
+                                .padding(top = 10.dp, bottom = 12.dp, start = 6.dp, end = 6.dp)
                         )
                     } else {
                         Box(
