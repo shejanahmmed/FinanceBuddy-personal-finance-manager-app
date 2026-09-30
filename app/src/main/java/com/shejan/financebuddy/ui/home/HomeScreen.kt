@@ -1123,29 +1123,119 @@ fun HomeScreen(
                     loans.count { (it.loanAmount - it.repaidAmount) > 0.0 }
                 }
 
-                Card(
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = CardDark),
-                    border = BorderStroke(1.dp, DividerColor),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp)
-                        .clickable { onNavigateToLoans() }
-                ) {
-                    if (loans.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "No active loans — tap to add or manage loans",
-                                color = TextMuted,
-                                fontSize = 13.sp
-                            )
+                if (loans.isEmpty()) {
+                    Card(
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardDark),
+                        border = BorderStroke(1.dp, DividerColor),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 6.dp)
+                            .height(130.dp)
+                            .clickable { onNavigateToLoans() }
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            // Dot Grid Canvas Background
+                            Canvas(modifier = Modifier.fillMaxSize()) {
+                                val spacing = 20.dp.toPx()
+                                val dotRadius = 1.dp.toPx()
+                                val dotColor = if (isDarkModeGlobal) Color.White.copy(alpha = 0.04f) else Color.Black.copy(alpha = 0.03f)
+
+                                var x = spacing / 2f
+                                while (x < size.width) {
+                                    var y = spacing / 2f
+                                    while (y < size.height) {
+                                        drawCircle(
+                                            color = dotColor,
+                                            radius = dotRadius,
+                                            center = Offset(x, y)
+                                        )
+                                        y += spacing
+                                    }
+                                    x += spacing
+                                }
+
+                                // Subtle curved decorative dashed accent
+                                val path = Path().apply {
+                                    moveTo(-10f, size.height * 0.7f)
+                                    cubicTo(
+                                        size.width * 0.25f, size.height * 0.7f,
+                                        size.width * 0.45f, size.height * 0.35f,
+                                        size.width * 0.65f, size.height * 0.35f
+                                    )
+                                    cubicTo(
+                                        size.width * 0.80f, size.height * 0.35f,
+                                        size.width * 0.90f, size.height * 0.6f,
+                                        size.width + 10f, size.height * 0.55f
+                                    )
+                                }
+
+                                drawPath(
+                                    path = path,
+                                    color = AccentTeal.copy(alpha = 0.25f),
+                                    style = Stroke(
+                                        width = 1.5.dp.toPx(),
+                                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 5.dp.toPx()), 0f)
+                                    )
+                                )
+                            }
+
+                            // Foreground Content
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(CardDarker)
+                                        .border(1.dp, DividerColor.copy(alpha = 0.6f), RoundedCornerShape(12.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CreditCard,
+                                        contentDescription = "Loans",
+                                        tint = AccentTeal,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Text(
+                                    text = "No active loans or borrowings",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = TextPrimary,
+                                    textAlign = TextAlign.Center
+                                )
+
+                                Spacer(modifier = Modifier.height(3.dp))
+
+                                Text(
+                                    text = "Tap to record and manage loans →",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = AccentTeal,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
-                    } else {
+                    }
+                } else {
+                    Card(
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardDark),
+                        border = BorderStroke(1.dp, DividerColor),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 6.dp)
+                            .clickable { onNavigateToLoans() }
+                    ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
