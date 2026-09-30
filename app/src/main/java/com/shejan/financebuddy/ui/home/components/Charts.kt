@@ -304,7 +304,7 @@ fun ExpenseBarChart(
 
 
 // ─────────────────────────────────────────────────────────────
-// Custom 30-Day Balance Trend Line Chart (Interactive Bezier)
+// Custom 7-Day Balance Trend Line Chart (Interactive Bezier)
 // ─────────────────────────────────────────────────────────────
 
 @Composable
@@ -316,28 +316,34 @@ fun BalanceTrendLineChart(
     var selectedIndex by remember { mutableStateOf(-1) }
     val animProgress = remember { Animatable(0f) }
     LaunchedEffect(balances) {
-        animProgress.animateTo(1f, animationSpec = tween(900))
+        animProgress.snapTo(0f)
+        animProgress.animateTo(
+            1f,
+            animationSpec = tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+        )
     }
 
     val textMeasurer = rememberTextMeasurer()
     val rawMin = remember(balances) { balances.minOrNull() ?: 0.0 }
     val rawMax = remember(balances) { balances.maxOrNull() ?: 0.0 }
-    
-    // Baseline zero for positive balances gives accurate visual magnitude (5% spend won't look like 90% loss)
-    val minVal = remember(rawMin) {
-        if (rawMin >= 0.0) 0.0 else rawMin * 1.15
+
+    // Dynamic scale giving enough amplitude for aesthetic curve
+    val minVal = remember(rawMin, rawMax) {
+        if (rawMin == rawMax) (rawMin - 500.0).coerceAtLeast(0.0)
+        else (rawMin - (rawMax - rawMin) * 0.15).coerceAtLeast(0.0)
     }
     val maxVal = remember(rawMax, minVal) {
-        (rawMax * 1.12).coerceAtLeast(minVal + 1000.0)
+        if (rawMin == rawMax) rawMax + 500.0
+        else rawMax + ((rawMax - minVal) * 0.18).coerceAtLeast(100.0)
     }
-    val valRange = maxVal - minVal
+    val valRange = remember(minVal, maxVal) { (maxVal - minVal).coerceAtLeast(1.0) }
 
     Box(
         modifier = modifier.pointerInput(balances) {
             detectTapGestures { offset ->
                 val w = size.width
-                val leftPadding = 48.dp.toPx()
-                val rightPadding = 16.dp.toPx()
+                val leftPadding = 20.dp.toPx()
+                val rightPadding = 20.dp.toPx()
                 val chartW = w - leftPadding - rightPadding
                 val pointsCount = balances.size
                 if (pointsCount >= 2 && chartW > 0) {
@@ -351,45 +357,26 @@ fun BalanceTrendLineChart(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-            val leftPadding = 48.dp.toPx()
-            val rightPadding = 16.dp.toPx()
-            val topPadding = 24.dp.toPx()
-            val bottomPadding = 30.dp.toPx()
+            val leftPadding = 20.dp.toPx()
+            val rightPadding = 20.dp.toPx()
+            val topPadding = 34.dp.toPx()
+            val bottomPadding = 42.dp.toPx()
 
             val chartW = w - leftPadding - rightPadding
             val chartH = h - topPadding - bottomPadding
             val pointsCount = balances.size
             if (pointsCount < 2) return@Canvas
 
-            // ── Grid Lines and Y-Axis Labels ────────────────────
-            val gridLines = 4
+            // ── Subtle Horizontal Dashed Guide Lines ────────────
+            val gridLines = 3
             for (i in 0..gridLines) {
                 val y = topPadding + chartH * (i / gridLines.toFloat())
-                val valAtLine = maxVal - (valRange * (i / gridLines.toFloat()))
-
                 drawLine(
-                    color       = ChartGridLine,
-                    start       = Offset(leftPadding, y),
-                    end         = Offset(w - rightPadding, y),
+                    color = ChartGridLine.copy(alpha = 0.5f),
+                    start = Offset(leftPadding, y),
+                    end = Offset(w - rightPadding, y),
                     strokeWidth = 1.dp.toPx(),
-                    pathEffect  = PathEffect.dashPathEffect(floatArrayOf(6f, 8f), 0f)
-                )
-
-                val labelText = if (valAtLine >= 100_000) {
-                    val lakhs = valAtLine / 100_000.0
-                    if (lakhs % 1.0 == 0.0) "${lakhs.toInt()}L" else String.format(java.util.Locale.US, "%.1fL", lakhs)
-                } else if (valAtLine >= 1000) {
-                    val k = valAtLine / 1000.0
-                    if (k % 1.0 == 0.0) "${k.toInt()}K" else String.format(java.util.Locale.US, "%.1fK", k)
-                } else {
-                    String.format(java.util.Locale.US, "%.0f", valAtLine)
-                }
-
-                drawText(
-                    textMeasurer = textMeasurer,
-                    text         = labelText,
-                    topLeft      = Offset(10.dp.toPx(), y - 7.dp.toPx()),
-                    style        = TextStyle(color = ChartLabel, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 6f), 0f)
                 )
             }
 
@@ -397,10 +384,13 @@ fun BalanceTrendLineChart(
             val xStep = chartW / (pointsCount - 1)
             val points = balances.mapIndexed { idx, bal ->
                 val normalizedY = ((bal - minVal) / valRange).toFloat()
-                Offset(leftPadding + idx * xStep, (topPadding + chartH) - (normalizedY * chartH * animProgress.value))
+                Offset(
+                    leftPadding + idx * xStep,
+                    (topPadding + chartH) - (normalizedY * chartH * animProgress.value)
+                )
             }
 
-            // Draw line curve via cubic bezier
+            // Draw line curve via smooth cubic bezier
             val strokePath = Path().apply {
                 if (points.isNotEmpty()) {
                     moveTo(points[0].x, points[0].y)
@@ -416,140 +406,184 @@ fun BalanceTrendLineChart(
                 }
             }
 
-            // Draw area gradient
+            // Draw area gradient under the curve
             val fillPath = Path().apply {
                 addPath(strokePath)
-                lineTo(w - rightPadding, topPadding + chartH)
-                lineTo(leftPadding, topPadding + chartH)
+                lineTo(points.last().x, topPadding + chartH)
+                lineTo(points.first().x, topPadding + chartH)
                 close()
             }
 
             drawPath(
-                path  = fillPath,
+                path = fillPath,
                 brush = Brush.verticalGradient(
-                    colors = listOf(AccentTeal.copy(alpha = 0.20f), Color.Transparent),
+                    colors = listOf(
+                        AccentTeal.copy(alpha = 0.25f),
+                        AccentTeal.copy(alpha = 0.05f),
+                        Color.Transparent
+                    ),
                     startY = topPadding,
-                    endY   = topPadding + chartH
+                    endY = topPadding + chartH
                 )
             )
 
-            // Draw path stroke
+            // Draw smooth path stroke with glowing gradient
             drawPath(
-                path  = strokePath,
+                path = strokePath,
                 brush = Brush.horizontalGradient(
-                    colors = listOf(AccentTeal, AccentBlue),
+                    colors = listOf(
+                        Color(0xFF00D4AA),
+                        AccentTeal,
+                        Color(0xFF38BDF8)
+                    ),
                     startX = leftPadding,
-                    endX   = w - rightPadding
+                    endX = w - rightPadding
                 ),
-                style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
+                style = Stroke(
+                    width = 2.8.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
             )
 
-            // ── Active Selection / Endpoint Marker ──────────────
-            val activeIdx = if (selectedIndex in 0 until pointsCount) selectedIndex else -1
-            if (activeIdx >= 0) {
+            // ── Active Node & Tooltip Bubble ─────────────────────
+            val activeIdx = if (selectedIndex in 0 until pointsCount) selectedIndex else pointsCount - 1
+            if (activeIdx in 0 until pointsCount) {
                 val p = points[activeIdx]
 
-                // Vertical dashed guideline
+                // Vertical dashed guideline down to baseline
                 drawLine(
-                    color       = AccentTeal.copy(alpha = 0.35f),
-                    start       = Offset(p.x, topPadding),
-                    end         = Offset(p.x, topPadding + chartH),
-                    strokeWidth = 1.dp.toPx(),
-                    pathEffect  = PathEffect.dashPathEffect(floatArrayOf(4f, 4f), 0f)
+                    color = AccentTeal.copy(alpha = 0.55f),
+                    start = Offset(p.x, p.y),
+                    end = Offset(p.x, topPadding + chartH),
+                    strokeWidth = 1.2.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f), 0f)
                 )
 
-                // Glowing node
-                drawCircle(color = AccentTeal.copy(alpha = 0.25f), radius = 10.dp.toPx(), center = p)
-                drawCircle(color = AccentTeal, radius = 5.dp.toPx(), center = p)
-                drawCircle(color = OnAccent, radius = 2.dp.toPx(), center = p)
+                // Glowing node on the curve
+                drawCircle(color = AccentTeal.copy(alpha = 0.28f), radius = 8.dp.toPx(), center = p)
+                drawCircle(color = AccentTeal, radius = 4.5.dp.toPx(), center = p)
+                drawCircle(color = CardDarker, radius = 2.dp.toPx(), center = p)
 
-                // Tooltip bubble
+                // Tooltip box above the node
                 val balAmt = balances[activeIdx]
-                val amtText = "৳${java.text.NumberFormat.getNumberInstance(java.util.Locale.US).format(balAmt.toLong())}"
+                val amtText = when {
+                    balAmt >= 100_000 -> "৳${String.format(java.util.Locale.US, "%.1fL", balAmt / 100_000.0)}"
+                    balAmt >= 1_000 -> "৳${String.format(java.util.Locale.US, "%.1fk", balAmt / 1000.0)}"
+                    else -> "৳${balAmt.toInt()}"
+                }
+
                 val tooltipResult = textMeasurer.measure(
-                    text  = amtText,
+                    text = amtText,
                     style = TextStyle(
-                        color      = OnAccent,
-                        fontSize   = 10.sp,
+                        color = AccentTeal,
+                        fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold
                     )
                 )
-                val caretSize = 4.dp.toPx()
-                val tW = tooltipResult.size.width + 10.dp.toPx()
-                val tH = tooltipResult.size.height + 4.dp.toPx()
+                val tW = tooltipResult.size.width + 16.dp.toPx()
+                val tH = tooltipResult.size.height + 8.dp.toPx()
                 var tX = p.x - tW / 2f
                 tX = tX.coerceIn(leftPadding, w - rightPadding - tW)
-                val tY = (p.y - tH - caretSize - 6.dp.toPx()).coerceAtLeast(2.dp.toPx())
+                val tY = (p.y - tH - 8.dp.toPx()).coerceAtLeast(2.dp.toPx())
 
-                // Tooltip background bubble
+                // Tooltip background container
                 drawRoundRect(
-                    color        = AccentTeal,
-                    topLeft      = Offset(tX, tY),
-                    size         = Size(tW, tH),
-                    cornerRadius = CornerRadius(6.dp.toPx())
+                    color = CardDarker,
+                    topLeft = Offset(tX, tY),
+                    size = Size(tW, tH),
+                    cornerRadius = CornerRadius(8.dp.toPx())
+                )
+                // Tooltip glowing border
+                drawRoundRect(
+                    color = AccentTeal,
+                    topLeft = Offset(tX, tY),
+                    size = Size(tW, tH),
+                    cornerRadius = CornerRadius(8.dp.toPx()),
+                    style = Stroke(width = 1.2.dp.toPx())
                 )
                 // Tooltip text
                 drawText(
                     textMeasurer = textMeasurer,
-                    text         = amtText,
-                    topLeft      = Offset(tX + 5.dp.toPx(), tY + 2.dp.toPx()),
-                    style        = TextStyle(
-                        color      = OnAccent,
-                        fontSize   = 10.sp,
+                    text = amtText,
+                    topLeft = Offset(tX + 8.dp.toPx(), tY + 4.dp.toPx()),
+                    style = TextStyle(
+                        color = AccentTeal,
+                        fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold
                     )
                 )
-                // Caret triangle
-                val caretPath = Path().apply {
-                    moveTo(p.x - caretSize, tY + tH)
-                    lineTo(p.x + caretSize, tY + tH)
-                    lineTo(p.x, tY + tH + caretSize)
-                    close()
-                }
-                drawPath(caretPath, color = AccentTeal)
-            } else if (points.isNotEmpty()) {
-                // Default endpoint marker
-                val lastPoint = points.last()
-                drawCircle(color = AccentTeal.copy(alpha = 0.25f), radius = 8.dp.toPx(), center = lastPoint)
-                drawCircle(color = AccentTeal, radius = 4.dp.toPx(), center = lastPoint)
             }
 
-            // ── X-Axis Day/Date Labels ─────────────────────────────
-            balances.forEachIndexed { idx, _ ->
-                val dateLabel = dates.getOrNull(idx) ?: ""
-                if (dateLabel.isNotBlank()) {
-                    val isSelected = selectedIndex == idx
-                    val labelResult = textMeasurer.measure(
-                        text = dateLabel,
-                        style = TextStyle(
-                            color = if (isSelected) AccentTeal else ChartLabel,
-                            fontSize = 10.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
-                    )
-                    drawText(
-                        textMeasurer = textMeasurer,
-                        text = dateLabel,
-                        topLeft = Offset(
-                            leftPadding + idx * xStep - labelResult.size.width / 2f,
-                            topPadding + chartH + 8.dp.toPx()
-                        ),
-                        style = TextStyle(
-                            color = if (isSelected) AccentTeal else ChartLabel,
-                            fontSize = 10.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
-                    )
-                }
-            }
-
-            // ── X-Axis baseline ────────────────────────────────────
+            // ── X-Axis Baseline ────────────────────────────────────
             drawLine(
-                color = ChartGridLine,
+                color = ChartGridLine.copy(alpha = 0.6f),
                 start = Offset(leftPadding, topPadding + chartH),
                 end = Offset(w - rightPadding, topPadding + chartH),
                 strokeWidth = 1.dp.toPx()
             )
+
+            // ── X-Axis Date Labels (Day on top, Month centered below) ──
+            balances.forEachIndexed { idx, _ ->
+                val dateLabel = dates.getOrNull(idx) ?: ""
+                if (dateLabel.isNotBlank()) {
+                    val isHighlighted = idx == activeIdx || (activeIdx == -1 && idx == pointsCount - 1)
+                    val parts = dateLabel.trim().split(" ")
+                    val dayText = parts.getOrNull(0) ?: dateLabel
+                    val monthText = parts.getOrNull(1) ?: ""
+
+                    val centerX = leftPadding + idx * xStep
+
+                    // Top: Day number (e.g. "20", "30")
+                    val dayResult = textMeasurer.measure(
+                        text = dayText,
+                        style = TextStyle(
+                            color = if (isHighlighted) AccentTeal else ChartLabel,
+                            fontSize = 10.sp,
+                            fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Medium
+                        )
+                    )
+                    val dayTop = topPadding + chartH + 6.dp.toPx()
+                    drawText(
+                        textMeasurer = textMeasurer,
+                        text = dayText,
+                        topLeft = Offset(
+                            (centerX - dayResult.size.width / 2f).coerceIn(0f, w - dayResult.size.width),
+                            dayTop
+                        ),
+                        style = TextStyle(
+                            color = if (isHighlighted) AccentTeal else ChartLabel,
+                            fontSize = 10.sp,
+                            fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Medium
+                        )
+                    )
+
+                    // Bottom: Month abbreviation centered below day (e.g. "Sep")
+                    if (monthText.isNotBlank()) {
+                        val monthResult = textMeasurer.measure(
+                            text = monthText,
+                            style = TextStyle(
+                                color = if (isHighlighted) AccentTeal.copy(alpha = 0.85f) else ChartLabel.copy(alpha = 0.7f),
+                                fontSize = 8.5.sp,
+                                fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Normal
+                            )
+                        )
+                        val monthTop = dayTop + dayResult.size.height - 1.dp.toPx()
+                        drawText(
+                            textMeasurer = textMeasurer,
+                            text = monthText,
+                            topLeft = Offset(
+                                (centerX - monthResult.size.width / 2f).coerceIn(0f, w - monthResult.size.width),
+                                monthTop
+                            ),
+                            style = TextStyle(
+                                color = if (isHighlighted) AccentTeal.copy(alpha = 0.85f) else ChartLabel.copy(alpha = 0.7f),
+                                fontSize = 8.5.sp,
+                                fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Normal
+                            )
+                        )
+                    }
+                }
+            }
         }
     }
 }

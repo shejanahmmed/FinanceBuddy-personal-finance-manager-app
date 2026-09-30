@@ -45,12 +45,29 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Flight
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LaptopMac
+import androidx.compose.material.icons.filled.LocalOffer
+import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.ShoppingBag
+import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -656,15 +673,57 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 // ── 4. Last Recorded Overview ──────────────────────────
-                SectionHeader(title = "Recent Transactions", onViewAllClick = onNavigateToHistory)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Recent Transactions",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        if (recentTransactions.isNotEmpty()) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = CardDarker,
+                                border = BorderStroke(1.dp, DividerColor)
+                            ) {
+                                Text(
+                                    text = "Latest ${recentTransactions.take(5).size}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = TextSecondary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = "View All →",
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AccentTeal,
+                        modifier = Modifier.clickable { onNavigateToHistory() }
+                    )
+                }
+
                 if (recentTransactions.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 16.dp)
-                            .clip(RoundedCornerShape(20.dp))
+                            .padding(horizontal = 20.dp, vertical = 8.dp)
+                            .clip(RoundedCornerShape(18.dp))
                             .background(CardDark)
-                            .border(1.dp, DividerColor, RoundedCornerShape(20.dp))
+                            .border(1.dp, DividerColor, RoundedCornerShape(18.dp))
                             .padding(32.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -674,25 +733,16 @@ fun HomeScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 8.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(CardDark)
-                            .border(1.dp, DividerColor, RoundedCornerShape(20.dp))
+                            .padding(horizontal = 20.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        recentTransactions.forEachIndexed { index, tx ->
-                            TransactionRowItem(
+                        recentTransactions.take(5).forEach { tx ->
+                            TransactionRowCard(
                                 tx             = tx,
                                 accounts       = accounts,
-                                currencyFormat = currencyFormat
+                                currencyFormat = currencyFormat,
+                                onClick        = onNavigateToHistory
                             )
-                            if (index < recentTransactions.size - 1) {
-                                Spacer(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(1.dp)
-                                        .background(DividerColor)
-                                )
-                            }
                         }
                     }
                 }
@@ -700,7 +750,50 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 // ── 5. Balance Trend (Line Chart) ─────────────────────
-                SectionHeader(title = "Balance Trend")
+                val trendBalances = remember(totalBalance, allTransactions) {
+                    getActualBalanceTrend(totalBalance, allTransactions)
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Balance Trend",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = CardDarker,
+                        border = BorderStroke(1.dp, DividerColor)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(IncomeGreen)
+                            )
+                            Text(
+                                text = "Last 7 Days",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                }
+
                 Card(
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = CardDark),
@@ -708,16 +801,16 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 8.dp)
-                        .height(180.dp)
+                        .height(210.dp)
                 ) {
                     val hasTrendData = remember(allTransactions) { allTransactions.isNotEmpty() }
                     if (hasTrendData) {
                         BalanceTrendLineChart(
-                            balances = getActualBalanceTrend(totalBalance, allTransactions),
-                            dates    = getLast7DayNames(),
+                            balances = trendBalances,
+                            dates    = getLast7DateLabels(),
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(top = 16.dp, bottom = 8.dp)
+                                .padding(top = 8.dp, bottom = 10.dp, start = 6.dp, end = 6.dp)
                         )
                     } else {
                         Box(
@@ -1458,100 +1551,191 @@ fun SummaryCard(
 }
 
 @Composable
-fun TransactionRowItem(
+fun TransactionRowCard(
     tx: TransactionEntity,
     accounts: List<AccountEntity>,
-    currencyFormat: DecimalFormat
+    currencyFormat: DecimalFormat,
+    onClick: () -> Unit
 ) {
-    val dateString = remember(tx.timestamp) {
-        SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(tx.timestamp))
+    val dateOnlyString = remember(tx.timestamp) {
+        SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(tx.timestamp))
     }
     val sourceAccount = remember(tx.fromAccountId) {
         accounts.find { it.id == tx.fromAccountId }?.name ?: "Unknown"
     }
-    val destAccount = remember(tx.toAccountId, tx.note) {
-        if (tx.toAccountId != null) {
-            accounts.find { it.id == tx.toAccountId }?.name ?: "Unknown"
-        } else {
-            if (tx.note.startsWith("To: ")) {
-                tx.note.removePrefix("To: ").substringBefore(" - ").ifBlank { "Other Person" }
-            } else {
-                "Other Person"
+    val isLight = currentThemeModeState == "LIGHT"
+    val visuals = getTransactionVisuals(tx = tx, accounts = accounts)
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardDark),
+        border = BorderStroke(1.dp, DividerColor),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Category / Transaction Icon in Squircle
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(visuals.color.copy(alpha = if (isLight) 0.12f else 0.16f))
+                    .border(
+                        1.dp,
+                        visuals.color.copy(alpha = if (isLight) 0.28f else 0.24f),
+                        RoundedCornerShape(12.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = visuals.icon,
+                    contentDescription = visuals.title,
+                    tint = visuals.color,
+                    modifier = Modifier.size(20.dp)
+                )
             }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Details (Title & Subtitle with Date only)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = visuals.title,
+                    fontSize = 13.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "$sourceAccount • $dateOnlyString",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            // Amount
+            Text(
+                text = "${visuals.amountPrefix}৳${currencyFormat.format(tx.amount)}",
+                fontSize = 13.5.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = visuals.amountColor
+            )
+        }
+    }
+}
+
+private data class TransactionVisuals(
+    val title: String,
+    val icon: ImageVector,
+    val color: Color,
+    val amountPrefix: String,
+    val amountColor: Color
+)
+
+@Composable
+private fun getTransactionVisuals(
+    tx: TransactionEntity,
+    accounts: List<AccountEntity>
+): TransactionVisuals {
+    val destAccountName = remember(tx.toAccountId, tx.note) {
+        if (tx.toAccountId != null) {
+            accounts.find { it.id == tx.toAccountId }?.name ?: "Account"
+        } else if (tx.note.startsWith("To: ")) {
+            tx.note.removePrefix("To: ").substringBefore(" - ").ifBlank { "Other Person" }
+        } else {
+            "Other Person"
         }
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Semantic Indicator
-        val isLight = currentThemeModeState == "LIGHT"
-        val bulletColor = when (tx.type) {
-            "INCOME" -> IncomeGreen
-            "EXPENSE" -> ExpenseRed
-            else -> TransferYellow
-        }
-        val bulletIcon = when (tx.type) {
-            "INCOME" -> Icons.Default.ArrowDownward
-            "EXPENSE" -> Icons.Default.ArrowUpward
-            else -> Icons.Default.Sync
-        }
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(bulletColor.copy(alpha = if (isLight) 0.14f else 0.18f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = bulletIcon,
-                contentDescription = tx.type,
-                tint = bulletColor,
-                modifier = Modifier.size(18.dp)
+    val catLower = tx.category.lowercase(Locale.ROOT).trim()
+
+    return when (tx.type) {
+        "INCOME" -> {
+            val (icon, color) = when {
+                catLower.contains("salary") || catLower.contains("paycheck") ->
+                    Icons.Default.Payments to IncomeGreen
+                catLower.contains("invest") || catLower.contains("dividend") || catLower.contains("profit") || catLower.contains("stock") ->
+                    Icons.AutoMirrored.Filled.TrendingUp to Color(0xFF818CF8)
+                catLower.contains("bonus") || catLower.contains("award") ->
+                    Icons.Default.CardGiftcard to Color(0xFFF59E0B)
+                catLower.contains("business") || catLower.contains("sales") ->
+                    Icons.Default.Storefront to IncomeGreen
+                catLower.contains("freelance") || catLower.contains("gig") ->
+                    Icons.Default.LaptopMac to IncomeGreen
+                else ->
+                    Icons.AutoMirrored.Filled.TrendingUp to IncomeGreen
+            }
+            TransactionVisuals(
+                title = tx.category.ifBlank { "Income" },
+                icon = icon,
+                color = color,
+                amountPrefix = "+",
+                amountColor = IncomeGreen
             )
         }
-
-        Spacer(modifier = Modifier.width(14.dp))
-
-        // Transaction Details
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text  = when (tx.type) {
-                    "TRANSFER" -> "Transfer to $destAccount"
-                    else -> tx.category
-                },
-                fontSize   = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color      = TextPrimary
+        "EXPENSE" -> {
+            val (icon, color) = when {
+                catLower.contains("invest") || catLower.contains("stock") || catLower.contains("trading") || catLower.contains("crypto") || catLower.contains("share") ->
+                    Icons.AutoMirrored.Filled.TrendingUp to Color(0xFF818CF8)
+                catLower.contains("food") || catLower.contains("dining") || catLower.contains("restaurant") || catLower.contains("cafe") || catLower.contains("lunch") || catLower.contains("dinner") || catLower.contains("snack") || catLower.contains("coffee") || catLower.contains("burger") || catLower.contains("pizza") ->
+                    Icons.Default.Restaurant to Color(0xFFF43F5E)
+                catLower.contains("shop") || catLower.contains("cloth") || catLower.contains("shoe") || catLower.contains("dress") || catLower.contains("market") || catLower.contains("grocery") || catLower.contains("groceries") || catLower.contains("mall") || catLower.contains("heho") ->
+                    Icons.Default.ShoppingBag to Color(0xFFF59E0B)
+                catLower.contains("tag") || catLower.contains("offer") || catLower.contains("deal") || catLower.contains("discount") || catLower.contains("buy") ->
+                    Icons.Default.LocalOffer to Color(0xFFF59E0B)
+                catLower.contains("bill") || catLower.contains("utilit") || catLower.contains("electric") || catLower.contains("water") || catLower.contains("gas") || catLower.contains("internet") || catLower.contains("wifi") || catLower.contains("recharge") || catLower.contains("mobile") ->
+                    Icons.Default.Bolt to AccentTeal
+                catLower.contains("transp") || catLower.contains("car") || catLower.contains("fuel") || catLower.contains("petrol") || catLower.contains("gasoline") || catLower.contains("cng") || catLower.contains("uber") || catLower.contains("pathao") || catLower.contains("bus") || catLower.contains("train") || catLower.contains("flight") ->
+                    Icons.Default.DirectionsCar to AccentBlue
+                catLower.contains("health") || catLower.contains("medic") || catLower.contains("doctor") || catLower.contains("hospital") || catLower.contains("pharma") ->
+                    Icons.Default.MedicalServices to Color(0xFF10B981)
+                catLower.contains("entertain") || catLower.contains("movie") || catLower.contains("game") || catLower.contains("cinema") || catLower.contains("theatre") || catLower.contains("netflix") || catLower.contains("stream") ->
+                    Icons.Default.Movie to Color(0xFFA855F7)
+                catLower.contains("home") || catLower.contains("rent") || catLower.contains("housing") || catLower.contains("flat") || catLower.contains("repair") ->
+                    Icons.Default.Home to Color(0xFFEC4899)
+                catLower.contains("educat") || catLower.contains("school") || catLower.contains("college") || catLower.contains("university") || catLower.contains("tuition") || catLower.contains("course") || catLower.contains("book") ->
+                    Icons.Default.School to Color(0xFF6366F1)
+                catLower.contains("loan") || catLower.contains("repay") || catLower.contains("debt") || catLower.contains("emi") ->
+                    Icons.Default.CreditCard to AccentTeal
+                catLower.contains("travel") || catLower.contains("hotel") || catLower.contains("trip") || catLower.contains("vacation") ->
+                    Icons.Default.Flight to Color(0xFF0EA5E9)
+                catLower.contains("gift") || catLower.contains("charity") || catLower.contains("donation") || catLower.contains("zakat") ->
+                    Icons.Default.CardGiftcard to Color(0xFFEC4899)
+                else ->
+                    Icons.Default.LocalOffer to Color(0xFFF59E0B)
+            }
+            TransactionVisuals(
+                title = tx.category.ifBlank { "Expense" },
+                icon = icon,
+                color = color,
+                amountPrefix = "-",
+                amountColor = ExpenseRed
             )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text  = "$sourceAccount • $dateString",
-                fontSize = 11.sp,
-                color    = TextSecondary
+        }
+        else -> {
+            TransactionVisuals(
+                title = "Transfer to $destAccountName",
+                icon = Icons.Default.SwapHoriz,
+                color = TransferYellow,
+                amountPrefix = "",
+                amountColor = TransferYellow
             )
         }
-
-        // Amount
-        val sign = when (tx.type) {
-            "INCOME" -> "+"
-            "EXPENSE" -> "-"
-            else -> ""
-        }
-        val amountColor = when (tx.type) {
-            "INCOME" -> IncomeGreen
-            "EXPENSE" -> ExpenseRed
-            else -> TextPrimary
-        }
-        Text(
-            text       = "$sign৳${currencyFormat.format(tx.amount)}",
-            fontSize   = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            color      = amountColor
-        )
     }
 }
 
@@ -1711,6 +1895,17 @@ private fun getActualBalanceTrend(currentTotalBalance: Double, transactions: Lis
 
 private fun getLast7DayNames(): List<String> {
     val sdf = SimpleDateFormat("EEE", Locale.getDefault())
+    val calendar = Calendar.getInstance()
+    val names = mutableListOf<String>()
+    for (i in 0..6) {
+        names.add(sdf.format(calendar.time))
+        calendar.add(Calendar.DAY_OF_YEAR, -1)
+    }
+    return names.reversed()
+}
+
+private fun getLast7DateLabels(): List<String> {
+    val sdf = SimpleDateFormat("d MMM", Locale.getDefault())
     val calendar = Calendar.getInstance()
     val names = mutableListOf<String>()
     for (i in 0..6) {
