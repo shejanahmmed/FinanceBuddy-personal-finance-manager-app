@@ -810,15 +810,95 @@ fun HomeScreen(
                                 .padding(top = 10.dp, bottom = 12.dp, start = 6.dp, end = 6.dp)
                         )
                     } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text     = "No balance trend data available.",
-                                color    = TextMuted,
-                                fontSize = 14.sp
-                            )
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            // Dot Grid Canvas Background
+                            Canvas(modifier = Modifier.fillMaxSize()) {
+                                val spacing = 22.dp.toPx()
+                                val dotRadius = 1.1.dp.toPx()
+                                val dotColor = if (isDarkModeGlobal) Color.White.copy(alpha = 0.04f) else Color.Black.copy(alpha = 0.03f)
+
+                                var x = spacing / 2f
+                                while (x < size.width) {
+                                    var y = spacing / 2f
+                                    while (y < size.height) {
+                                        drawCircle(
+                                            color = dotColor,
+                                            radius = dotRadius,
+                                            center = Offset(x, y)
+                                        )
+                                        y += spacing
+                                    }
+                                    x += spacing
+                                }
+
+                                // Subtle curved decorative dashed accent
+                                val path = Path().apply {
+                                    moveTo(-10f, size.height * 0.7f)
+                                    cubicTo(
+                                        size.width * 0.25f, size.height * 0.7f,
+                                        size.width * 0.45f, size.height * 0.35f,
+                                        size.width * 0.65f, size.height * 0.35f
+                                    )
+                                    cubicTo(
+                                        size.width * 0.80f, size.height * 0.35f,
+                                        size.width * 0.90f, size.height * 0.6f,
+                                        size.width + 10f, size.height * 0.55f
+                                    )
+                                }
+
+                                drawPath(
+                                    path = path,
+                                    color = AccentTeal.copy(alpha = 0.25f),
+                                    style = Stroke(
+                                        width = 1.5.dp.toPx(),
+                                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 5.dp.toPx()), 0f)
+                                    )
+                                )
+                            }
+
+                            // Foreground Content
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(CardDarker)
+                                        .border(1.dp, DividerColor.copy(alpha = 0.6f), RoundedCornerShape(14.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                                        contentDescription = "Balance Trend",
+                                        tint = AccentTeal,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Text(
+                                    text = "No balance trend data yet",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = TextPrimary,
+                                    textAlign = TextAlign.Center
+                                )
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                Text(
+                                    text = "Add transactions to see your 7-day balance curve",
+                                    fontSize = 12.5.sp,
+                                    color = TextSecondary,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                     }
                 }
