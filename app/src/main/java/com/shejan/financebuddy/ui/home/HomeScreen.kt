@@ -3,7 +3,6 @@ package com.shejan.financebuddy.ui.home
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,7 +45,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Bolt
@@ -68,10 +67,8 @@ import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.Label
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Surface
@@ -79,14 +76,14 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.core.graphics.toColorInt
 import com.shejan.financebuddy.ui.notifications.AppNotification
 import com.shejan.financebuddy.ui.notifications.NotificationsBottomSheet
 import androidx.compose.ui.text.buildAnnotatedString
@@ -101,13 +98,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -159,7 +156,6 @@ fun HomeScreen(
     onDismissNotification: (String) -> Unit = {}
 ) {
     var showAddSheet by remember { mutableStateOf(false) }
-    val sheetState   = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -212,10 +208,11 @@ fun HomeScreen(
             containerColor = Color.Transparent,
             // Empty topBar so we can overlay the floating top bar smoothly
             topBar = {}
-        ) { _ ->
+        ) { paddingValues ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
             ) {
                 // Spacer matching top bar height (84.dp) + status bar padding
@@ -228,7 +225,7 @@ fun HomeScreen(
 
                 LaunchedEffect(showTemporarily) {
                     if (showTemporarily) {
-                        kotlinx.coroutines.delay(2000)
+                        delay(2000.milliseconds)
                         showTemporarily = false
                     }
                 }
@@ -849,8 +846,8 @@ fun HomeScreen(
                     )
                     Text(
                         text = "View All →",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Bold,
                         color = AccentTeal,
                         modifier = Modifier.clickable { onNavigateToBudget() }
                     )
@@ -861,9 +858,9 @@ fun HomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp, vertical = 8.dp)
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(18.dp))
                             .background(CardDark)
-                            .border(1.dp, DividerColor, RoundedCornerShape(20.dp))
+                            .border(1.dp, DividerColor, RoundedCornerShape(18.dp))
                             .clickable { onNavigateToBudget() }
                             .padding(24.dp),
                         contentAlignment = Alignment.Center
@@ -879,7 +876,7 @@ fun HomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp, vertical = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         currentMonthBudgets.take(3).forEach { budget ->
                             val spent = spentByCategory[budget.category] ?: 0.0
@@ -888,7 +885,7 @@ fun HomeScreen(
                             val remaining = (budget.limitAmount - spent).coerceAtLeast(0.0)
 
                             val accentColor = remember(budget.colorHex) {
-                                try { Color(android.graphics.Color.parseColor(budget.colorHex)) } catch (e: Exception) { AccentTeal }
+                                try { Color(budget.colorHex.toColorInt()) } catch (_: Exception) { AccentTeal }
                             }
 
                             val barColor = when {
@@ -902,17 +899,17 @@ fun HomeScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { onNavigateToBudget() },
-                                shape = RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(18.dp),
                                 colors = CardDefaults.cardColors(containerColor = CardDark),
                                 border = BorderStroke(
                                     1.dp,
-                                    if (overBudget) ExpenseRed.copy(alpha = 0.4f) else DividerColor
+                                    if (overBudget) ExpenseRed.copy(alpha = 0.5f) else DividerColor
                                 )
                             ) {
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(14.dp)
+                                        .padding(16.dp)
                                 ) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -922,28 +919,28 @@ fun HomeScreen(
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Box(
                                                 modifier = Modifier
-                                                    .size(10.dp)
+                                                    .size(9.dp)
                                                     .clip(CircleShape)
-                                                    .background(accentColor)
+                                                    .background(barColor)
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
                                             Text(
                                                 text = budget.category,
-                                                fontSize = 13.5.sp,
-                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.Bold,
                                                 color = TextPrimary
                                             )
                                         }
 
                                         Text(
                                             text = if (overBudget) "⚠️ Over Budget" else "${(progress * 100).toInt()}%",
-                                            fontSize = 11.5.sp,
-                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.5.sp,
+                                            fontWeight = FontWeight.Medium,
                                             color = if (overBudget) ExpenseRed else TextSecondary
                                         )
                                     }
 
-                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Spacer(modifier = Modifier.height(12.dp))
 
                                     // Progress bar
                                     Box(
@@ -962,7 +959,7 @@ fun HomeScreen(
                                         )
                                     }
 
-                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(12.dp))
 
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -971,9 +968,9 @@ fun HomeScreen(
                                     ) {
                                         Text(
                                             text = "৳${currencyFormat.format(spent)} / ৳${currencyFormat.format(budget.limitAmount)}",
-                                            fontSize = 11.5.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = TextSecondary
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = TextPrimary
                                         )
                                         Text(
                                             text = if (overBudget) {
@@ -981,8 +978,9 @@ fun HomeScreen(
                                             } else {
                                                 "৳${currencyFormat.format(remaining)} remaining"
                                             },
-                                            fontSize = 11.sp,
-                                            color = if (overBudget) ExpenseRed else TextMuted
+                                            fontSize = 12.5.sp,
+                                            fontWeight = FontWeight.Normal,
+                                            color = if (overBudget) ExpenseRed else TextSecondary
                                         )
                                     }
                                 }
@@ -1009,8 +1007,8 @@ fun HomeScreen(
                     )
                     Text(
                         text = "View All →",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Bold,
                         color = AccentTeal,
                         modifier = Modifier.clickable { onNavigateToLoans() }
                     )
@@ -1022,9 +1020,12 @@ fun HomeScreen(
                 val overallProgress = remember(totalPrincipal, totalRepaid) {
                     if (totalPrincipal > 0) (totalRepaid / totalPrincipal).toFloat().coerceIn(0f, 1f) else 0f
                 }
+                val activeLoansCount = remember(loans) {
+                    loans.count { (it.loanAmount - it.repaidAmount) > 0.0 }
+                }
 
                 Card(
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = CardDark),
                     border = BorderStroke(1.dp, DividerColor),
                     modifier = Modifier
@@ -1049,50 +1050,61 @@ fun HomeScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(18.dp)
+                                .padding(16.dp)
                         ) {
+                            // Top: Remaining Payable + Active Loans Badge
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Column {
-                                    Text("Remaining Payable", fontSize = 11.sp, color = TextSecondary)
-                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = "Remaining Payable",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = TextSecondary
+                                    )
+                                    Spacer(Modifier.height(4.dp))
                                     Text(
                                         text = "৳${currencyFormat.format(remainingBalance)}",
-                                        fontSize = 18.sp,
+                                        fontSize = 21.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = TextPrimary
                                     )
                                 }
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(AccentTeal.copy(alpha = 0.15f))
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = AccentTeal.copy(alpha = 0.12f),
+                                    border = BorderStroke(1.dp, AccentTeal.copy(alpha = 0.35f))
                                 ) {
                                     Text(
-                                        text = "${loans.size} ${if (loans.size == 1) "Active Loan" else "Active Loans"}",
+                                        text = "$activeLoansCount ${if (activeLoansCount == 1) "Active Loan" else "Active Loans"}",
                                         color = AccentTeal,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                                     )
                                 }
                             }
 
                             Spacer(Modifier.height(14.dp))
 
-                            // Progress bar
+                            // Middle: Repayment Progress
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Repayment Progress", fontSize = 11.sp, color = TextMuted)
+                                Text(
+                                    text = "Repayment Progress",
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = TextSecondary
+                                )
                                 Text(
                                     text = "${(overallProgress * 100).toInt()}% Repaid",
-                                    fontSize = 11.sp,
+                                    fontSize = 12.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = AccentTeal
                                 )
@@ -1103,7 +1115,7 @@ fun HomeScreen(
                                     .fillMaxWidth()
                                     .height(6.dp)
                                     .clip(RoundedCornerShape(3.dp))
-                                    .background(DividerColor)
+                                    .background(CardDarker)
                             ) {
                                 Box(
                                     modifier = Modifier
@@ -1116,17 +1128,47 @@ fun HomeScreen(
 
                             Spacer(Modifier.height(14.dp))
 
+                            HorizontalDivider(color = DividerColor, modifier = Modifier.fillMaxWidth())
+
+                            Spacer(Modifier.height(12.dp))
+
+                            // Bottom: Total Borrowed and Total Repaid
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column {
-                                    Text("Total Borrowed", fontSize = 10.sp, color = TextMuted)
-                                    Text("৳${currencyFormat.format(totalPrincipal)}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
+                                    Text(
+                                        text = "Total Borrowed",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = TextSecondary
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = "৳${currencyFormat.format(totalPrincipal)}",
+                                        fontSize = 14.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("Total Repaid", fontSize = 10.sp, color = TextMuted)
-                                    Text("৳${currencyFormat.format(totalRepaid)}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = IncomeGreen)
+                                    Text(
+                                        text = "Total Repaid",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = TextSecondary,
+                                        textAlign = TextAlign.End
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = "৳${currencyFormat.format(totalRepaid)}",
+                                        fontSize = 14.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AccentTeal,
+                                        textAlign = TextAlign.End
+                                    )
                                 }
                             }
                         }
@@ -1253,12 +1295,14 @@ fun HomeScreen(
 fun AccountCardChip(
     account: AccountEntity,
     currencyFormat: DecimalFormat,
+    modifier: Modifier = Modifier,
     hideBalancesPref: Boolean = false,
     isPinned: Boolean = false,
-    onPinToggle: () -> Unit = {},
-    modifier: Modifier = Modifier
+    onPinToggle: () -> Unit = {}
 ) {
-    val cardColor = remember { Color(android.graphics.Color.parseColor(account.colorHex)) }
+    val cardColor = remember(account.colorHex) {
+        try { Color(account.colorHex.toColorInt()) } catch (_: Exception) { AccentTeal }
+    }
     var isBalanceVisible by remember(hideBalancesPref) { mutableStateOf(!hideBalancesPref) }
     var showMenu by remember { mutableStateOf(false) }
 
@@ -1272,7 +1316,7 @@ fun AccountCardChip(
 
     LaunchedEffect(isBalanceVisible, hideBalancesPref) {
         if (isBalanceVisible && hideBalancesPref) {
-            kotlinx.coroutines.delay(3000)
+            delay(3000.milliseconds)
             isBalanceVisible = false
         }
     }
@@ -1281,7 +1325,7 @@ fun AccountCardChip(
         Card(
             shape   = RoundedCornerShape(16.dp),
             colors  = CardDefaults.cardColors(containerColor = cardColor.copy(alpha = 0.12f)),
-            border  = androidx.compose.foundation.BorderStroke(1.dp, cardColor.copy(alpha = 0.4f)),
+            border  = BorderStroke(1.dp, cardColor.copy(alpha = 0.4f)),
             modifier = modifier
                 .height(95.dp)
                 .graphicsLayer {
@@ -1373,17 +1417,13 @@ fun AccountCardChip(
                     horizontalArrangement = Arrangement.Start
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Label,
+                        imageVector = Icons.AutoMirrored.Filled.Label,
                         contentDescription = "Nickname Tag",
                         tint = TextPrimary.copy(alpha = 0.5f),
                         modifier = Modifier.size(10.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    val displayShowAs = if (account.showAs.isNotBlank()) {
-                        account.showAs
-                    } else {
-                        "Not set"
-                    }
+                    val displayShowAs = account.showAs.ifBlank { "Not set" }
                     Text(
                         text = displayShowAs,
                         fontSize = 9.sp,
@@ -1417,7 +1457,7 @@ fun AccountCardChip(
                 Column(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    val accType = if (account.accountSubtype.isNotBlank()) account.accountSubtype else account.type
+                    val accType = account.accountSubtype.ifBlank { account.type }
                     
                     Text(
                         text = buildAnnotatedString {
@@ -1499,55 +1539,6 @@ fun AccountCardChip(
         )
     }
 }
-}
-
-@Composable
-fun SummaryCard(
-    title: String,
-    amount: Double,
-    color: Color,
-    modifier: Modifier = Modifier,
-    formatter: DecimalFormat,
-    onClick: () -> Unit
-) {
-    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    Card(
-        shape    = RoundedCornerShape(16.dp),
-        colors   = CardDefaults.cardColors(containerColor = CardDark),
-        border   = BorderStroke(1.dp, DividerColor),
-        modifier = modifier
-            .height(84.dp)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null
-            ) { onClick() }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(text = title, fontSize = 12.sp, color = TextSecondary)
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(color)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text       = "৳${formatter.format(amount)}",
-                    fontSize   = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color      = TextPrimary
-                )
-            }
-        }
-    }
 }
 
 @Composable
@@ -1740,34 +1731,6 @@ private fun getTransactionVisuals(
 }
 
 @Composable
-fun PlannedPaymentItem(
-    title: String,
-    date: String,
-    amount: Double,
-    formatter: DecimalFormat
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column {
-            Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(text = date, fontSize = 11.sp, color = TextMuted)
-        }
-        Text(
-            text       = "৳${formatter.format(amount)}",
-            fontSize   = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            color      = TextPrimary
-        )
-    }
-}
-
-@Composable
 fun SectionHeader(
     title: String,
     onViewAllClick: (() -> Unit)? = null
@@ -1897,18 +1860,7 @@ private fun getLast7DayNames(): List<String> {
     val sdf = SimpleDateFormat("EEE", Locale.getDefault())
     val calendar = Calendar.getInstance()
     val names = mutableListOf<String>()
-    for (i in 0..6) {
-        names.add(sdf.format(calendar.time))
-        calendar.add(Calendar.DAY_OF_YEAR, -1)
-    }
-    return names.reversed()
-}
-
-private fun getLast7DateLabels(): List<String> {
-    val sdf = SimpleDateFormat("d MMM", Locale.getDefault())
-    val calendar = Calendar.getInstance()
-    val names = mutableListOf<String>()
-    for (i in 0..6) {
+    repeat(7) {
         names.add(sdf.format(calendar.time))
         calendar.add(Calendar.DAY_OF_YEAR, -1)
     }
