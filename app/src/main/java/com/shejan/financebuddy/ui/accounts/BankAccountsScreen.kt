@@ -68,7 +68,7 @@ import com.shejan.financebuddy.ui.theme.*
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 
-private val PRESET_CASH = listOf("Hand Cash", "Petty Cash", "Wallet Cash")
+private val PRESET_CASH = listOf("Hand Cash")
 private val PRESET_BANKS = listOf(
     "BRAC Bank PLC", "The City Bank PLC", "Eastern Bank PLC (EBL)",
     "Dutch-Bangla Bank PLC (DBBL)", "Prime Bank PLC", "Mutual Trust Bank PLC",
@@ -80,12 +80,10 @@ private val PRESET_BANKS = listOf(
 private val PRESET_MFS = listOf(
     "bKash", "Nagad", "Rocket", "Upay", "CellFin (IBBL)", "Ok Wallet", "MyCash"
 )
-private val ACCOUNT_SUBTYPES = listOf("Savings", "Current", "Salary", "Student", "Business", "Islamic", "Personal", "Merchant", "Agent", "In Hand", "Wallet", "Petty Cash", "Other")
+private val ACCOUNT_SUBTYPES = listOf("Savings", "Current", "Salary", "Student", "Business", "Islamic", "Personal", "Merchant", "Agent", "In Hand", "Other")
 
 private val BANK_COLOR_MAP = mapOf(
     "Hand Cash" to "#10B981",
-    "Petty Cash" to "#059669",
-    "Wallet Cash" to "#34D399",
     "BRAC Bank PLC" to "#0096FF",
     "The City Bank PLC" to "#007A33",
     "Eastern Bank PLC (EBL)" to "#003366",

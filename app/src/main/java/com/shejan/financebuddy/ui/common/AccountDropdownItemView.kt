@@ -24,8 +24,6 @@ import java.text.DecimalFormat
 
 val BANK_COLOR_MAP: Map<String, String> = mapOf(
     "Hand Cash" to "#10B981",
-    "Petty Cash" to "#059669",
-    "Wallet Cash" to "#34D399",
     "BRAC Bank PLC" to "#0096FF",
     "The City Bank PLC" to "#007A33",
     "Eastern Bank PLC (EBL)" to "#003366",

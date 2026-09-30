@@ -2,35 +2,54 @@ package com.shejan.financebuddy.ui.home
 
 import android.app.DatePickerDialog
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.TrendingDown
-import androidx.compose.material.icons.filled.TrendingUp
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -39,10 +58,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shejan.financebuddy.data.db.AccountEntity
 import com.shejan.financebuddy.data.db.TransactionEntity
+import com.shejan.financebuddy.ui.common.AppBackButton
 import com.shejan.financebuddy.ui.theme.*
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -148,18 +170,9 @@ fun TransactionListScreen(
 
     // Group transactions by date string
     val groupedTransactions = remember(filteredTransactions) {
-        val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault())
-        val todayStr = dateFormat.format(Date())
-        val cal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
-        val yesterdayStr = dateFormat.format(cal.time)
-
+        val dateFormat = SimpleDateFormat("d MMMM yyyy", Locale.ENGLISH)
         filteredTransactions.groupBy { tx ->
-            val dateStr = dateFormat.format(Date(tx.timestamp))
-            when (dateStr) {
-                todayStr -> "Today"
-                yesterdayStr -> "Yesterday"
-                else -> dateStr
-            }
+            dateFormat.format(Date(tx.timestamp))
         }
     }
 
@@ -185,10 +198,10 @@ fun TransactionListScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(240.dp)
+                .height(260.dp)
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(glowColor.copy(alpha = 0.05f), Color.Transparent)
+                        colors = listOf(glowColor.copy(alpha = 0.07f), Color.Transparent)
                     )
                 )
         )
@@ -199,14 +212,16 @@ fun TransactionListScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 18.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 // Left side: Back Button & Page Title
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    com.shejan.financebuddy.ui.common.AppBackButton(
-                        onClick = { onBack() }
+                    AppBackButton(
+                        onClick = { onBack() },
+                        size = 40.dp,
+                        cornerRadius = 12.dp
                     )
 
                     Spacer(modifier = Modifier.width(14.dp))
@@ -217,13 +232,14 @@ fun TransactionListScreen(
                             color = TextPrimary,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = (-0.4).sp
+                            letterSpacing = (-0.3).sp
                         )
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "Historical transaction records",
                             color = TextSecondary,
-                            fontSize = 11.5.sp,
-                            fontWeight = FontWeight.Medium
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Normal
                         )
                     }
                 }
@@ -233,18 +249,16 @@ fun TransactionListScreen(
                     val isFiltered = selectedFilter != "ALL"
                     val activeLabel = filterOptions.firstOrNull { it.first == selectedFilter }?.second ?: "Filter"
 
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (isFiltered) glowColor.copy(alpha = 0.16f) else CardDarker)
-                            .border(1.dp, if (isFiltered) glowColor else DividerColor, RoundedCornerShape(12.dp))
-                            .clickable { showFilterMenu = true }
-                            .padding(horizontal = 10.dp, vertical = 7.dp),
-                        contentAlignment = Alignment.Center
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = if (isFiltered) glowColor.copy(alpha = 0.16f) else CardDark,
+                        border = BorderStroke(1.dp, if (isFiltered) glowColor.copy(alpha = 0.5f) else DividerColor),
+                        modifier = Modifier.clickable { showFilterMenu = true }
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.FilterList,
@@ -255,7 +269,7 @@ fun TransactionListScreen(
                             Text(
                                 text = if (isFiltered) activeLabel else "Filter",
                                 color = if (isFiltered) glowColor else TextPrimary,
-                                fontSize = 12.sp,
+                                fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -336,26 +350,26 @@ fun TransactionListScreen(
 
                     // Transaction list grouped by day
                     groupedTransactions.forEach { (dateHeader, txs) ->
-                        // Sticky Header style section title
+                        // Date section header
                         item {
                             Text(
                                 text = dateHeader,
-                                color = TextMuted,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 8.dp)
+                                color = TextSecondary,
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 10.dp)
                             )
                         }
 
-                        items(txs) { tx ->
+                        items(txs, key = { it.id }) { tx ->
                             TransactionDetailsRow(
                                 tx = tx,
                                 accounts = accounts,
                                 formatter = currencyFormat
                             )
                             HorizontalDivider(
-                                color = DividerColor.copy(alpha = 0.5f),
-                                modifier = Modifier.padding(horizontal = 24.dp)
+                                color = DividerColor.copy(alpha = 0.35f),
+                                modifier = Modifier.padding(horizontal = 20.dp)
                             )
                         }
                     }
@@ -373,12 +387,12 @@ private fun SummaryAggregateCard(
     formatter: DecimalFormat
 ) {
     Card(
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = CardDark),
+        border = BorderStroke(1.dp, DividerColor),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp)
-            .border(1.dp, DividerColor, RoundedCornerShape(18.dp))
+            .padding(horizontal = 18.dp, vertical = 8.dp)
     ) {
         Row(
             modifier = Modifier
@@ -391,30 +405,29 @@ private fun SummaryAggregateCard(
                 Text(
                     text = "Total ${if (type == "INCOME") "Inflow" else "Outflow"}",
                     color = TextSecondary,
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Medium
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "৳${formatter.format(totalAmount)}",
                     color = if (type == "INCOME") IncomeGreen else ExpenseRed,
-                    fontSize = 24.sp,
+                    fontSize = 28.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
 
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (type == "INCOME") IncomeGreen.copy(alpha = 0.1f) else ExpenseRed.copy(alpha = 0.1f))
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = (if (type == "INCOME") IncomeGreen else ExpenseRed).copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, (if (type == "INCOME") IncomeGreen else ExpenseRed).copy(alpha = 0.35f))
             ) {
                 Text(
                     text = "$count Trans.",
                     color = if (type == "INCOME") IncomeGreen else ExpenseRed,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                 )
             }
         }
@@ -428,62 +441,64 @@ private fun TransactionDetailsRow(
     formatter: DecimalFormat
 ) {
     val timeStr = remember(tx.timestamp) {
-        SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(tx.timestamp))
+        SimpleDateFormat("hh:mm a", Locale.ENGLISH).format(Date(tx.timestamp))
     }
-    val accountName = remember(tx.fromAccountId) {
-        accounts.find { it.id == tx.fromAccountId }?.name ?: "Unknown Account"
+    val account = remember(tx.fromAccountId, accounts) {
+        accounts.find { it.id == tx.fromAccountId }
+    }
+    val accountName = account?.name ?: "Unknown Account"
+    val subDetail = remember(tx.note, account?.showAs) {
+        if (tx.note.isNotBlank()) tx.note else account?.showAs?.takeIf { it.isNotBlank() }
     }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(BackgroundDark)
-            .padding(horizontal = 24.dp, vertical = 14.dp),
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Styled indicator badge
+        // Styled indicator badge (Squircle)
         Box(
             modifier = Modifier
-                .size(38.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(CardDark),
+                .size(44.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(CardDark)
+                .border(1.dp, DividerColor.copy(alpha = 0.5f), RoundedCornerShape(14.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = if (tx.type == "INCOME") Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                imageVector = if (tx.type == "INCOME") Icons.AutoMirrored.Filled.TrendingUp else Icons.Default.TrendingDown,
                 contentDescription = null,
                 tint = if (tx.type == "INCOME") IncomeGreen else ExpenseRed,
                 modifier = Modifier.size(20.dp)
             )
         }
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(14.dp))
 
         // Transaction metadata
         Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = tx.category,
-                    color = TextPrimary,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            Text(
+                text = tx.category.ifBlank { if (tx.type == "INCOME") "Income" else "Expense" },
+                color = TextPrimary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "$accountName • $timeStr",
                 color = TextSecondary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal
             )
-            if (tx.note.isNotBlank()) {
+            if (!subDetail.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = tx.note,
+                    text = subDetail,
                     color = TextMuted,
-                    fontSize = 10.sp,
+                    fontSize = 11.5.sp,
                     fontWeight = FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
