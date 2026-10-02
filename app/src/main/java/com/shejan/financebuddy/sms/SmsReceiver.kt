@@ -7,6 +7,7 @@ import android.provider.Telephony
 import android.util.Log
 import com.shejan.financebuddy.data.db.FinanceDatabase
 import com.shejan.financebuddy.data.db.PendingSmsTransactionEntity
+import com.shejan.financebuddy.data.db.AccountEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -109,9 +110,24 @@ class SmsReceiver : BroadcastReceiver() {
                 val matchedAccount = if (mapping != null && mapping.accountId > 0) {
                     accounts.find { it.id == mapping.accountId }
                 } else {
-                    accounts.firstOrNull { acc ->
-                        acc.name.equals(parsed.detectedAccountName, ignoreCase = true)
+                    var acc = accounts.firstOrNull { a ->
+                        a.name.equals(parsed.detectedAccountName, ignoreCase = true) ||
+                        a.name.contains(parsed.detectedAccountName, ignoreCase = true) ||
+                        parsed.detectedAccountName.contains(a.name, ignoreCase = true)
                     }
+                    if (acc == null && parsed.detectedAccountName.isNotBlank()) {
+                        val isMfs = SmsParser.isMfsAccount(parsed.detectedAccountName)
+                        val newAccount = AccountEntity(
+                            id = 0,
+                            name = parsed.detectedAccountName,
+                            type = if (isMfs) "MFS" else "BANK",
+                            balance = 0.0,
+                            colorHex = SmsParser.getDefaultColorForAccount(parsed.detectedAccountName)
+                        )
+                        val insertedId = accountDao.insertAccount(newAccount).toInt()
+                        acc = newAccount.copy(id = insertedId)
+                    }
+                    acc
                 }
 
                 val pending = PendingSmsTransactionEntity(

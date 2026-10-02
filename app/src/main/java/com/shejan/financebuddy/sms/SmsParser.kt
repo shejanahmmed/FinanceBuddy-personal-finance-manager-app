@@ -44,6 +44,7 @@ object SmsParser {
         // Nagad
         "nagad"         to "Nagad",
         "nagadsms"      to "Nagad",
+        "16167"         to "Nagad",
 
         // Rocket (DBBL MFS)
         "rocket"        to "Rocket",
@@ -52,6 +53,7 @@ object SmsParser {
         // Upay
         "upay"          to "Upay",
         "upaysms"       to "Upay",
+        "16268"         to "Upay",
 
         // CellFin (IBBL)
         "cellfin"       to "CellFin (IBBL)",
@@ -60,6 +62,7 @@ object SmsParser {
         // Ok Wallet
         "okwallet"      to "Ok Wallet",
         "okcash"        to "Ok Wallet",
+        "16269"         to "Ok Wallet",
 
         // MyCash
         "mycash"        to "MyCash",
@@ -68,18 +71,22 @@ object SmsParser {
         "bracbank"      to "BRAC Bank PLC",
         "brac"          to "BRAC Bank PLC",
         "bracbanksms"   to "BRAC Bank PLC",
+        "16221"         to "BRAC Bank PLC",
 
         // City Bank
         "citybank"      to "The City Bank PLC",
         "thecitybank"   to "The City Bank PLC",
         "citybanksms"   to "The City Bank PLC",
+        "16234"         to "The City Bank PLC",
 
         // EBL
         "ebl"           to "Eastern Bank PLC (EBL)",
         "easternbank"   to "Eastern Bank PLC (EBL)",
         "eblsms"        to "Eastern Bank PLC (EBL)",
+        "16230"         to "Eastern Bank PLC (EBL)",
 
         // DBBL (Dutch-Bangla)
+        "16216"         to "Dutch-Bangla Bank PLC (DBBL)",
         "dbbl"          to "Dutch-Bangla Bank PLC (DBBL)",
         "dutchbangla"   to "Dutch-Bangla Bank PLC (DBBL)",
         "dbblsms"       to "Dutch-Bangla Bank PLC (DBBL)",
@@ -88,35 +95,43 @@ object SmsParser {
         // Prime Bank
         "primebank"     to "Prime Bank PLC",
         "primebanksms"  to "Prime Bank PLC",
+        "16218"         to "Prime Bank PLC",
 
         // Mutual Trust Bank
         "mtb"           to "Mutual Trust Bank PLC",
         "mutualtrustbank" to "Mutual Trust Bank PLC",
         "mtbsms"        to "Mutual Trust Bank PLC",
+        "16267"         to "Mutual Trust Bank PLC",
 
         // Islami Bank
         "ibbl"          to "Islami Bank Bangladesh PLC (IBBL)",
         "islamibank"    to "Islami Bank Bangladesh PLC (IBBL)",
         "ibblsms"       to "Islami Bank Bangladesh PLC (IBBL)",
+        "16259"         to "Islami Bank Bangladesh PLC (IBBL)",
 
         // Al-Arafah Islami Bank
         "alarafah"      to "Al-Arafah Islami Bank PLC",
         "alarafahbank"  to "Al-Arafah Islami Bank PLC",
+        "16261"         to "Al-Arafah Islami Bank PLC",
 
         // Shahjalal Islami Bank
         "sjibl"         to "Shahjalal Islami Bank PLC",
         "shahjalal"     to "Shahjalal Islami Bank PLC",
-        "sjibsms"       to "Shahjalal Islami Bank PLC"
+        "sjibsms"       to "Shahjalal Islami Bank PLC",
+        "16247"         to "Shahjalal Islami Bank PLC"
     )
 
     /**
      * Returns the canonical account name if [sender] is on the whitelist, null otherwise.
-     * A numeric-only sender (e.g. "+8801XXXXXXX") is never whitelisted.
      */
     fun resolveAccount(sender: String): String? {
-        // Numeric-only senders are rejected — real bank shortcodes are alphanumeric
+        val cleanSender = sender.lowercase().trim()
+        val match = SENDER_ACCOUNT_MAP[cleanSender]
+        if (match != null) return match
+
+        // Reject unknown numeric phone numbers (+8801...)
         if (sender.trimStart('+').all { it.isDigit() }) return null
-        return SENDER_ACCOUNT_MAP[sender.lowercase().trim()]
+        return null
     }
 
     /**
@@ -128,6 +143,94 @@ object SmsParser {
             val cleanCanon = canonical.lowercase().trim()
             cleanCanon == cleanAcc || cleanAcc.contains(cleanCanon) || cleanCanon.contains(cleanAcc)
         }.keys.toList()
+    }
+
+    /**
+     * Returns the preferred default sender display identifier for a bank/MFS account.
+     */
+    fun getDefaultSenderHeader(accountName: String): String {
+        val clean = accountName.lowercase().trim()
+        return when {
+            clean.contains("dutch-bangla") || clean.contains("dbbl") -> "16216"
+            clean.contains("brac") -> "BRAC BANK"
+            clean.contains("city bank") -> "CITY BANK"
+            clean.contains("eastern bank") || clean.contains("ebl") -> "EBL"
+            clean.contains("prime bank") -> "Prime Bank"
+            clean.contains("mutual trust") || clean.contains("mtb") -> "MTB"
+            clean.contains("islami bank") || clean.contains("ibbl") -> "IBBL"
+            clean.contains("al-arafah") -> "Al-Arafah Bank"
+            clean.contains("shahjalal") || clean.contains("sjibl") -> "Shahjalal Bank"
+            clean.contains("bkash") -> "bKash"
+            clean.contains("nagad") -> "NAGAD"
+            clean.contains("rocket") -> "Rocket"
+            clean.contains("upay") -> "Upay"
+            clean.contains("cellfin") -> "CellFin"
+            clean.contains("ok wallet") || clean.contains("okcash") -> "Ok Wallet"
+            clean.contains("mycash") -> "MyCash"
+            else -> accountName
+        }
+    }
+
+    /**
+     * Formats raw or lowercase sender codes to their canonical, clean display name.
+     */
+    fun formatDisplaySender(sender: String): String {
+        val clean = sender.lowercase().trim()
+        return when {
+            clean == "16216" || clean == "dbbl" || clean == "dutchbangla" || clean == "dbblsms" || clean == "dutchbanglabank" -> "16216"
+            clean == "16221" || clean == "brac" || clean == "bracbank" || clean == "bracbanksms" -> "BRAC BANK"
+            clean == "16234" || clean == "citybank" || clean == "thecitybank" || clean == "citybanksms" -> "CITY BANK"
+            clean == "16230" || clean == "ebl" || clean == "easternbank" || clean == "eblsms" -> "EBL"
+            clean == "16218" || clean == "primebank" || clean == "primebanksms" -> "Prime Bank"
+            clean == "16267" || clean == "mtb" || clean == "mutualtrustbank" || clean == "mtbsms" -> "MTB"
+            clean == "16259" || clean == "ibbl" || clean == "islamibank" || clean == "ibblsms" -> "IBBL"
+            clean == "16261" || clean == "alarafah" || clean == "alarafahbank" -> "Al-Arafah Bank"
+            clean == "16247" || clean == "sjibl" || clean == "shahjalal" || clean == "sjibsms" -> "Shahjalal Bank"
+            clean == "bkash" || clean == "bkashsms" -> "bKash"
+            clean == "16167" || clean == "nagad" || clean == "nagadsms" -> "NAGAD"
+            clean == "rocket" || clean == "dbblrocket" -> "Rocket"
+            clean == "16268" || clean == "upay" || clean == "upaysms" -> "Upay"
+            clean == "cellfin" || clean == "ibblcellfin" -> "CellFin"
+            clean == "16269" || clean == "okwallet" || clean == "okcash" -> "Ok Wallet"
+            clean == "mycash" -> "MyCash"
+            else -> sender
+        }
+    }
+
+    /**
+     * Returns true if the given account name belongs to an MFS provider (e.g. bKash, Nagad, Rocket).
+     */
+    fun isMfsAccount(accountName: String): Boolean {
+        val clean = accountName.lowercase().trim()
+        return clean.contains("bkash") || clean.contains("nagad") || clean.contains("rocket") ||
+               clean.contains("upay") || clean.contains("cellfin") || clean.contains("ok wallet") ||
+               clean.contains("okcash") || clean.contains("mycash")
+    }
+
+    /**
+     * Returns the theme color for a bank or MFS account.
+     */
+    fun getDefaultColorForAccount(accountName: String): String {
+        val clean = accountName.lowercase().trim()
+        return when {
+            clean.contains("bkash") -> "#FF5C7C"
+            clean.contains("nagad") -> "#FFBD2E"
+            clean.contains("rocket") -> "#00D4AA"
+            clean.contains("upay") -> "#FFB300"
+            clean.contains("cellfin") -> "#4CAF50"
+            clean.contains("ok wallet") || clean.contains("okcash") -> "#FF5722"
+            clean.contains("mycash") -> "#3F51B5"
+            clean.contains("brac") -> "#0096FF"
+            clean.contains("city") -> "#007A33"
+            clean.contains("eastern") || clean.contains("ebl") -> "#003366"
+            clean.contains("dutch") || clean.contains("dbbl") -> "#7C5CFC"
+            clean.contains("prime") -> "#FF5722"
+            clean.contains("mutual") || clean.contains("mtb") -> "#0C2340"
+            clean.contains("islami") || clean.contains("ibbl") -> "#1B5E20"
+            clean.contains("al-arafah") -> "#2E7D32"
+            clean.contains("shahjalal") || clean.contains("sjibl") -> "#008080"
+            else -> "#10B981"
+        }
     }
 
     /**

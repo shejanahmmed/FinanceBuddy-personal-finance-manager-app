@@ -61,7 +61,7 @@ class PendingTransactionsViewModel(private val database: FinanceDatabase) : View
         pendingSmsDao.getDismissedCount()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
-    /** Active SMS Sender Mappings (merging custom DB mappings and default pre-synced mappings). */
+    /** Active SMS Sender Mappings (merging custom DB mappings, default pre-synced mappings, and active inbox senders). */
     val activeMappings: StateFlow<List<ActiveSenderMapping>> = combine(
         database.accountDao().getAllAccounts(),
         database.smsSenderMappingDao().getAllMappingsFlow(),
@@ -70,86 +70,117 @@ class PendingTransactionsViewModel(private val database: FinanceDatabase) : View
         val result = mutableListOf<ActiveSenderMapping>()
         val dbMappingBySender = dbMappings.associateBy { it.senderAddress.lowercase().trim() }
         val addedSenders = mutableSetOf<String>()
+        val addedAccountKeys = mutableSetOf<String>()
 
-        // 1. Add all DB mappings where accountId > 0
+        // 1. Add all custom DB mappings where accountId > 0 and the account still exists
         for (mapping in dbMappings) {
             if (mapping.accountId > 0) {
                 val senderLower = mapping.senderAddress.lowercase().trim()
                 val account = accounts.find { it.id == mapping.accountId }
                 if (account != null) {
-                    val isDefault = SmsParser.resolveAccount(mapping.senderAddress) != null
-                    result.add(
-                        ActiveSenderMapping(
-                            id = mapping.id,
-                            senderAddress = mapping.senderAddress,
-                            accountId = mapping.accountId,
-                            accountName = account.name,
-                            isDefault = isDefault,
-                            isCustomOverride = isDefault
+                    val displaySender = SmsParser.formatDisplaySender(mapping.senderAddress)
+                    val key = "${displaySender.lowercase()}_${account.id}"
+                    if (!addedAccountKeys.contains(key)) {
+                        val isDefault = SmsParser.resolveAccount(mapping.senderAddress) != null
+                        result.add(
+                            ActiveSenderMapping(
+                                id = mapping.id,
+                                senderAddress = displaySender,
+                                accountId = mapping.accountId,
+                                accountName = account.name,
+                                isDefault = isDefault,
+                                isCustomOverride = isDefault
+                            )
                         )
-                    )
+                        addedAccountKeys.add(key)
+                    }
+                    val aliases = SmsParser.getAliasesForSender(mapping.senderAddress)
+                    for (a in aliases) {
+                        addedSenders.add(a.lowercase().trim())
+                    }
                     addedSenders.add(senderLower)
                 }
             }
         }
 
-        // 2. Add default active mappings for user's existing accounts (if not unlinked or overridden in DB)
+        // 2. Add default active mappings for user's existing accounts (if not explicitly unlinked or overridden in DB)
         for (account in accounts) {
             val knownSenders = SmsParser.getKnownSendersForAccount(account.name)
-            for (sender in knownSenders) {
-                val senderLower = sender.lowercase().trim()
-                if (addedSenders.contains(senderLower)) continue
+            if (knownSenders.isEmpty()) continue
 
-                val dbMapping = dbMappingBySender[senderLower]
-                // If present in DB, either handled above (accountId > 0) or explicitly unlinked (accountId == -1)
-                if (dbMapping != null) continue
+            // If any known sender for this account was explicitly unlinked in DB, skip
+            val hasUnlinked = knownSenders.any { s ->
+                val m = dbMappingBySender[s.lowercase().trim()]
+                m != null && m.accountId == -1
+            }
+            if (hasUnlinked) continue
 
-                // Display name
-                val displayName = when (senderLower) {
-                    "bkash" -> "bKash"
-                    "bkashsms" -> "bKash (SMS)"
-                    "nagad" -> "Nagad"
-                    "nagadsms" -> "Nagad (SMS)"
-                    "rocket" -> "Rocket"
-                    "dbblrocket" -> "Rocket (DBBL)"
-                    "upay" -> "Upay"
-                    "upaysms" -> "Upay (SMS)"
-                    "cellfin" -> "CellFin (IBBL)"
-                    "ibblcellfin" -> "CellFin (SMS)"
-                    "okwallet" -> "Ok Wallet"
-                    "okcash" -> "Ok Wallet (Cash)"
-                    "mycash" -> "MyCash"
-                    "bracbank" -> "BRAC Bank PLC"
-                    "citybank" -> "The City Bank PLC"
-                    "ebl" -> "Eastern Bank PLC (EBL)"
-                    "dbbl" -> "Dutch-Bangla Bank PLC (DBBL)"
-                    "primebank" -> "Prime Bank PLC"
-                    "mtb" -> "Mutual Trust Bank PLC"
-                    "ibbl" -> "Islami Bank Bangladesh PLC (IBBL)"
-                    "alarafah" -> "Al-Arafah Islami Bank PLC"
-                    "sjibl" -> "Shahjalal Islami Bank PLC"
-                    else -> sender
-                }
+            // Check if any alias is already added via custom DB mapping (accountId > 0)
+            if (knownSenders.any { addedSenders.contains(it.lowercase().trim()) }) {
+                continue
+            }
 
-                // Only show primary alias or if it appeared in pending list
-                val wasSeenInPending = pendingList.any { it.senderAddress.lowercase().trim() == senderLower }
-                val isPrimary = senderLower in listOf(
-                    "bkash", "nagad", "rocket", "upay", "cellfin", "okwallet", "mycash",
-                    "bracbank", "citybank", "ebl", "dbbl", "primebank", "mtb", "ibbl", "alarafah", "sjibl"
-                )
+            // Find if user received any SMS from any known alias for this account in inbox
+            val matchingPending = pendingList.firstOrNull { p ->
+                knownSenders.any { k -> k.equals(p.senderAddress.trim(), ignoreCase = true) }
+            }
 
-                if (isPrimary || wasSeenInPending) {
-                    result.add(
-                        ActiveSenderMapping(
-                            id = 0,
-                            senderAddress = displayName,
-                            accountId = account.id,
-                            accountName = account.name,
-                            isDefault = true,
-                            isCustomOverride = false
-                        )
+            val defaultSenderCode = SmsParser.getDefaultSenderHeader(account.name)
+            val senderHeader = matchingPending?.senderAddress ?: defaultSenderCode
+            val formattedSenderHeader = SmsParser.formatDisplaySender(senderHeader)
+
+            val key = "${formattedSenderHeader.lowercase()}_${account.id}"
+            if (!addedAccountKeys.contains(key)) {
+                result.add(
+                    ActiveSenderMapping(
+                        id = 0,
+                        senderAddress = formattedSenderHeader,
+                        accountId = account.id,
+                        accountName = account.name,
+                        isDefault = true,
+                        isCustomOverride = false
                     )
-                    addedSenders.add(senderLower)
+                )
+                addedAccountKeys.add(key)
+            }
+
+            for (s in knownSenders) {
+                addedSenders.add(s.lowercase().trim())
+            }
+        }
+
+        // 3. Fallback: Any pending SMS with fromAccountId > 0 that has a valid account, not yet listed and not unlinked
+        for (pending in pendingList) {
+            if (pending.fromAccountId > 0) {
+                val sLower = pending.senderAddress.lowercase().trim()
+                val m = dbMappingBySender[sLower]
+                if (m != null && m.accountId == -1) continue // explicitly unlinked
+
+                if (!addedSenders.contains(sLower)) {
+                    val account = accounts.find { it.id == pending.fromAccountId }
+                    if (account != null) {
+                        val displaySender = SmsParser.formatDisplaySender(pending.senderAddress)
+                        val key = "${displaySender.lowercase()}_${account.id}"
+                        if (!addedAccountKeys.contains(key)) {
+                            val isDefault = SmsParser.resolveAccount(pending.senderAddress) != null
+                            result.add(
+                                ActiveSenderMapping(
+                                    id = 0,
+                                    senderAddress = displaySender,
+                                    accountId = account.id,
+                                    accountName = account.name,
+                                    isDefault = isDefault,
+                                    isCustomOverride = false
+                                )
+                            )
+                            addedAccountKeys.add(key)
+                        }
+                        val aliases = SmsParser.getAliasesForSender(pending.senderAddress)
+                        for (a in aliases) {
+                            addedSenders.add(a.lowercase().trim())
+                        }
+                        addedSenders.add(sLower)
+                    }
                 }
             }
         }
@@ -165,8 +196,51 @@ class PendingTransactionsViewModel(private val database: FinanceDatabase) : View
     private val _potentialSenders = MutableStateFlow<List<com.shejan.financebuddy.sms.PotentialSender>>(emptyList())
     val potentialSenders: StateFlow<List<com.shejan.financebuddy.sms.PotentialSender>> = _potentialSenders
 
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            autoHealAndLinkAccounts()
+        }
+    }
+
+    suspend fun autoHealAndLinkAccounts() {
+        val accounts = database.accountDao().getAllAccountsOnce().toMutableList()
+        val pendingItems = pendingSmsDao.getAllPendingOnce()
+        val mappings = database.smsSenderMappingDao().getAllMappingsOnce()
+        val unlinkedSenders = mappings.filter { it.accountId == -1 }.map { it.senderAddress.lowercase().trim() }.toSet()
+
+        for (pending in pendingItems) {
+            val sLower = pending.senderAddress.lowercase().trim()
+            if (unlinkedSenders.contains(sLower)) continue // explicitly unlinked
+
+            if (pending.fromAccountId == -1 && pending.detectedAccountName.isNotBlank()) {
+                var matched = accounts.firstOrNull { a ->
+                    a.name.equals(pending.detectedAccountName, ignoreCase = true) ||
+                    a.name.contains(pending.detectedAccountName, ignoreCase = true) ||
+                    pending.detectedAccountName.contains(a.name, ignoreCase = true)
+                }
+
+                if (matched == null) {
+                    val isMfs = SmsParser.isMfsAccount(pending.detectedAccountName)
+                    val newAcc = com.shejan.financebuddy.data.db.AccountEntity(
+                        id = 0,
+                        name = pending.detectedAccountName,
+                        type = if (isMfs) "MFS" else "BANK",
+                        balance = 0.0,
+                        colorHex = SmsParser.getDefaultColorForAccount(pending.detectedAccountName)
+                    )
+                    val insertedId = database.accountDao().insertAccount(newAcc).toInt()
+                    matched = newAcc.copy(id = insertedId)
+                    accounts.add(matched)
+                }
+
+                pendingSmsDao.updatePending(pending.copy(fromAccountId = matched.id))
+            }
+        }
+    }
+
     fun loadPotentialSenders(context: android.content.Context) {
         viewModelScope.launch(Dispatchers.IO) {
+            autoHealAndLinkAccounts()
             val senders = com.shejan.financebuddy.sms.SmsSyncHelper.findPotentialUnknownSenders(context, database)
             _potentialSenders.value = senders
         }
@@ -178,6 +252,7 @@ class PendingTransactionsViewModel(private val database: FinanceDatabase) : View
             val sendersToMap = SmsParser.getAliasesForSender(senderAddress).ifEmpty { listOf(senderLower) }
 
             for (s in sendersToMap) {
+                database.smsSenderMappingDao().deleteBySender(s)
                 database.smsSenderMappingDao().insertMapping(
                     SmsSenderMappingEntity(
                         senderAddress = s,
@@ -195,9 +270,8 @@ class PendingTransactionsViewModel(private val database: FinanceDatabase) : View
             val sendersToUnlink = SmsParser.getAliasesForSender(mapping.senderAddress).ifEmpty { listOf(senderLower) }
 
             for (s in sendersToUnlink) {
-                if (!mapping.isDefault && mapping.id > 0) {
-                    database.smsSenderMappingDao().deleteBySender(s)
-                } else {
+                database.smsSenderMappingDao().deleteBySender(s)
+                if (mapping.isDefault || mapping.id == 0) {
                     database.smsSenderMappingDao().insertMapping(
                         SmsSenderMappingEntity(
                             senderAddress = s,
@@ -213,14 +287,19 @@ class PendingTransactionsViewModel(private val database: FinanceDatabase) : View
     fun deleteMapping(mapping: SmsSenderMappingEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             val isDefault = SmsParser.resolveAccount(mapping.senderAddress) != null
-            if (isDefault) {
-                database.smsSenderMappingDao().insertMapping(
-                    mapping.copy(accountId = -1)
-                )
-            } else {
-                database.smsSenderMappingDao().deleteMapping(mapping)
+            val sendersToHandle = SmsParser.getAliasesForSender(mapping.senderAddress).ifEmpty { listOf(mapping.senderAddress) }
+            for (s in sendersToHandle) {
+                database.smsSenderMappingDao().deleteBySender(s)
+                if (isDefault) {
+                    database.smsSenderMappingDao().insertMapping(
+                        SmsSenderMappingEntity(
+                            senderAddress = s,
+                            accountId = -1
+                        )
+                    )
+                }
+                database.pendingSmsDao().unassignAccountIdForSender(s)
             }
-            database.pendingSmsDao().unassignAccountIdForSender(mapping.senderAddress)
         }
     }
 

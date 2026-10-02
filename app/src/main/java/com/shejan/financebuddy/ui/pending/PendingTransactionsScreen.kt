@@ -1902,16 +1902,41 @@ private fun SmsSenderMappingsConfigSheet(
                                     .clip(RoundedCornerShape(14.dp))
                                     .background(CardDarker)
                                     .border(1.dp, DividerColor.copy(alpha = 0.7f), RoundedCornerShape(14.dp))
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                // Left Icon Box
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(AccentTeal.copy(alpha = 0.12f))
+                                        .border(0.5.dp, AccentTeal.copy(alpha = 0.25f), RoundedCornerShape(10.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.SwapHoriz,
+                                        contentDescription = null,
+                                        tint = AccentTeal,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
                                         Text(
                                             text = mapping.senderAddress,
                                             color = TextPrimary,
                                             fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f, fill = false)
                                         )
                                         if (mapping.isDefault) {
                                             Spacer(modifier = Modifier.width(8.dp))
@@ -1919,25 +1944,43 @@ private fun SmsSenderMappingsConfigSheet(
                                                 modifier = Modifier
                                                     .background(AccentTeal.copy(alpha = 0.14f), RoundedCornerShape(6.dp))
                                                     .border(0.5.dp, AccentTeal.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    .padding(horizontal = 7.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
                                                     text = if (mapping.isCustomOverride) "Override" else "Auto-Sync",
                                                     color = AccentTeal,
                                                     fontSize = 10.sp,
-                                                    fontWeight = FontWeight.SemiBold
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    maxLines = 1,
+                                                    softWrap = false
                                                 )
                                             }
                                         }
                                     }
                                     Spacer(modifier = Modifier.height(3.dp))
-                                    Text(
-                                        text = "Mapped to: ${mapping.accountName}",
-                                        color = AccentTeal,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = "Mapped to: ",
+                                            color = TextMuted,
+                                            fontSize = 12.sp
+                                        )
+                                        Text(
+                                            text = mapping.accountName,
+                                            color = AccentTeal,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f, fill = false)
+                                        )
+                                    }
                                 }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
                                 IconButton(
                                     onClick = {
                                         onDeleteMapping(mapping)
@@ -1946,13 +1989,16 @@ private fun SmsSenderMappingsConfigSheet(
                                             "Unlinked ${mapping.senderAddress} from ${mapping.accountName}",
                                             android.widget.Toast.LENGTH_SHORT
                                         ).show()
-                                    }
+                                    },
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(ExpenseRed.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Delete,
                                         contentDescription = "Unlink Sender",
                                         tint = ExpenseRed,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
@@ -1991,20 +2037,44 @@ private fun SmsSenderMappingsConfigSheet(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(38.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(SurfaceDark)
+                                            .border(0.5.dp, DividerColor.copy(alpha = 0.6f), RoundedCornerShape(10.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Sms,
+                                            contentDescription = null,
+                                            tint = TextSecondary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(12.dp))
+
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = sender.senderAddress,
                                             color = TextPrimary,
                                             fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
+                                        Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = formatTimestamp(sender.timestamp),
                                             color = TextMuted,
-                                            fontSize = 10.sp
+                                            fontSize = 10.sp,
+                                            maxLines = 1
                                         )
                                     }
                                     
+                                    Spacer(modifier = Modifier.width(8.dp))
+
                                     Box {
                                         Button(
                                             onClick = { showAccountMenu = true },
@@ -2013,7 +2083,7 @@ private fun SmsSenderMappingsConfigSheet(
                                             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
                                             modifier = Modifier.height(34.dp)
                                         ) {
-                                            Text("Link Account", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BackgroundDark)
+                                            Text("Link Account", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BackgroundDark, maxLines = 1, softWrap = false)
                                         }
                                         
                                         DropdownMenu(

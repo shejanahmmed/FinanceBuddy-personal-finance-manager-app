@@ -37,7 +37,7 @@ object SmsSyncHelper {
         val accountDao = database.accountDao()
         val senderMappingDao = database.smsSenderMappingDao()
 
-        val accounts = accountDao.getAllAccountsOnce()
+        val accounts = accountDao.getAllAccountsOnce().toMutableList()
         val mappings = senderMappingDao.getAllMappingsOnce()
         val mappingMap = mappings.associateBy { it.senderAddress.lowercase().trim() }
 
@@ -129,13 +129,28 @@ object SmsSyncHelper {
                     val existsInPending = pendingSmsDao.isSmsExists(body)
                     if (existsInPending) continue
 
-                    // Match account name
                     val matchedAccount = if (mapping != null && mapping.accountId > 0) {
                         accounts.find { it.id == mapping.accountId }
                     } else {
-                        accounts.firstOrNull { acc ->
-                            acc.name.equals(parsed.detectedAccountName, ignoreCase = true)
+                        var acc = accounts.firstOrNull { a ->
+                            a.name.equals(parsed.detectedAccountName, ignoreCase = true) ||
+                            a.name.contains(parsed.detectedAccountName, ignoreCase = true) ||
+                            parsed.detectedAccountName.contains(a.name, ignoreCase = true)
                         }
+                        if (acc == null && parsed.detectedAccountName.isNotBlank()) {
+                            val isMfs = SmsParser.isMfsAccount(parsed.detectedAccountName)
+                            val newAccount = com.shejan.financebuddy.data.db.AccountEntity(
+                                id = 0,
+                                name = parsed.detectedAccountName,
+                                type = if (isMfs) "MFS" else "BANK",
+                                balance = 0.0,
+                                colorHex = SmsParser.getDefaultColorForAccount(parsed.detectedAccountName)
+                            )
+                            val insertedId = accountDao.insertAccount(newAccount).toInt()
+                            acc = newAccount.copy(id = insertedId)
+                            accounts.add(acc)
+                        }
+                        acc
                     }
 
                     val pending = PendingSmsTransactionEntity(
