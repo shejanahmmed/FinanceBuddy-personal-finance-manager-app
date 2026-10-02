@@ -66,4 +66,13 @@ interface PendingSmsDao {
 
     @Query("SELECT EXISTS(SELECT 1 FROM pending_sms_transactions WHERE rawSmsBody = :rawBody LIMIT 1)")
     suspend fun isSmsExists(rawBody: String): Boolean
+
+    @Query("SELECT * FROM pending_sms_transactions WHERE status = 'PENDING' ORDER BY receivedAt DESC")
+    suspend fun getAllPendingOnce(): List<PendingSmsTransactionEntity>
+
+    @Query("UPDATE pending_sms_transactions SET fromAccountId = :accountId WHERE LOWER(TRIM(senderAddress)) = LOWER(TRIM(:senderAddress)) AND fromAccountId = -1")
+    suspend fun updateAccountIdForSender(senderAddress: String, accountId: Int)
+
+    @Query("UPDATE pending_sms_transactions SET fromAccountId = -1 WHERE LOWER(TRIM(senderAddress)) = LOWER(TRIM(:senderAddress)) AND status = 'PENDING'")
+    suspend fun unassignAccountIdForSender(senderAddress: String)
 }

@@ -83,7 +83,31 @@ object SmsSyncHelper {
                     val senderLower = sender.lowercase().trim()
                     val mapping = mappingMap[senderLower]
 
-                    val parsed = if (mapping != null) {
+                    if (mapping != null && mapping.accountId == -1) {
+                        // User explicitly unlinked this sender — do not auto-map to any account
+                        val parsed = SmsParser.parse(sender, body) ?: continue
+                        val existsInPending = pendingSmsDao.isSmsExists(body)
+                        if (existsInPending) continue
+
+                        val pending = PendingSmsTransactionEntity(
+                            rawSmsBody          = body,
+                            senderAddress       = sender,
+                            amount              = parsed.amount,
+                            type                = parsed.type,
+                            category            = parsed.category,
+                            note                = parsed.note,
+                            detectedAccountName = parsed.detectedAccountName,
+                            fromAccountId       = -1, // Unlinked
+                            toAccountId         = null,
+                            timestamp           = parsed.timestamp ?: smsDate,
+                            receivedAt          = smsDate
+                        )
+                        pendingSmsDao.insertPending(pending)
+                        importedCount++
+                        continue
+                    }
+
+                    val parsed = if (mapping != null && mapping.accountId > 0) {
                         val matchedAccount = accounts.find { it.id == mapping.accountId }
                         if (matchedAccount != null) {
                             SmsParser.parse(
@@ -106,7 +130,7 @@ object SmsSyncHelper {
                     if (existsInPending) continue
 
                     // Match account name
-                    val matchedAccount = if (mapping != null) {
+                    val matchedAccount = if (mapping != null && mapping.accountId > 0) {
                         accounts.find { it.id == mapping.accountId }
                     } else {
                         accounts.firstOrNull { acc ->
@@ -140,21 +164,22 @@ object SmsSyncHelper {
     }
 
     /**
-     * Scans the system SMS inbox for potential transaction messages from unknown, non-whitelisted,
-     * and currently unmapped senders.
+     * Scans the system SMS inbox for potential transaction messages from unknown, unlinked,
+     * or unmapped senders.
      */
     suspend fun findPotentialUnknownSenders(context: Context, database: FinanceDatabase): List<PotentialSender> = withContext(Dispatchers.IO) {
         val result = mutableListOf<PotentialSender>()
         if (!isReadSmsPermissionGranted(context)) return@withContext result
 
         val mappings = database.smsSenderMappingDao().getAllMappingsOnce()
-        val mappedAddresses = mappings.map { it.senderAddress.lowercase().trim() }.toSet()
+        val accounts = database.accountDao().getAllAccountsOnce()
+        val mappingMap = mappings.associateBy { it.senderAddress.lowercase().trim() }
 
         val uri = Uri.parse("content://sms/inbox")
         val projection = arrayOf("address", "body", "date")
 
         // Search for keywords that suggest transaction messages
-        val selection = "body LIKE '%Tk%' OR body LIKE '%BDT%' OR body LIKE '%৳%' OR body LIKE '%received%' OR body LIKE '%sent%' OR body LIKE '%paid%'"
+        val selection = "body LIKE '%Tk%' OR body LIKE '%BDT%' OR body LIKE '%৳%' OR body LIKE '%received%' OR body LIKE '%sent%' OR body LIKE '%paid%' OR body LIKE '%Cash In%' OR body LIKE '%Cash Out%' OR body LIKE '%Payment%'"
         
         val seenSenders = mutableSetOf<String>()
 
@@ -173,14 +198,28 @@ object SmsSyncHelper {
                 while (cursor.moveToNext()) {
                     val sender = cursor.getString(addressIdx) ?: continue
                     val senderLower = sender.lowercase().trim()
-
-                    // Skip standard whitelisted senders
-                    if (SmsParser.resolveAccount(sender) != null) continue
-                    // Skip already mapped senders
-                    if (mappedAddresses.contains(senderLower)) continue
-                    // Skip duplicate senders in the scanned list
                     if (seenSenders.contains(senderLower)) continue
 
+                    val mapping = mappingMap[senderLower]
+
+                    // 1. If actively mapped to an account in DB -> skip from Link New
+                    if (mapping != null && mapping.accountId > 0) continue
+
+                    // 2. If mapping is not in DB:
+                    if (mapping == null) {
+                        val resolvedAccountName = SmsParser.resolveAccount(sender)
+                        if (resolvedAccountName != null) {
+                            val matchingAccount = accounts.firstOrNull { acc ->
+                                acc.name.equals(resolvedAccountName, ignoreCase = true) ||
+                                resolvedAccountName.contains(acc.name, ignoreCase = true) ||
+                                acc.name.contains(resolvedAccountName, ignoreCase = true)
+                            }
+                            // If an active account matches by default -> skip from Link New
+                            if (matchingAccount != null) continue
+                        }
+                    }
+
+                    // 3. Either explicitly unlinked (accountId == -1), unknown number, or unmatched default sender
                     val body = cursor.getString(bodyIdx) ?: continue
                     val date = cursor.getLong(dateIdx)
 
@@ -194,6 +233,23 @@ object SmsSyncHelper {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error finding potential senders: ${e.message}", e)
+        }
+
+        // Also add any explicitly unlinked senders (accountId == -1) from DB if not already seen in inbox
+        val unlinkedDbMappings = mappings.filter { it.accountId == -1 }
+        for (unlinked in unlinkedDbMappings) {
+            val sLower = unlinked.senderAddress.lowercase().trim()
+            if (!seenSenders.contains(sLower)) {
+                seenSenders.add(sLower)
+                val canonical = SmsParser.resolveAccount(unlinked.senderAddress) ?: unlinked.senderAddress
+                result.add(
+                    PotentialSender(
+                        senderAddress = canonical,
+                        latestMessage = "Unlinked sender. Tap 'Link Account' to attach to a bank or wallet.",
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
+            }
         }
 
         return@withContext result

@@ -56,7 +56,37 @@ class SmsReceiver : BroadcastReceiver() {
                 val mapping = db.smsSenderMappingDao().getMappingForSenderOnce(sender)
                 val accounts = accountDao.getAllAccountsOnce()
 
-                val parsed = if (mapping != null) {
+                if (mapping != null && mapping.accountId == -1) {
+                    // Sender is explicitly unlinked
+                    val parsed = SmsParser.parse(sender, body) ?: return@launch
+                    val pending = PendingSmsTransactionEntity(
+                        rawSmsBody          = body,
+                        senderAddress       = sender,
+                        amount              = parsed.amount,
+                        type                = parsed.type,
+                        category            = parsed.category,
+                        note                = parsed.note,
+                        detectedAccountName = parsed.detectedAccountName,
+                        fromAccountId       = -1, // Unlinked
+                        toAccountId         = null,
+                        timestamp           = parsed.timestamp ?: System.currentTimeMillis(),
+                        receivedAt          = System.currentTimeMillis()
+                    )
+                    pendingSmsDao.insertPending(pending)
+                    try {
+                        SmsNotificationHelper.notifyNewTransaction(
+                            context = context.applicationContext,
+                            amount = parsed.amount,
+                            accountName = parsed.detectedAccountName,
+                            type = parsed.type
+                        )
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to post SMS transaction notification", e)
+                    }
+                    return@launch
+                }
+
+                val parsed = if (mapping != null && mapping.accountId > 0) {
                     val matchedAccount = accounts.find { it.id == mapping.accountId }
                     if (matchedAccount != null) {
                         SmsParser.parse(
@@ -76,7 +106,7 @@ class SmsReceiver : BroadcastReceiver() {
 
                 Log.d(TAG, "Parsed SMS from $sender: amount=${parsed.amount} type=${parsed.type}")
 
-                val matchedAccount = if (mapping != null) {
+                val matchedAccount = if (mapping != null && mapping.accountId > 0) {
                     accounts.find { it.id == mapping.accountId }
                 } else {
                     accounts.firstOrNull { acc ->

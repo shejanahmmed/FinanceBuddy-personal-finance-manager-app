@@ -120,6 +120,26 @@ object SmsParser {
     }
 
     /**
+     * Returns all known sender identifiers that match a given canonical account name or institution.
+     */
+    fun getKnownSendersForAccount(accountName: String): List<String> {
+        val cleanAcc = accountName.lowercase().trim()
+        return SENDER_ACCOUNT_MAP.filter { (_, canonical) ->
+            val cleanCanon = canonical.lowercase().trim()
+            cleanCanon == cleanAcc || cleanAcc.contains(cleanCanon) || cleanCanon.contains(cleanAcc)
+        }.keys.toList()
+    }
+
+    /**
+     * Returns all known aliases for a sender address (e.g. bkash -> [bkash, bkashsms]).
+     */
+    fun getAliasesForSender(sender: String): List<String> {
+        val cleanSender = sender.lowercase().trim()
+        val canonical = resolveAccount(cleanSender) ?: return listOf(cleanSender)
+        return SENDER_ACCOUNT_MAP.filter { it.value.equals(canonical, ignoreCase = true) }.keys.toList()
+    }
+
+    /**
      * Attempts to parse a financial transaction from an SMS.
      *
      * @param sender              The originating address.

@@ -557,7 +557,7 @@ fun AppNavigation(
                 val pendingList by viewModel.pendingList.collectAsState()
                 val confirmedList by viewModel.confirmedList.collectAsState()
                 val dismissedList by viewModel.dismissedList.collectAsState()
-                val mappingsList by viewModel.mappingsList.collectAsState()
+                val mappingsList by viewModel.activeMappings.collectAsState()
                 val potentialSenders by viewModel.potentialSenders.collectAsState()
                 val context = androidx.compose.ui.platform.LocalContext.current
                 PendingTransactionsScreen(
@@ -569,7 +569,7 @@ fun AppNavigation(
                     mappingsList  = mappingsList,
                     potentialSenders = potentialSenders,
                     onAddMapping  = { sender, accountId -> viewModel.addMapping(sender, accountId) },
-                    onDeleteMapping = { viewModel.deleteMapping(it) },
+                    onDeleteMapping = { viewModel.unlinkMapping(it) },
                     onLoadPotentialSenders = { viewModel.loadPotentialSenders(context) },
                     onSyncSenderHistory = { sender, accountId, onComplete ->
                         viewModel.syncSenderHistory(context, sender, accountId, onComplete)

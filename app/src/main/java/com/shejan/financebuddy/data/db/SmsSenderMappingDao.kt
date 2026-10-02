@@ -16,7 +16,7 @@ interface SmsSenderMappingDao {
     @Query("SELECT * FROM sms_sender_mappings")
     fun getAllMappingsFlow(): Flow<List<SmsSenderMappingEntity>>
 
-    @Query("SELECT * FROM sms_sender_mappings WHERE senderAddress = :senderAddress LIMIT 1")
+    @Query("SELECT * FROM sms_sender_mappings WHERE LOWER(TRIM(senderAddress)) = LOWER(TRIM(:senderAddress)) LIMIT 1")
     fun getMappingForSenderOnce(senderAddress: String): SmsSenderMappingEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -27,6 +27,9 @@ interface SmsSenderMappingDao {
 
     @Delete
     suspend fun deleteMapping(mapping: SmsSenderMappingEntity)
+
+    @Query("DELETE FROM sms_sender_mappings WHERE LOWER(TRIM(senderAddress)) = LOWER(TRIM(:senderAddress))")
+    suspend fun deleteBySender(senderAddress: String)
 
     @Query("DELETE FROM sms_sender_mappings")
     suspend fun deleteAll()

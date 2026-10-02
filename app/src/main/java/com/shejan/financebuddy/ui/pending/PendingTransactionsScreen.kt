@@ -82,10 +82,10 @@ fun PendingTransactionsScreen(
     dismissedList: List<PendingSmsTransactionEntity> = emptyList(),
     accounts: List<AccountEntity>,
     database: com.shejan.financebuddy.data.db.FinanceDatabase,
-    mappingsList: List<com.shejan.financebuddy.data.db.SmsSenderMappingEntity>,
+    mappingsList: List<com.shejan.financebuddy.ui.pending.ActiveSenderMapping>,
     potentialSenders: List<com.shejan.financebuddy.sms.PotentialSender>,
     onAddMapping: (String, Int) -> Unit,
-    onDeleteMapping: (com.shejan.financebuddy.data.db.SmsSenderMappingEntity) -> Unit,
+    onDeleteMapping: (com.shejan.financebuddy.ui.pending.ActiveSenderMapping) -> Unit,
     onLoadPotentialSenders: () -> Unit,
     onSyncSenderHistory: (String, Int, (Int) -> Unit) -> Unit,
     onConfirm: (PendingSmsTransactionEntity, PendingSmsTransactionEntity) -> Unit,
@@ -1822,10 +1822,10 @@ private fun formatTimestamp(ms: Long): String {
 @Composable
 private fun SmsSenderMappingsConfigSheet(
     accounts: List<AccountEntity>,
-    mappingsList: List<com.shejan.financebuddy.data.db.SmsSenderMappingEntity>,
+    mappingsList: List<com.shejan.financebuddy.ui.pending.ActiveSenderMapping>,
     potentialSenders: List<com.shejan.financebuddy.sms.PotentialSender>,
     onAddMapping: (String, Int) -> Unit,
-    onDeleteMapping: (com.shejan.financebuddy.data.db.SmsSenderMappingEntity) -> Unit,
+    onDeleteMapping: (com.shejan.financebuddy.ui.pending.ActiveSenderMapping) -> Unit,
     onSyncSenderHistory: (String, Int, (Int) -> Unit) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -1846,7 +1846,7 @@ private fun SmsSenderMappingsConfigSheet(
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "Map custom numbers/sender IDs to your bank accounts",
+            text = "Manage sender bindings and custom SMS linkages for your accounts",
             color = TextMuted,
             fontSize = 12.sp,
             modifier = Modifier.padding(bottom = 16.dp)
@@ -1882,12 +1882,12 @@ private fun SmsSenderMappingsConfigSheet(
                 // Active Mappings Tab
                 if (mappingsList.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 32.dp)) {
                             Icon(Icons.Default.Tune, null, tint = TextMuted, modifier = Modifier.size(48.dp))
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text("No custom mappings yet", color = TextMuted, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            Text("No active mappings", color = TextMuted, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("Go to 'Link New Sender' tab to link a number", color = TextMuted, fontSize = 12.sp)
+                            Text("All senders are currently unlinked. Switch to 'Link New Sender' tab to link a number or provider.", color = TextMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
                         }
                     }
                 } else {
@@ -1895,8 +1895,7 @@ private fun SmsSenderMappingsConfigSheet(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        items(mappingsList) { mapping ->
-                            val account = accounts.find { it.id == mapping.accountId }
+                        items(mappingsList, key = { "${it.senderAddress}_${it.accountId}" }) { mapping ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1907,24 +1906,51 @@ private fun SmsSenderMappingsConfigSheet(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = mapping.senderAddress,
+                                            color = TextPrimary,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        if (mapping.isDefault) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Box(
+                                                modifier = Modifier
+                                                    .background(AccentTeal.copy(alpha = 0.14f), RoundedCornerShape(6.dp))
+                                                    .border(0.5.dp, AccentTeal.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            ) {
+                                                Text(
+                                                    text = if (mapping.isCustomOverride) "Override" else "Auto-Sync",
+                                                    color = AccentTeal,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(3.dp))
                                     Text(
-                                        text = mapping.senderAddress,
-                                        color = TextPrimary,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "Mapped to: ${account?.name ?: "Unknown Account"}",
+                                        text = "Mapped to: ${mapping.accountName}",
                                         color = AccentTeal,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
-                                IconButton(onClick = { onDeleteMapping(mapping) }) {
+                                IconButton(
+                                    onClick = {
+                                        onDeleteMapping(mapping)
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "Unlinked ${mapping.senderAddress} from ${mapping.accountName}",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.Delete,
-                                        contentDescription = "Delete Mapping",
+                                        contentDescription = "Unlink Sender",
                                         tint = ExpenseRed,
                                         modifier = Modifier.size(20.dp)
                                     )
@@ -1950,7 +1976,7 @@ private fun SmsSenderMappingsConfigSheet(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        items(potentialSenders) { sender ->
+                        items(potentialSenders, key = { it.senderAddress }) { sender ->
                             var showAccountMenu by remember { mutableStateOf(false) }
                             
                             Column(
@@ -2016,7 +2042,7 @@ private fun SmsSenderMappingsConfigSheet(
                                                         onSyncSenderHistory(sender.senderAddress, account.id) { count ->
                                                             android.widget.Toast.makeText(
                                                                 context,
-                                                                "Success! Mapped ${sender.senderAddress} and imported $count transactions.",
+                                                                "Success! Mapped ${sender.senderAddress} to ${account.name} (imported $count message(s)).",
                                                                 android.widget.Toast.LENGTH_LONG
                                                             ).show()
                                                         }
