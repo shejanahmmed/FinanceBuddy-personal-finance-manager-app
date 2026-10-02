@@ -218,8 +218,8 @@ fun HomeScreen(
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
             ) {
-                // Spacer matching top bar height (58.dp) + status bar padding
-                Spacer(modifier = Modifier.statusBarsPadding().height(58.dp))
+                // Spacer matching top bar height (54.dp) + status bar padding
+                Spacer(modifier = Modifier.statusBarsPadding().height(54.dp))
 
                 val context = LocalContext.current
                 val preferencesManager = remember { com.shejan.financebuddy.data.PreferencesManager(context.applicationContext) }
@@ -233,159 +233,230 @@ fun HomeScreen(
                     }
                 }
 
-                // ── 1. Hero Total Balance & Monthly Inflow/Outflow Split Cards ───────
-                Row(
+                // ── 1. Hero Total Balance Card (Merged with Income & Expenses) ───────
+                val currentDateText = remember {
+                    SimpleDateFormat("MMM d", Locale.getDefault()).format(Date())
+                }
+
+                val isLight = currentThemeModeState == "LIGHT"
+
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 14.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 8.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardDark),
+                    border = BorderStroke(1.dp, DividerColor)
                 ) {
-                    // Left: Total Balance Card
-                    val balanceStr = currencyFormat.format(totalBalance)
-                    val displayBalance = if (hideTotalBalance && !showTemporarily) {
-                        balanceStr.filter { it != ',' && it != '.' }.map { '*' }.joinToString("")
-                    } else {
-                        balanceStr
-                    }
-
-                    Card(
+                    Column(
                         modifier = Modifier
-                            .weight(1f)
-                            .height(86.dp)
-                            .clickable(
-                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                if (hideTotalBalance) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    showTemporarily = true
-                                }
-                            },
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = CardDark),
-                        border = BorderStroke(1.dp, DividerColor)
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp)
                     ) {
+                        // Header Row: "Total Balance" + Date Chip
                         Row(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            // Circular Teal Taka Badge
+                            Text(
+                                text = "Total Balance",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextSecondary
+                            )
+
                             Box(
                                 modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF00E5FF)),
-                                contentAlignment = Alignment.Center
+                                    .border(
+                                        width = 1.dp,
+                                        color = DividerColor,
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                                    .background(
+                                        CardDarker,
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = "৳",
-                                    color = Color.Black,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Black
+                                    text = currentDateText,
+                                    color = TextPrimary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
+                        }
 
-                            Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Amount Display Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            val balanceStr = "৳${currencyFormat.format(totalBalance)}"
+                            val displayText = if (hideTotalBalance && !showTemporarily) {
+                                "৳" + balanceStr.substring(1).filter { it != ',' && it != '.' }.map { '*' }.joinToString("")
+                            } else {
+                                balanceStr
+                            }
 
                             Text(
-                                text = displayBalance,
-                                fontSize = if (displayBalance.length > 11) 15.sp else 17.sp,
+                                text = displayText,
+                                fontSize = 27.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
+                                color = TextPrimary
                             )
-                        }
-                    }
 
-                    // Right: Income & Expense Summary Card
-                    Card(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(86.dp),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = CardDark),
-                        border = BorderStroke(1.dp, DividerColor)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.SpaceEvenly
+                            if (hideTotalBalance) {
+                                IconButton(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        showTemporarily = true
+                                    },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (showTemporarily) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = "Show/Hide Balance",
+                                        tint = TextSecondary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Merged Income & Expense Sub-Cards
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            // Income Row
-                            Row(
+                            // Income Sub-Card
+                            Surface(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .weight(1f)
+                                    .height(66.dp)
                                     .clickable(
                                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                                         indication = null
                                     ) { onIncomeClick() },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .clip(CircleShape)
-                                        .background(IncomeGreen.copy(alpha = 0.15f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowDownward,
-                                        contentDescription = null,
-                                        tint = IncomeGreen,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "+৳${currencyFormat.format(monthlyIncome)}",
-                                    color = IncomeGreen,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (isLight) Color(0xFFECFDF5) else CardDarker,
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isLight) Color(0xFFA7F3D0) else DividerColor
                                 )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(
+                                                if (isLight) Color(0xFFD1FAE5)
+                                                else IncomeGreen.copy(alpha = 0.15f)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDownward,
+                                            contentDescription = null,
+                                            tint = if (isLight) Color(0xFF059669) else IncomeGreen,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = "Income",
+                                            color = if (isLight) Color(0xFF047857) else TextSecondary,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Spacer(modifier = Modifier.height(1.dp))
+                                        Text(
+                                            text = "৳${currencyFormat.format(monthlyIncome)}",
+                                            color = if (isLight) Color(0xFF065F46) else TextPrimary,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
                             }
 
-                            // Expense Row
-                            Row(
+                            // Expenses Sub-Card
+                            Surface(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .weight(1f)
+                                    .height(66.dp)
                                     .clickable(
                                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                                         indication = null
                                     ) { onExpenseClick() },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .clip(CircleShape)
-                                        .background(ExpenseRed.copy(alpha = 0.15f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowUpward,
-                                        contentDescription = null,
-                                        tint = ExpenseRed,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "-৳${currencyFormat.format(monthlyExpenses)}",
-                                    color = ExpenseRed,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (isLight) Color(0xFFFFF1F2) else CardDarker,
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isLight) Color(0xFFFECDD3) else DividerColor
                                 )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(
+                                                if (isLight) Color(0xFFFFE4E6)
+                                                else ExpenseRed.copy(alpha = 0.15f)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowUpward,
+                                            contentDescription = null,
+                                            tint = if (isLight) Color(0xFFE11D48) else ExpenseRed,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = "Expenses",
+                                            color = if (isLight) Color(0xFFBE123C) else TextSecondary,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Spacer(modifier = Modifier.height(1.dp))
+                                        Text(
+                                            text = "৳${currencyFormat.format(monthlyExpenses)}",
+                                            color = if (isLight) Color(0xFF9F1239) else TextPrimary,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
