@@ -11,6 +11,12 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -316,7 +322,27 @@ fun BankAccountsScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(BackgroundDark)) {
+    var isTopBarVisible by remember { mutableStateOf(true) }
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                if (delta < -12f) {
+                    isTopBarVisible = false
+                } else if (delta > 12f) {
+                    isTopBarVisible = true
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundDark)
+            .nestedScroll(nestedScrollConnection)
+    ) {
         // Ambient background glow
         Box(
             modifier = Modifier
@@ -329,105 +355,57 @@ fun BankAccountsScreen(
                 )
         )
 
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Clean Top Bar with Top Right '+' Square Button
-            Row(
+        if (accounts.isEmpty()) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .fillMaxSize()
+                    .padding(top = 80.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    com.shejan.financebuddy.ui.common.AppBackButton(
-                        onClick = { onBack() }
-                    )
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column {
-                        Text(
-                            text = "Bank Accounts",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = "Manage your wallets & accounts",
-                            fontSize = 12.sp,
-                            color = TextMuted
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(CardDarker)
+                            .border(1.dp, DividerColor, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AccountBalance,
+                            contentDescription = null,
+                            tint = AccentTeal.copy(alpha = 0.7f),
+                            modifier = Modifier.size(36.dp)
                         )
                     }
-                }
-
-                // Add Account '+' Button in a Compact Square Box (shifted slightly left)
-                Box(
-                    modifier = Modifier
-                        .padding(end = 6.dp)
-                        .size(28.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(CardDarker)
-                        .border(1.dp, AccentTeal.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
-                        .clickable {
-                            editingAccount = null
-                            showAddSheet = true
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add Account",
-                        tint = AccentTeal,
-                        modifier = Modifier.size(22.dp)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "No accounts linked yet",
+                        color = TextPrimary,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Tap + below to add your first Bank or MFS",
+                        color = TextMuted,
+                        fontSize = 13.sp
                     )
                 }
             }
-
-            if (accounts.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            modifier = Modifier
-                                .size(80.dp)
-                                .clip(CircleShape)
-                                .background(CardDarker)
-                                .border(1.dp, DividerColor, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AccountBalance,
-                                contentDescription = null,
-                                tint = AccentTeal.copy(alpha = 0.7f),
-                                modifier = Modifier.size(36.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "No accounts linked yet",
-                            color = TextPrimary,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Tap + below to add your first Bank or MFS",
-                            color = TextMuted,
-                            fontSize = 13.sp
-                        )
-                    }
+        } else {
+            LazyColumn(
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Spacer matching top bar height (64.dp) + status bar padding
+                item {
+                    Spacer(modifier = Modifier.statusBarsPadding().height(64.dp))
                 }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    // Hero Total Balance Summary Card
-                    item {
+
+                // Hero Total Balance Summary Card
+                item {
                         AccountsHeroCard(
                             totalBalance = totalBalance,
                             cashBalance = totalCashBalance,
@@ -543,6 +521,64 @@ fun BankAccountsScreen(
                     }
 
                     item { Spacer(Modifier.height(80.dp)) }
+                }
+            }
+
+        // ── Top Bar Overlay (Translucent and Animated) ───────────────
+        AnimatedVisibility(
+            visible = isTopBarVisible,
+            enter   = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+            exit    = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    com.shejan.financebuddy.ui.common.AppBackButton(
+                        onClick = { onBack() }
+                    )
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column {
+                        Text(
+                            text = "Bank Accounts",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "Manage your wallets & accounts",
+                            fontSize = 12.sp,
+                            color = TextMuted
+                        )
+                    }
+                }
+
+                // Add Account '+' Button in a Compact Square Box (shifted slightly left)
+                Box(
+                    modifier = Modifier
+                        .padding(end = 6.dp)
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(CardDarker)
+                        .border(1.dp, AccentTeal.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                        .clickable {
+                            editingAccount = null
+                            showAddSheet = true
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Account",
+                        tint = AccentTeal,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
             }
         }
