@@ -1943,9 +1943,9 @@ fun AccountCardChip(
                         // Bottom Detail Row: Dot + Nickname / Account Number
                         val last4 = if (account.accountNumber.isNotBlank()) account.accountNumber.takeLast(4) else ""
                         val bottomDetail = when {
-                            account.showAs.isNotBlank() && last4.isNotBlank() -> "${account.showAs.uppercase()}  •••• $last4"
+                            account.showAs.isNotBlank() && last4.isNotBlank() -> "${account.showAs.uppercase()}  •••• •••• •••• $last4"
                             account.showAs.isNotBlank() -> account.showAs.uppercase()
-                            last4.isNotBlank() -> "•••• $last4"
+                            last4.isNotBlank() -> "•••• •••• •••• $last4"
                             else -> (if (account.name.contains("Cash", ignoreCase = true)) "HAND CASH" else account.name).uppercase()
                         }
 

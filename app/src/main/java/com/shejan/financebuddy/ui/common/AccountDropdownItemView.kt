@@ -160,7 +160,7 @@ fun AccountDropdownItemView(
                                         .padding(horizontal = 5.dp, vertical = 1.5.dp)
                                 ) {
                                     Text(
-                                        text = "•••• $last4",
+                                        text = "•••• •••• •••• $last4",
                                         color = TextPrimary,
                                         fontSize = 10.5.sp,
                                         fontWeight = FontWeight.Medium,

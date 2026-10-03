@@ -1148,7 +1148,7 @@ private fun EditAccountSelectDialog(
                         val isCashAcc = acc.type == "CASH" || acc.name.contains("Cash", ignoreCase = true)
                         val accNum = if (acc.accountNumber.isNotBlank()) {
                             val raw = acc.accountNumber.trim()
-                            if (raw.length > 4) "•••• ${raw.takeLast(4)}" else raw
+                            if (raw.length > 4) "•••• •••• •••• ${raw.takeLast(4)}" else raw
                         } else ""
 
                         Surface(
@@ -1340,7 +1340,7 @@ private fun DeleteAccountSelectDialog(
                         val isCashAcc = acc.type == "CASH" || acc.name.contains("Cash", ignoreCase = true)
                         val accNum = if (acc.accountNumber.isNotBlank()) {
                             val raw = acc.accountNumber.trim()
-                            if (raw.length > 4) "•••• ${raw.takeLast(4)}" else raw
+                            if (raw.length > 4) "•••• •••• •••• ${raw.takeLast(4)}" else raw
                         } else ""
 
                         Surface(
@@ -1522,7 +1522,7 @@ private fun SingleAccountInnerCard(
     // Resolve account number
     val accNumberDisplay = if (account.accountNumber.isNotBlank()) {
         val raw = account.accountNumber.trim()
-        if (raw.length > 4) "•••• ${raw.takeLast(4)}" else raw
+        if (raw.length > 4) "•••• •••• •••• ${raw.takeLast(4)}" else raw
     } else {
         ""
     }

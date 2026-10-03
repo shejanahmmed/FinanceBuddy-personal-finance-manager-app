@@ -902,7 +902,7 @@ private fun PayeeAccountCard(
                 )
 
                 val displayNum = if (account.accountNumber.length > 4) {
-                    "•••• ${account.accountNumber.takeLast(4)}"
+                    "•••• •••• •••• ${account.accountNumber.takeLast(4)}"
                 } else {
                     account.accountNumber
                 }

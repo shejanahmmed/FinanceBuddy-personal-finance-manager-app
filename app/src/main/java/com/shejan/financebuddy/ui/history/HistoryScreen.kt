@@ -946,7 +946,7 @@ private fun HistoryTransactionCard(
     }
 
     fun formatAccNum(num: String): String {
-        return if (num.length > 4) "•••• ${num.takeLast(4)}" else num
+        return if (num.length > 4) "•••• •••• •••• ${num.takeLast(4)}" else num
     }
 
     val accountSubtext = when {
