@@ -514,11 +514,7 @@ fun HomeScreen(
                         val horizontalMargin = 14.dp
                         val spacing = 14.dp
 
-                        val cardWidth = if (activeAccounts.size == 1) {
-                            containerWidth - (horizontalMargin * 2)
-                        } else {
-                            (containerWidth - (horizontalMargin * 2) - spacing) / 2
-                        }
+                        val cardWidth = (containerWidth - (horizontalMargin * 2) - spacing) / 2
 
                         LazyRow(
                             contentPadding = PaddingValues(horizontal = horizontalMargin, vertical = 2.dp),
