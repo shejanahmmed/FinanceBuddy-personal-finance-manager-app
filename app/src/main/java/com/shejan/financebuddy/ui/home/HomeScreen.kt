@@ -105,6 +105,8 @@ import kotlin.time.Duration.Companion.milliseconds
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -1814,16 +1816,105 @@ fun AccountCardChip(
 
     val rawSubtype = if (account.name.contains("Cash", ignoreCase = true)) "CASH" else account.accountSubtype.ifBlank { account.type }
 
+    // Solid opaque card gradient based on the account's theme color
+    val solidCardBrush = remember(cardColor) {
+        val baseDark = Color(0xFF11141E)
+        val startColor = Color(
+            red = (cardColor.red * 0.45f + baseDark.red * 0.55f).coerceIn(0f, 1f),
+            green = (cardColor.green * 0.45f + baseDark.green * 0.55f).coerceIn(0f, 1f),
+            blue = (cardColor.blue * 0.45f + baseDark.blue * 0.55f).coerceIn(0f, 1f),
+            alpha = 1.0f
+        )
+        val endColor = Color(
+            red = (cardColor.red * 0.16f + baseDark.red * 0.84f).coerceIn(0f, 1f),
+            green = (cardColor.green * 0.16f + baseDark.green * 0.84f).coerceIn(0f, 1f),
+            blue = (cardColor.blue * 0.16f + baseDark.blue * 0.84f).coerceIn(0f, 1f),
+            alpha = 1.0f
+        )
+        Brush.linearGradient(
+            colors = listOf(startColor, endColor),
+            start = Offset(0f, 0f),
+            end = Offset(350f, 350f)
+        )
+    }
+
     Box {
         Card(
             shape   = RoundedCornerShape(12.dp),
-            colors  = CardDefaults.cardColors(containerColor = cardColor.copy(alpha = 0.10f)),
-            border  = BorderStroke(1.dp, cardColor.copy(alpha = 0.38f)),
+            colors  = CardDefaults.cardColors(containerColor = Color.Transparent),
+            border  = BorderStroke(1.dp, cardColor.copy(alpha = 0.45f)),
             modifier = modifier
                 .height(115.dp)
                 .graphicsLayer {
                     rotationY = rotation
                     cameraDistance = 12f * density
+                }
+                .clip(RoundedCornerShape(12.dp))
+                .background(solidCardBrush)
+                .drawBehind {
+                    // 1. Subtle radial light glow in top-right
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                cardColor.copy(alpha = 0.32f),
+                                Color.Transparent
+                            ),
+                            center = Offset(size.width * 0.88f, size.height * 0.12f),
+                            radius = size.width * 0.55f
+                        ),
+                        center = Offset(size.width * 0.88f, size.height * 0.12f),
+                        radius = size.width * 0.55f
+                    )
+
+                    // 2. Faded geometric concentric watermark arcs in bottom-right corner
+                    val arcCenter = Offset(size.width * 0.95f, size.height * 0.90f)
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.05f),
+                        radius = size.width * 0.52f,
+                        center = arcCenter,
+                        style = Stroke(width = 1.2.dp.toPx())
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.038f),
+                        radius = size.width * 0.36f,
+                        center = arcCenter,
+                        style = Stroke(width = 1.0.dp.toPx())
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.025f),
+                        radius = size.width * 0.20f,
+                        center = arcCenter,
+                        style = Stroke(width = 0.8.dp.toPx())
+                    )
+
+                    // 3. Faded curved abstract contour wave lines across card body
+                    val wavePath1 = Path().apply {
+                        moveTo(-10f, size.height * 0.40f)
+                        cubicTo(
+                            size.width * 0.30f, size.height * 0.15f,
+                            size.width * 0.68f, size.height * 0.80f,
+                            size.width + 10f, size.height * 0.48f
+                        )
+                    }
+                    drawPath(
+                        path = wavePath1,
+                        color = Color.White.copy(alpha = 0.055f),
+                        style = Stroke(width = 1.2.dp.toPx())
+                    )
+
+                    val wavePath2 = Path().apply {
+                        moveTo(-10f, size.height * 0.65f)
+                        cubicTo(
+                            size.width * 0.35f, size.height * 0.38f,
+                            size.width * 0.65f, size.height * 1.02f,
+                            size.width + 10f, size.height * 0.72f
+                        )
+                    }
+                    drawPath(
+                        path = wavePath2,
+                        color = cardColor.copy(alpha = 0.18f),
+                        style = Stroke(width = 1.0.dp.toPx())
+                    )
                 }
                 .combinedClickable(
                     interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
