@@ -1917,7 +1917,7 @@ fun AccountCardChip(
                         ) {
                             Text(
                                 text = displayText,
-                                fontSize = 16.5.sp,
+                                fontSize = 14.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary,
                                 maxLines = 1,

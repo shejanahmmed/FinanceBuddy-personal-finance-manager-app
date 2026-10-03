@@ -1573,7 +1573,7 @@ private fun SingleAccountInnerCard(
                 Text(
                     text = "৳${currencyFormat.format(account.balance)}",
                     color = AccentTeal,
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
