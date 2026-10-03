@@ -221,7 +221,7 @@ fun HomeScreen(
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
             ) {
-                // Spacer matching top bar height (54.dp) + status bar padding
+                // Spacer matching top bar height + status bar padding
                 Spacer(modifier = Modifier.statusBarsPadding().height(54.dp))
 
                 val context = LocalContext.current
@@ -246,7 +246,7 @@ fun HomeScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 8.dp),
+                        .padding(start = 14.dp, end = 14.dp, top = 0.dp, bottom = 8.dp),
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = CardDark),
                     border = BorderStroke(1.dp, DividerColor)
@@ -467,13 +467,12 @@ fun HomeScreen(
 
                 // ── 2. My Wallets & Accounts Section ──────────────────
                 val activeAccounts = remember(sortedAccounts, pinnedAccountId) {
-                    val nonZero = sortedAccounts.filter { it.balance > 0 }
                     if (pinnedAccountId != null) {
-                        val pinned = nonZero.filter { it.id == pinnedAccountId }
-                        val rest = nonZero.filter { it.id != pinnedAccountId }
+                        val pinned = sortedAccounts.filter { it.id == pinnedAccountId }
+                        val rest = sortedAccounts.filter { it.id != pinnedAccountId }
                         pinned + rest
                     } else {
-                        nonZero
+                        sortedAccounts
                     }
                 }
 
@@ -513,7 +512,7 @@ fun HomeScreen(
                     ) {
                         val containerWidth = maxWidth
                         val horizontalMargin = 14.dp
-                        val spacing = 12.dp
+                        val spacing = 14.dp
 
                         val cardWidth = if (activeAccounts.size == 1) {
                             containerWidth - (horizontalMargin * 2)
@@ -1587,7 +1586,7 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .background(BackgroundDark)
                     .statusBarsPadding()
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                    .padding(horizontal = 14.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Left Drawer Menu Button (Squircle container)
@@ -1613,28 +1612,23 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // Title + Green Indicator Dot + Subtitle
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "FinanceBuddy",
-                            fontSize = 19.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF10B981))
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(1.dp))
+                // Title + Green Indicator Dot
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "Personal Finance Overview",
-                        fontSize = 12.sp,
-                        color = TextSecondary
+                        text = "FinanceBuddy",
+                        fontSize = 19.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF10B981))
                     )
                 }
 
