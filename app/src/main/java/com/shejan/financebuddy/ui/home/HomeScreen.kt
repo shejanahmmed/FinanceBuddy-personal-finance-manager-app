@@ -1816,11 +1816,11 @@ fun AccountCardChip(
 
     Box {
         Card(
-            shape   = RoundedCornerShape(18.dp),
+            shape   = RoundedCornerShape(12.dp),
             colors  = CardDefaults.cardColors(containerColor = cardColor.copy(alpha = 0.10f)),
             border  = BorderStroke(1.dp, cardColor.copy(alpha = 0.38f)),
             modifier = modifier
-                .height(125.dp)
+                .height(115.dp)
                 .graphicsLayer {
                     rotationY = rotation
                     cameraDistance = 12f * density
@@ -1883,20 +1883,12 @@ fun AccountCardChip(
                         }
                     }
 
-                    // Middle Row: Subtype (left) & EMV Chip Graphic (right)
+                    // Middle Row: EMV Chip Graphic (Right-aligned)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = rawSubtype.uppercase(),
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = cardColor.copy(alpha = 0.9f),
-                            letterSpacing = 0.8.sp
-                        )
-
                         EmvChipGraphic(tint = cardColor)
                     }
 

@@ -935,7 +935,7 @@ private fun GroupedAccountManageCard(
     }
 
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = CardDark),
         border = BorderStroke(1.dp, cardColor.copy(alpha = 0.25f)),
         modifier = Modifier.fillMaxWidth()
@@ -1585,7 +1585,7 @@ private fun SingleAccountInnerCard(
     }
 
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(10.dp),
         color = CardDarker,
         border = BorderStroke(1.dp, DividerColor),
         modifier = Modifier.fillMaxWidth()
