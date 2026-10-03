@@ -4,7 +4,13 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -109,6 +115,8 @@ import com.shejan.financebuddy.ui.theme.CardDark
 import com.shejan.financebuddy.ui.theme.CardDarker
 import com.shejan.financebuddy.ui.theme.DividerColor
 import com.shejan.financebuddy.ui.theme.DrawerBackground
+import com.shejan.financebuddy.ui.theme.DrawerCardBackground
+import com.shejan.financebuddy.ui.theme.DrawerIconContainer
 import com.shejan.financebuddy.ui.theme.ExpenseRed
 import com.shejan.financebuddy.ui.theme.FinanceBuddyTheme
 import com.shejan.financebuddy.ui.theme.SurfaceDark
@@ -736,7 +744,7 @@ fun MainDashboardContainer(
                                 .size(34.dp)
                                 .align(Alignment.CenterEnd)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF263045))
+                                .background(DrawerCardBackground)
                                 .border(1.dp, DividerColor, RoundedCornerShape(8.dp))
                                 .clickable { scope.launch { drawerState.close() } },
                             contentAlignment = Alignment.Center
@@ -744,7 +752,7 @@ fun MainDashboardContainer(
                             Icon(
                                 imageVector        = Icons.Default.Close,
                                 contentDescription = "Close Drawer",
-                                tint               = Color.White,
+                                tint               = TextPrimary,
                                 modifier           = Modifier.size(18.dp)
                             )
                         }
@@ -756,7 +764,7 @@ fun MainDashboardContainer(
                             .fillMaxWidth()
                             .padding(horizontal = 14.dp, vertical = 10.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFF263045))
+                            .background(DrawerCardBackground)
                             .border(1.dp, DividerColor, RoundedCornerShape(16.dp))
                             .clickable {
                                 scope.launch { drawerState.close() }
@@ -769,7 +777,7 @@ fun MainDashboardContainer(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(Brush.linearGradient(colors = listOf(AccentTeal.copy(alpha = 0.25f), AccentBlue.copy(alpha = 0.25f)))),
+                                .background(DrawerIconContainer),
                             contentAlignment = Alignment.Center
                         ) {
                             val profileBitmap = remember(profileImagePath) {
@@ -796,7 +804,7 @@ fun MainDashboardContainer(
                                 Icon(
                                     imageVector = Icons.Default.Person,
                                     contentDescription = "Default Profile Photo",
-                                    tint = AccentTeal,
+                                    tint = TextPrimary.copy(alpha = 0.85f),
                                     modifier = Modifier.fillMaxSize(0.6f)
                                 )
                             }
@@ -805,15 +813,15 @@ fun MainDashboardContainer(
                         Column {
                             Text(
                                 text = profileName,
-                                color = Color.White,
+                                color = TextPrimary,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "Tap to edit profile",
-                                color = AccentTeal,
+                                color = TextSecondary,
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
@@ -869,7 +877,7 @@ fun MainDashboardContainer(
                     DrawerMenuItem(
                         icon = Icons.Default.Inbox,
                         label = "Transaction Inbox",
-                        badgeText = if (pendingCount > 0) pendingCount.toString() else null,
+                        showDot = pendingCount > 0,
                         onClick = {
                             scope.launch { drawerState.close() }
                             onNavigateToPending()
@@ -905,9 +913,9 @@ fun MainDashboardContainer(
                     ) {
                         Text(
                             text = "Local Storage Secured",
-                            color = AccentTeal,
+                            color = TextSecondary,
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -1232,7 +1240,7 @@ private fun getStartOfMonthTimestamp(): Long {
 fun DrawerMenuItem(
     icon: ImageVector,
     label: String,
-    badgeText: String? = null,
+    showDot: Boolean = false,
     onClick: () -> Unit
 ) {
     Row(
@@ -1240,7 +1248,7 @@ fun DrawerMenuItem(
             .fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 3.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF263045))
+            .background(DrawerCardBackground)
             .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
             .clickable { onClick() }
             .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -1250,43 +1258,57 @@ fun DrawerMenuItem(
             modifier = Modifier
                 .size(36.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(AccentTeal.copy(alpha = 0.20f)),
+                .background(DrawerIconContainer),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = AccentTeal,
+                tint = TextPrimary.copy(alpha = 0.9f),
                 modifier = Modifier.size(20.dp)
             )
         }
         Spacer(modifier = Modifier.width(14.dp))
         Text(
             text = label,
-            color = Color.White,
+            color = TextPrimary,
             fontSize = 14.5.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier.weight(1f)
         )
-        if (badgeText != null) {
+        if (showDot) {
+            val infiniteTransition = rememberInfiniteTransition(label = "DotBlinkTransition")
+            val dotAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.2f,
+                targetValue = 1.0f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 1600, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "DotAlpha"
+            )
+            val dotScale by infiniteTransition.animateFloat(
+                initialValue = 0.85f,
+                targetValue = 1.15f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 1600, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "DotScale"
+            )
+
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(AccentTeal, AccentBlue)
-                        )
-                    )
-                    .padding(horizontal = 9.dp, vertical = 3.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = badgeText,
-                    color = BackgroundDark,
-                    fontSize = 11.5.sp,
-                    fontWeight = FontWeight.Black
-                )
-            }
+                    .padding(end = 4.dp)
+                    .size(8.5.dp)
+                    .graphicsLayer {
+                        scaleX = dotScale
+                        scaleY = dotScale
+                        alpha = dotAlpha
+                    }
+                    .clip(CircleShape)
+                    .background(AccentBlue)
+            )
         }
     }
 }

@@ -1608,25 +1608,14 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // Title + Green Indicator Dot
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "FinanceBuddy",
-                        fontSize = 19.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF10B981))
-                    )
-                }
+                // Title
+                Text(
+                    text = "FinanceBuddy",
+                    fontSize = 19.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    modifier = Modifier.weight(1f)
+                )
 
                 // Right Notification Bell Button (Squircle container)
                 Box(
