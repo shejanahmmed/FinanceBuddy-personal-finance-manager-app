@@ -79,22 +79,23 @@ private val PRESET_MFS = listOf(
 )
 
 private val BANK_COLOR_MAP = mapOf(
+    "Hand Cash" to "#10B981",
     "BRAC Bank PLC" to "#0096FF",
-    "The City Bank PLC" to "#007A33",
-    "Eastern Bank PLC (EBL)" to "#003366",
-    "Dutch-Bangla Bank PLC (DBBL)" to "#7C5CFC",
-    "Prime Bank PLC" to "#FF5722",
-    "Mutual Trust Bank PLC" to "#0C2340",
-    "Islami Bank Bangladesh PLC (IBBL)" to "#1B5E20",
-    "Al-Arafah Islami Bank PLC" to "#2E7D32",
-    "Shahjalal Islami Bank PLC" to "#008080",
+    "The City Bank PLC" to "#059669",
+    "Eastern Bank PLC (EBL)" to "#3B82F6",
+    "Dutch-Bangla Bank PLC (DBBL)" to "#8B5CF6",
+    "Prime Bank PLC" to "#F97316",
+    "Mutual Trust Bank PLC" to "#0EA5E9",
+    "Islami Bank Bangladesh PLC (IBBL)" to "#16A34A",
+    "Al-Arafah Islami Bank PLC" to "#10B981",
+    "Shahjalal Islami Bank PLC" to "#14B8A6",
     "bKash" to "#FF5C7C",
-    "Nagad" to "#FFBD2E",
+    "Nagad" to "#F59E0B",
     "Rocket" to "#00D4AA",
-    "Upay" to "#FFB300",
-    "CellFin (IBBL)" to "#4CAF50",
-    "Ok Wallet" to "#FF5722",
-    "MyCash" to "#3F51B5"
+    "Upay" to "#EAB308",
+    "CellFin (IBBL)" to "#22C55E",
+    "Ok Wallet" to "#F97316",
+    "MyCash" to "#6366F1"
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -844,8 +845,9 @@ private fun PayeeAccountCard(
     var showActions by remember { mutableStateOf(false) }
 
     val cardColor = remember(account.bankName) {
-        try { Color(android.graphics.Color.parseColor(BANK_COLOR_MAP[account.bankName] ?: "#0096FF")) }
+        val base = try { Color(android.graphics.Color.parseColor(BANK_COLOR_MAP[account.bankName] ?: "#0096FF")) }
         catch (e: Exception) { AccentTeal }
+        ensureReadableColor(base)
     }
 
     Box(

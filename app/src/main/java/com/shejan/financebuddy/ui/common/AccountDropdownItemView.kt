@@ -25,47 +25,48 @@ import java.text.DecimalFormat
 val BANK_COLOR_MAP: Map<String, String> = mapOf(
     "Hand Cash" to "#10B981",
     "BRAC Bank PLC" to "#0096FF",
-    "The City Bank PLC" to "#007A33",
-    "Eastern Bank PLC (EBL)" to "#003366",
-    "Dutch-Bangla Bank PLC (DBBL)" to "#7C5CFC",
-    "Prime Bank PLC" to "#FF5722",
-    "Mutual Trust Bank PLC" to "#0C2340",
-    "Islami Bank Bangladesh PLC (IBBL)" to "#1B5E20",
-    "Al-Arafah Islami Bank PLC" to "#2E7D32",
-    "Shahjalal Islami Bank PLC" to "#008080",
-    "Sonali Bank PLC" to "#00875A",
-    "Janata Bank PLC" to "#D97706",
+    "The City Bank PLC" to "#059669",
+    "Eastern Bank PLC (EBL)" to "#3B82F6",
+    "Dutch-Bangla Bank PLC (DBBL)" to "#8B5CF6",
+    "Prime Bank PLC" to "#F97316",
+    "Mutual Trust Bank PLC" to "#0EA5E9",
+    "Islami Bank Bangladesh PLC (IBBL)" to "#16A34A",
+    "Al-Arafah Islami Bank PLC" to "#10B981",
+    "Shahjalal Islami Bank PLC" to "#14B8A6",
+    "Sonali Bank PLC" to "#10B981",
+    "Janata Bank PLC" to "#F59E0B",
     "Agrani Bank PLC" to "#059669",
     "Rupali Bank PLC" to "#0284C7",
-    "Trust Bank PLC" to "#4F46E5",
-    "One Bank PLC" to "#0D9488",
-    "Meghna Bank PLC" to "#EA580C",
-    "NRB Bank PLC" to "#9333EA",
+    "Trust Bank PLC" to "#6366F1",
+    "One Bank PLC" to "#14B8A6",
+    "Meghna Bank PLC" to "#F97316",
+    "NRB Bank PLC" to "#A855F7",
     "bKash" to "#FF5C7C",
-    "Nagad" to "#FFBD2E",
+    "Nagad" to "#F59E0B",
     "Rocket" to "#00D4AA",
-    "Upay" to "#FFB300",
-    "CellFin (IBBL)" to "#4CAF50",
-    "Ok Wallet" to "#FF5722",
-    "MyCash" to "#3F51B5"
+    "Upay" to "#EAB308",
+    "CellFin (IBBL)" to "#22C55E",
+    "Ok Wallet" to "#F97316",
+    "MyCash" to "#6366F1"
 )
 
 fun getInstitutionColor(name: String, fallbackType: String = "", colorHex: String = ""): Color {
     if (colorHex.isNotBlank()) {
-        try { return Color(android.graphics.Color.parseColor(colorHex)) } catch (_: Exception) {}
+        try { return ensureReadableColor(Color(android.graphics.Color.parseColor(colorHex))) } catch (_: Exception) {}
     }
     val mapped = BANK_COLOR_MAP.entries.firstOrNull { (k, _) ->
         name.contains(k, ignoreCase = true) || k.contains(name, ignoreCase = true)
     }?.value
     if (mapped != null) {
-        try { return Color(android.graphics.Color.parseColor(mapped)) } catch (_: Exception) {}
+        try { return ensureReadableColor(Color(android.graphics.Color.parseColor(mapped))) } catch (_: Exception) {}
     }
-    return when (fallbackType.uppercase()) {
+    val base = when (fallbackType.uppercase()) {
         "CASH" -> IncomeGreen
         "MFS" -> Color(0xFFFF5C7C)
         "BANK" -> AccentTeal
         else -> AccentTeal
     }
+    return ensureReadableColor(base)
 }
 
 /**

@@ -465,7 +465,7 @@ fun HomeScreen(
                     }
                 }
 
-                // ── 2. My Wallets & Accounts Section ──────────────────
+                // ── 2. My Accounts Section ───────────────────────────
                 val activeAccounts = remember(sortedAccounts, pinnedAccountId) {
                     if (pinnedAccountId != null) {
                         val pinned = sortedAccounts.filter { it.id == pinnedAccountId }
@@ -485,7 +485,7 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "My Wallets & Accounts",
+                        text = "My Accounts",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
@@ -1765,7 +1765,8 @@ fun AccountCardChip(
     onPinToggle: () -> Unit = {}
 ) {
     val cardColor = remember(account.colorHex) {
-        try { Color(account.colorHex.toColorInt()) } catch (_: Exception) { AccentTeal }
+        val base = try { Color(account.colorHex.toColorInt()) } catch (_: Exception) { AccentTeal }
+        ensureReadableColor(base)
     }
     var isBalanceVisible by remember(hideBalancesPref) { mutableStateOf(!hideBalancesPref) }
     var showMenu by remember { mutableStateOf(false) }

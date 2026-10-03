@@ -85,21 +85,21 @@ private val ACCOUNT_SUBTYPES = listOf("Savings", "Current", "Salary", "Student",
 private val BANK_COLOR_MAP = mapOf(
     "Hand Cash" to "#10B981",
     "BRAC Bank PLC" to "#0096FF",
-    "The City Bank PLC" to "#007A33",
-    "Eastern Bank PLC (EBL)" to "#003366",
-    "Dutch-Bangla Bank PLC (DBBL)" to "#7C5CFC",
-    "Prime Bank PLC" to "#FF5722",
-    "Mutual Trust Bank PLC" to "#0C2340",
-    "Islami Bank Bangladesh PLC (IBBL)" to "#1B5E20",
-    "Al-Arafah Islami Bank PLC" to "#2E7D32",
-    "Shahjalal Islami Bank PLC" to "#008080",
+    "The City Bank PLC" to "#059669",
+    "Eastern Bank PLC (EBL)" to "#3B82F6",
+    "Dutch-Bangla Bank PLC (DBBL)" to "#8B5CF6",
+    "Prime Bank PLC" to "#F97316",
+    "Mutual Trust Bank PLC" to "#0EA5E9",
+    "Islami Bank Bangladesh PLC (IBBL)" to "#16A34A",
+    "Al-Arafah Islami Bank PLC" to "#10B981",
+    "Shahjalal Islami Bank PLC" to "#14B8A6",
     "bKash" to "#FF5C7C",
-    "Nagad" to "#FFBD2E",
+    "Nagad" to "#F59E0B",
     "Rocket" to "#00D4AA",
-    "Upay" to "#FFB300",
-    "CellFin (IBBL)" to "#4CAF50",
-    "Ok Wallet" to "#FF5722",
-    "MyCash" to "#3F51B5"
+    "Upay" to "#EAB308",
+    "CellFin (IBBL)" to "#22C55E",
+    "Ok Wallet" to "#F97316",
+    "MyCash" to "#6366F1"
 )
 
 fun getShortBankName(name: String, type: String = "BANK"): String {
@@ -905,9 +905,10 @@ private fun GroupedAccountManageCard(
     onAddAnother: (String, String) -> Unit
 ) {
     val cardColor = remember(group.colorHex, group.name) {
-        try { Color(android.graphics.Color.parseColor(group.colorHex)) } catch (e: Exception) {
+        val base = try { Color(android.graphics.Color.parseColor(group.colorHex)) } catch (e: Exception) {
             BANK_COLOR_MAP[group.name]?.let { Color(android.graphics.Color.parseColor(it)) } ?: AccentTeal
         }
+        ensureReadableColor(base)
     }
     var showMenu by remember { mutableStateOf(false) }
     var showEditSelector by remember { mutableStateOf(false) }
@@ -1033,9 +1034,9 @@ private fun GroupedAccountManageCard(
                         DropdownMenuItem(
                             text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Add, contentDescription = null, tint = cardColor, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.Add, contentDescription = null, tint = AccentBlue, modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(10.dp))
-                                    Text("Add Another at ${getShortBankName(group.name, group.type)}", color = cardColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("Add Another at ${getShortBankName(group.name, group.type)}", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                 }
                             },
                             onClick = {

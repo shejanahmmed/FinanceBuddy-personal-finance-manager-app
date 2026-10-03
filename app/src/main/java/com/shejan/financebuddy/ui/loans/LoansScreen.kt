@@ -1429,13 +1429,13 @@ fun GroupedBankLoanCardItem(
                                             Icon(
                                                 imageVector = Icons.Default.Add,
                                                 contentDescription = "Add Loan",
-                                                tint = bankColor,
+                                                tint = AccentBlue,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                             Spacer(modifier = Modifier.width(10.dp))
                                             Text(
                                                 text = "Add Another Loan at ${group.bankName}",
-                                                color = bankColor,
+                                                color = TextPrimary,
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.SemiBold
                                             )
@@ -2046,13 +2046,13 @@ fun GroupedPersonalLoanCardItem(
                                             Icon(
                                                 imageVector = Icons.Default.Add,
                                                 contentDescription = "Add Loan",
-                                                tint = personalColor,
+                                                tint = AccentBlue,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                             Spacer(modifier = Modifier.width(10.dp))
                                             Text(
                                                 text = if (isLent) "Lend Again to ${group.lenderName}" else "Borrow Again from ${group.lenderName}",
-                                                color = personalColor,
+                                                color = TextPrimary,
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.SemiBold
                                             )

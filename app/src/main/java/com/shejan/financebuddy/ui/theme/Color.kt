@@ -173,6 +173,23 @@ val SwitchTrackUnchecked: Color get() = when (currentThemeModeState) {
     else     -> Color(0xFF22283A)
 }
 
+// === High-Contrast & Readability Helper ===
+fun ensureReadableColor(color: Color, isDark: Boolean = isDarkModeGlobal): Color {
+    if (!isDark) return color
+    // Calculate perceived relative luminance (0.299R + 0.587G + 0.114B)
+    val luminance = 0.299f * color.red + 0.587f * color.green + 0.114f * color.blue
+    if (luminance < 0.38f) {
+        val boost = (0.52f - luminance).coerceIn(0.25f, 0.65f)
+        return Color(
+            red = (color.red + boost * (1f - color.red)).coerceIn(0f, 1f),
+            green = (color.green + boost * (1f - color.green)).coerceIn(0f, 1f),
+            blue = (color.blue + boost * (1f - color.blue)).coerceIn(0f, 1f),
+            alpha = color.alpha
+        )
+    }
+    return color
+}
+
 val SwitchThumbUnchecked: Color get() = when (currentThemeModeState) {
     "AMOLED" -> Color(0x80FFFFFF)
     "LIGHT"  -> Color(0xFF94A3B8)
