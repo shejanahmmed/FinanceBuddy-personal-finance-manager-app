@@ -2,6 +2,7 @@ package com.shejan.financebuddy.ui.accounts
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -213,6 +214,15 @@ fun BankAccountsScreen(
     var deleteDialogMessage by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
+    val isAnySheetOrDialogActive = showAddSheet ||
+        editingAccount != null ||
+        deletingAccounts != null
+
+    val blurRadius by animateDpAsState(
+        targetValue = if (isAnySheetOrDialogActive) 16.dp else 0.dp,
+        label = "BankAccountsBlur"
+    )
+
     deletingAccounts?.let { targetAccounts ->
         Dialog(onDismissRequest = { deletingAccounts = null }) {
             Surface(
@@ -341,6 +351,7 @@ fun BankAccountsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundDark)
+            .blur(blurRadius)
             .nestedScroll(nestedScrollConnection)
     ) {
         // Ambient background glow

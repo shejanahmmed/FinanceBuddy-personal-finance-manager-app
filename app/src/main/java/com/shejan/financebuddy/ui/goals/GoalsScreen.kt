@@ -2,8 +2,10 @@ package com.shejan.financebuddy.ui.goals
 
 import com.shejan.financebuddy.data.db.AccountEntity
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.blur
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -141,6 +143,17 @@ fun GoalsScreen(
     var depositGoal        by remember { mutableStateOf<GoalEntity?>(null) }
     var showInfoDialog     by remember { mutableStateOf(false) }
     var showHistoryScreen  by remember { mutableStateOf(false) }
+
+    val isAnySheetOrDialogActive = showAddSheet ||
+        editingGoal != null ||
+        deletingGoal != null ||
+        depositGoal != null ||
+        showInfoDialog
+
+    val blurRadius by animateDpAsState(
+        targetValue = if (isAnySheetOrDialogActive) 16.dp else 0.dp,
+        label = "GoalsBlur"
+    )
 
     LaunchedEffect(triggerAddSheet) {
         if (triggerAddSheet) {
@@ -323,6 +336,7 @@ fun GoalsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundDark)
+            .blur(blurRadius)
             .nestedScroll(nestedScrollConnection)
     ) {
         // Ambient glow

@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -38,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -280,6 +282,18 @@ fun LoansScreen(
     var editingLoan by remember { mutableStateOf<LoanEntity?>(null) }
     var repayingLoan by remember { mutableStateOf<LoanEntity?>(null) }
     
+    val isAnySheetOrDialogActive = showAddTypeChooser ||
+        showAddBankLoanSheet ||
+        showAddPersonalLoanSheet ||
+        deletingLoan != null ||
+        editingLoan != null ||
+        repayingLoan != null
+
+    val blurRadius by animateDpAsState(
+        targetValue = if (isAnySheetOrDialogActive) 16.dp else 0.dp,
+        label = "LoansBlur"
+    )
+    
     val typeChooserSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val bankLoanSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val personalLoanSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -414,7 +428,8 @@ fun LoansScreen(
 
         Scaffold(
             containerColor = Color.Transparent,
-            topBar = {}
+            topBar = {},
+            modifier = Modifier.blur(blurRadius)
         ) { innerPadding ->
             Column(
                 modifier = Modifier
@@ -660,23 +675,34 @@ fun LoansScreen(
                     modifier = Modifier.fillMaxWidth().border(BorderStroke(1.dp, DividerColor), RoundedCornerShape(16.dp))
                 ) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
+                                .size(42.dp)
                                 .clip(CircleShape)
-                                .background(AccentTeal.copy(alpha = 0.1f)),
+                                .background(AccentTeal.copy(alpha = 0.12f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(imageVector = Icons.Default.AccountBalance, contentDescription = null, tint = AccentTeal)
+                            Icon(imageVector = Icons.Default.AccountBalance, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(22.dp))
                         }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("Bank Loan (Borrowed)", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 15.sp)
-                            Text("Formal EMI-based bank loan with interest rates & tenure.", color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp)
-                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Text(
+                            text = "Bank Loan (Borrowed)",
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            fontSize = 15.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = TextMuted,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
 
@@ -693,23 +719,34 @@ fun LoansScreen(
                     modifier = Modifier.fillMaxWidth().border(BorderStroke(1.dp, DividerColor), RoundedCornerShape(16.dp))
                 ) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
+                                .size(42.dp)
                                 .clip(CircleShape)
-                                .background(AccentBlue.copy(alpha = 0.1f)),
+                                .background(AccentBlue.copy(alpha = 0.12f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(imageVector = Icons.Default.People, contentDescription = null, tint = AccentBlue)
+                            Icon(imageVector = Icons.Default.People, contentDescription = null, tint = AccentBlue, modifier = Modifier.size(22.dp))
                         }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("Borrow from Friend / Family", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 15.sp)
-                            Text("Informal loan from individuals with no interest.", color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp)
-                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Text(
+                            text = "Borrow from Friend / Family",
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            fontSize = 15.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = TextMuted,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
 
@@ -726,23 +763,34 @@ fun LoansScreen(
                     modifier = Modifier.fillMaxWidth().border(BorderStroke(1.dp, DividerColor), RoundedCornerShape(16.dp))
                 ) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
+                                .size(42.dp)
                                 .clip(CircleShape)
-                                .background(AccentPurple.copy(alpha = 0.1f)),
+                                .background(AccentPurple.copy(alpha = 0.12f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = null, tint = AccentPurple)
+                            Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = null, tint = AccentPurple, modifier = Modifier.size(20.dp))
                         }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("Lend to Friend / Family", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 15.sp)
-                            Text("Track money you lend to others and their repayments.", color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp)
-                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Text(
+                            text = "Lend to Friend / Family",
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            fontSize = 15.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = TextMuted,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
                 

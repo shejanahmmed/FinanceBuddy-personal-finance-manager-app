@@ -1,7 +1,9 @@
 package com.shejan.financebuddy.ui.budget
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -249,6 +251,16 @@ fun BudgetScreen(
     var deletingBudget by remember { mutableStateOf<BudgetEntity?>(null) }
     var showInfoDialog by remember { mutableStateOf(false) }
 
+    val isAnySheetOrDialogActive = showAddSheet ||
+        editingBudget != null ||
+        deletingBudget != null ||
+        showInfoDialog
+
+    val blurRadius by animateDpAsState(
+        targetValue = if (isAnySheetOrDialogActive) 16.dp else 0.dp,
+        label = "BudgetBlur"
+    )
+
     LaunchedEffect(triggerAddSheet) {
         if (triggerAddSheet) {
             editingBudget = null
@@ -392,6 +404,7 @@ fun BudgetScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundDark)
+            .blur(blurRadius)
             .nestedScroll(nestedScrollConnection)
     ) {
         // Ambient top glow

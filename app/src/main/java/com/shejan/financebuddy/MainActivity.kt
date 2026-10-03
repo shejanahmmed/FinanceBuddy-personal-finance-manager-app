@@ -687,7 +687,7 @@ fun MainDashboardContainer(
     }
 
     val blurRadius by animateDpAsState(
-        targetValue = if (drawerState.targetValue == DrawerValue.Open) 16.dp else 0.dp,
+        targetValue = if (drawerState.targetValue == DrawerValue.Open || drawerState.isOpen || showAddTransactionSheet) 16.dp else 0.dp,
         label = "DrawerBlur"
     )
 

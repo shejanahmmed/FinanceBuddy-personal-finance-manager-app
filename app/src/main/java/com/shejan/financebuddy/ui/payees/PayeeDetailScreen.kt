@@ -2,12 +2,14 @@ package com.shejan.financebuddy.ui.payees
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -128,6 +130,17 @@ fun PayeeDetailScreen(
     var accountToDelete by remember { mutableStateOf<PayeeAccountEntity?>(null) }
     var showMenu by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
+
+    val isAnySheetOrDialogActive = showAddSheet ||
+        editingAccount != null ||
+        showDeleteConfirm ||
+        accountToDelete != null ||
+        showHistory
+
+    val blurRadius by animateDpAsState(
+        targetValue = if (isAnySheetOrDialogActive) 16.dp else 0.dp,
+        label = "PayeeDetailBlur"
+    )
 
     val recipientTransactions = remember(allTransactions, payee, accounts) {
         val accNums = accounts.map { it.accountNumber.trim() }.filter { it.isNotBlank() }
@@ -407,7 +420,7 @@ fun PayeeDetailScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(BackgroundDark)) {
+    Box(modifier = Modifier.fillMaxSize().background(BackgroundDark).blur(blurRadius)) {
         // Ambient background glow
         Box(
             modifier = Modifier
