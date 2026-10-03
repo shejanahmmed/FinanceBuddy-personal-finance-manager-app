@@ -181,9 +181,6 @@ fun PayeeDetailScreen(
 
     val profileBitmap = rememberBitmapFromUri(payee.imageUri)
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
-
     val avatarBg = remember(payee.name) {
         val hash = payee.name.hashCode()
         val colors = listOf(AccentTeal, AccentBlue, TransferYellow, IncomeGreen, Color(0xFF9C27B0), Color(0xFFE91E63))
@@ -819,17 +816,17 @@ fun PayeeDetailScreen(
 
     if (showAddSheet) {
         PayeeAccountFormSheet(
-            sheetState = sheetState,
             payeeName = payee.name,
             existingAccount = editingAccount,
-            onDismiss = { scope.launch { sheetState.hide() }.invokeOnCompletion { showAddSheet = false; editingAccount = null } },
+            onDismiss = { showAddSheet = false; editingAccount = null },
             onSave = { acc ->
                 if (editingAccount != null) {
                     onUpdateAccount(acc.copy(id = editingAccount!!.id, payeeId = payee.id))
                 } else {
                     onAddAccount(acc.copy(payeeId = payee.id))
                 }
-                scope.launch { sheetState.hide() }.invokeOnCompletion { showAddSheet = false; editingAccount = null }
+                showAddSheet = false
+                editingAccount = null
             }
         )
     }
@@ -1040,7 +1037,6 @@ private fun PayeeAccountCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PayeeAccountFormSheet(
-    sheetState: SheetState,
     payeeName: String,
     existingAccount: PayeeAccountEntity?,
     onDismiss: () -> Unit,
@@ -1056,6 +1052,8 @@ private fun PayeeAccountFormSheet(
 
     var nameExpanded by remember { mutableStateOf(false) }
     var showDiscardDialog by remember { mutableStateOf(false) }
+    var forceDismiss by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     val isFormDirty = remember(bankName, accountNumber, nickname, isEditing) {
         if (isEditing) {
@@ -1066,6 +1064,18 @@ private fun PayeeAccountFormSheet(
             bankName.trim().isNotEmpty() || accountNumber.trim().isNotEmpty() || nickname.trim().isNotEmpty()
         }
     }
+
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = { targetValue ->
+            if (targetValue == SheetValue.Hidden && isFormDirty && !forceDismiss) {
+                showDiscardDialog = true
+                false
+            } else {
+                true
+            }
+        }
+    )
 
     BackHandler(enabled = isFormDirty) {
         showDiscardDialog = true
@@ -1078,7 +1088,14 @@ private fun PayeeAccountFormSheet(
             onDismissRequest = { showDiscardDialog = false },
             onConfirmDiscard = {
                 showDiscardDialog = false
-                onDismiss()
+                forceDismiss = true
+                coroutineScope.launch {
+                    try {
+                        sheetState.hide()
+                    } finally {
+                        onDismiss()
+                    }
+                }
             }
         )
     }
@@ -1090,12 +1107,13 @@ private fun PayeeAccountFormSheet(
 
     ModalBottomSheet(
         onDismissRequest = {
-            if (isFormDirty) {
+            if (isFormDirty && !forceDismiss) {
                 showDiscardDialog = true
             } else {
                 onDismiss()
             }
         },
+        properties = ModalBottomSheetProperties(shouldDismissOnBackPress = !isFormDirty),
         sheetState = sheetState,
         containerColor = CardDark,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
@@ -1107,6 +1125,7 @@ private fun PayeeAccountFormSheet(
                 .padding(horizontal = 20.dp)
                 .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
+                .imePadding()
         ) {
             Row(
                 modifier = Modifier
@@ -1304,16 +1323,22 @@ private fun PayeeAccountFormSheet(
 
             Button(
                 onClick = {
-                    onSave(
-                        PayeeAccountEntity(
-                            payeeId = 0,
-                            bankName = bankName.trim(),
-                            accountNumber = accountNumber.trim(),
-                            recipientName = recipientName.trim(),
-                            type = type,
-                            nickname = nickname.trim()
-                        )
+                    val toSave = PayeeAccountEntity(
+                        payeeId = 0,
+                        bankName = bankName.trim(),
+                        accountNumber = accountNumber.trim(),
+                        recipientName = recipientName.trim(),
+                        type = type,
+                        nickname = nickname.trim()
                     )
+                    forceDismiss = true
+                    coroutineScope.launch {
+                        try {
+                            sheetState.hide()
+                        } finally {
+                            onSave(toSave)
+                        }
+                    }
                 },
                 enabled = isValid,
                 modifier = Modifier
@@ -1353,7 +1378,7 @@ private fun PayeeAccountFormSheet(
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(48.dp))
         }
     }
 }
