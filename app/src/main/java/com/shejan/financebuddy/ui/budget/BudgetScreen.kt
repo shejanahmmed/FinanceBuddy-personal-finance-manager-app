@@ -560,7 +560,7 @@ fun BudgetScreen(
             ) {
                 Text(
                     text       = "Budget",
-                    style      = MaterialTheme.typography.titleLarge,
+                    fontSize   = 19.5.sp,
                     fontWeight = FontWeight.Bold,
                     color      = TextPrimary
                 )

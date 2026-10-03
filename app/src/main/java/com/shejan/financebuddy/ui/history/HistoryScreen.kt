@@ -451,7 +451,7 @@ fun HistoryScreen(
                     Text(
                         text = "Transaction History",
                         color = TextPrimary,
-                        fontSize = 20.sp,
+                        fontSize = 19.5.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(

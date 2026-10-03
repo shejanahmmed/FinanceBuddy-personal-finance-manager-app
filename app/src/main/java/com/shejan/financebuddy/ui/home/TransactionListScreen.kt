@@ -230,7 +230,7 @@ fun TransactionListScreen(
                         Text(
                             text = if (type == "INCOME") "Income Ledger" else "Expense Ledger",
                             color = TextPrimary,
-                            fontSize = 20.sp,
+                            fontSize = 19.5.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.3).sp
                         )

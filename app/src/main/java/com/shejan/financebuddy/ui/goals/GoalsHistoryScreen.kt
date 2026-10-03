@@ -211,7 +211,7 @@ fun GoalsHistoryScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Goals History",
-                        style = MaterialTheme.typography.titleLarge,
+                        fontSize = 19.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )

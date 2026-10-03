@@ -295,7 +295,7 @@ fun PendingTransactionsScreen(
                     Text(
                         text = "Transaction Inbox",
                         color = TextPrimary,
-                        fontSize = 20.sp,
+                        fontSize = 19.5.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(

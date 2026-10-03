@@ -191,7 +191,7 @@ fun PayeesScreen(
                 )
                 Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Recipient Profiles", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Recipient Profiles", fontSize = 19.5.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     Text("Manage contacts and payment accounts", fontSize = 12.sp, color = TextMuted)
                 }
 
@@ -396,7 +396,7 @@ fun AddRecipientScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Add Recipient",
-                        fontSize = 20.sp,
+                        fontSize = 19.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )

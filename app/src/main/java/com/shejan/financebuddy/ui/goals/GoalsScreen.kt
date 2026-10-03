@@ -485,7 +485,7 @@ fun GoalsScreen(
             ) {
                 Text(
                     text       = "Goals",
-                    style      = MaterialTheme.typography.titleLarge,
+                    fontSize   = 19.5.sp,
                     fontWeight = FontWeight.Bold,
                     color      = TextPrimary
                 )

@@ -158,7 +158,7 @@ fun UserProfileScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "User Profile",
-                        style = MaterialTheme.typography.titleLarge,
+                        fontSize = 19.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )

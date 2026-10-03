@@ -158,7 +158,7 @@ fun InvestmentsScreen(
                         Text(
                             text = "Investment Tracker",
                             color = TextPrimary,
-                            fontSize = 20.sp,
+                            fontSize = 19.5.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(

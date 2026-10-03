@@ -631,7 +631,7 @@ fun LoansScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Loans & Debts",
-                        fontSize = 20.sp,
+                        fontSize = 19.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )

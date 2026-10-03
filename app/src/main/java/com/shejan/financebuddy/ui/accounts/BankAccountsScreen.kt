@@ -558,7 +558,7 @@ fun BankAccountsScreen(
                     Column {
                         Text(
                             text = "Bank Accounts",
-                            fontSize = 20.sp,
+                            fontSize = 19.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
                         )

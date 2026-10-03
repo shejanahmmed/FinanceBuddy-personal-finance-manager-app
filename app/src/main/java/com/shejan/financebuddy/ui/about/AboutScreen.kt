@@ -66,7 +66,7 @@ fun AboutScreen(
 
                 Text(
                     text = "About FinanceBuddy",
-                    style = MaterialTheme.typography.titleLarge,
+                    fontSize = 19.5.sp,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
                 )

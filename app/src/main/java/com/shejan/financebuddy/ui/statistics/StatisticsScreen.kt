@@ -753,7 +753,7 @@ fun StatisticsScreen(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Statistics", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("Statistics", color = TextPrimary, fontSize = 19.5.sp, fontWeight = FontWeight.Bold)
                     Text("Visual analytics & spending insights", color = TextMuted, fontSize = 12.sp)
                 }
 

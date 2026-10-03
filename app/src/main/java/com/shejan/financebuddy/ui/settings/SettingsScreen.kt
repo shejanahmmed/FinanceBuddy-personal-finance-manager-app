@@ -257,7 +257,7 @@ fun SettingsScreen(
                     Text(
                         text = "Settings",
                         color = TextPrimary,
-                        fontSize = 20.sp,
+                        fontSize = 19.5.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
