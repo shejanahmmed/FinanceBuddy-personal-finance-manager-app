@@ -102,6 +102,55 @@ private val BANK_COLOR_MAP = mapOf(
     "MyCash" to "#3F51B5"
 )
 
+fun getShortBankName(name: String, type: String = "BANK"): String {
+    if (type == "MFS" || type == "CASH" || name.contains("Cash", ignoreCase = true)) {
+        return name
+    }
+    val clean = name.trim()
+    return when {
+        clean.contains("Dutch-Bangla", ignoreCase = true) || clean.contains("DBBL", ignoreCase = true) -> "DBBL"
+        clean.contains("BRAC", ignoreCase = true) -> "BRAC Bank"
+        clean.contains("Eastern Bank", ignoreCase = true) || clean.contains("EBL", ignoreCase = true) -> "EBL"
+        clean.contains("City Bank", ignoreCase = true) || clean.contains("CBL", ignoreCase = true) -> "City Bank"
+        clean.contains("Islami Bank Bangladesh", ignoreCase = true) || clean.contains("IBBL", ignoreCase = true) -> "IBBL"
+        clean.contains("Mutual Trust", ignoreCase = true) || clean.contains("MTB", ignoreCase = true) -> "MTB"
+        clean.contains("Prime Bank", ignoreCase = true) || clean.contains("PBL", ignoreCase = true) -> "Prime Bank"
+        clean.contains("Al-Arafah", ignoreCase = true) || clean.contains("AIBL", ignoreCase = true) -> "AIBL"
+        clean.contains("Shahjalal", ignoreCase = true) || clean.contains("SJIBL", ignoreCase = true) -> "SJIBL"
+        clean.contains("United Commercial", ignoreCase = true) || clean.contains("UCB", ignoreCase = true) -> "UCB"
+        clean.contains("Dhaka Bank", ignoreCase = true) || clean.contains("DBL", ignoreCase = true) -> "Dhaka Bank"
+        clean.contains("Pubali", ignoreCase = true) -> "Pubali Bank"
+        clean.contains("Bank Asia", ignoreCase = true) -> "Bank Asia"
+        clean.contains("IFIC", ignoreCase = true) -> "IFIC Bank"
+        clean.contains("Standard Chartered", ignoreCase = true) || clean.contains("SCB", ignoreCase = true) -> "StanChart"
+        clean.contains("Sonali", ignoreCase = true) -> "Sonali Bank"
+        clean.contains("Janata", ignoreCase = true) -> "Janata Bank"
+        clean.contains("Agrani", ignoreCase = true) -> "Agrani Bank"
+        clean.contains("Rupali", ignoreCase = true) -> "Rupali Bank"
+        clean.contains("Trust Bank", ignoreCase = true) || clean.contains("TBL", ignoreCase = true) -> "Trust Bank"
+        clean.contains("Premier Bank", ignoreCase = true) -> "Premier Bank"
+        clean.contains("Mercantile", ignoreCase = true) -> "Mercantile Bank"
+        clean.contains("Southeast", ignoreCase = true) -> "Southeast Bank"
+        clean.contains("Exim", ignoreCase = true) -> "EXIM Bank"
+        clean.contains("Social Islami", ignoreCase = true) || clean.contains("SIBL", ignoreCase = true) -> "SIBL"
+        clean.contains("First Security", ignoreCase = true) || clean.contains("FSIBL", ignoreCase = true) -> "FSIBL"
+        clean.contains("National Bank", ignoreCase = true) || clean.contains("NBL", ignoreCase = true) -> "National Bank"
+        clean.contains("Jamuna", ignoreCase = true) -> "Jamuna Bank"
+        clean.contains("AB Bank", ignoreCase = true) -> "AB Bank"
+        clean.contains("One Bank", ignoreCase = true) -> "One Bank"
+        clean.contains("Midland", ignoreCase = true) -> "Midland Bank"
+        clean.contains("Community Bank", ignoreCase = true) -> "Community Bank"
+        clean.contains("Global Islami", ignoreCase = true) -> "Global Islami"
+        clean.contains("Union Bank", ignoreCase = true) -> "Union Bank"
+        else -> {
+            clean.replace(Regex("(?i)\\b(PLC|Limited|Ltd\\.?)\\b"), "")
+                .replace(Regex("\\(.*\\)"), "")
+                .trim()
+                .ifEmpty { clean }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BankAccountsScreen(
@@ -921,7 +970,7 @@ private fun GroupedAccountManageCard(
                 // Title & Count Info
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = group.name,
+                        text = getShortBankName(group.name, group.type),
                         color = TextPrimary,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
@@ -986,7 +1035,7 @@ private fun GroupedAccountManageCard(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.Add, contentDescription = null, tint = cardColor, modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(10.dp))
-                                    Text("Add Another at ${group.name}", color = cardColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("Add Another at ${getShortBankName(group.name, group.type)}", color = cardColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                 }
                             },
                             onClick = {
@@ -1516,7 +1565,7 @@ private fun SingleAccountInnerCard(
     val displayName = when {
         account.showAs.isNotBlank() -> account.showAs
         !isOnlyAccount -> "${account.accountSubtype.ifBlank { "Account" }} #$accountIndex"
-        else -> account.name
+        else -> getShortBankName(account.name, account.type)
     }
 
     // Resolve account number

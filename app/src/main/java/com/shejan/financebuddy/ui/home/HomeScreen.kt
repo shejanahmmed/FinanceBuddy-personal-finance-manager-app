@@ -87,6 +87,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.core.graphics.toColorInt
 import com.shejan.financebuddy.ui.notifications.AppNotification
 import com.shejan.financebuddy.ui.notifications.NotificationsBottomSheet
+import com.shejan.financebuddy.ui.accounts.getShortBankName
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.SpanStyle
@@ -1857,7 +1858,7 @@ fun AccountCardChip(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = account.name,
+                                text = getShortBankName(account.name, account.type),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
                                 color = TextPrimary,
@@ -1946,7 +1947,7 @@ fun AccountCardChip(
                             account.showAs.isNotBlank() && last4.isNotBlank() -> "${account.showAs.uppercase()}  •••• •••• •••• $last4"
                             account.showAs.isNotBlank() -> account.showAs.uppercase()
                             last4.isNotBlank() -> "•••• •••• •••• $last4"
-                            else -> (if (account.name.contains("Cash", ignoreCase = true)) "HAND CASH" else account.name).uppercase()
+                            else -> (if (account.name.contains("Cash", ignoreCase = true)) "HAND CASH" else getShortBankName(account.name, account.type)).uppercase()
                         }
 
                         Row(
@@ -1982,7 +1983,7 @@ fun AccountCardChip(
                 ) {
                     // Top header: Bank name
                     Text(
-                        text = account.name,
+                        text = getShortBankName(account.name, account.type),
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
                         color = TextPrimary,
