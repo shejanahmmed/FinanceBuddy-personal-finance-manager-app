@@ -1,9 +1,17 @@
 package com.shejan.financebuddy.ui.statistics
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -78,6 +86,22 @@ fun StatisticsScreen(
     val currencyFormat = remember { DecimalFormat("##,##,##0.00") }
 
     var selectedPeriod by remember { mutableStateOf("MONTH") }
+    var filterMenuExpanded by remember { mutableStateOf(false) }
+
+    var isTopBarVisible by remember { mutableStateOf(true) }
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                if (delta < -12f) {
+                    isTopBarVisible = false
+                } else if (delta > 12f) {
+                    isTopBarVisible = true
+                }
+                return Offset.Zero
+            }
+        }
+    }
 
     val periodTransactions = remember(allTransactions, selectedPeriod) {
         val now = Calendar.getInstance()
@@ -391,103 +415,34 @@ fun StatisticsScreen(
         periodTransactions.sortedByDescending { it.amount }.take(5)
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(BackgroundDark)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundDark)
+            .nestedScroll(nestedScrollConnection)
+    ) {
         Box(
-            modifier = Modifier.fillMaxWidth().height(240.dp).background(
-                Brush.verticalGradient(listOf(AccentTeal.copy(alpha = 0.08f), Color.Transparent))
-            )
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(240.dp)
+                .background(
+                    Brush.verticalGradient(listOf(AccentTeal.copy(alpha = 0.08f), Color.Transparent))
+                )
         )
 
-        Column(modifier = Modifier.fillMaxSize()) {
-            // ── Header ───────────────────────────────────────────────────
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                com.shejan.financebuddy.ui.common.AppBackButton(
-                    onClick = onBack
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Financial Statistics", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text("Visual analytics & spending insights", color = TextMuted, fontSize = 12.sp)
-                }
-
-                // Top-Right Filter Icon Button with Dropdown Menu
-                var filterMenuExpanded by remember { mutableStateOf(false) }
-                val periodOptions = listOf(
-                    "WEEK" to "This Week",
-                    "MONTH" to "This Month",
-                    "YEAR" to "This Year",
-                    "ALL" to "All Time"
-                )
-
-                Box {
-                    IconButton(
-                        onClick = { filterMenuExpanded = true }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FilterList,
-                            contentDescription = "Filter Timeframe",
-                            tint = if (selectedPeriod != "ALL") AccentTeal else TextPrimary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = filterMenuExpanded,
-                        onDismissRequest = { filterMenuExpanded = false },
-                        modifier = Modifier
-                            .background(CardDarker)
-                            .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
-                    ) {
-                        periodOptions.forEach { (key, label) ->
-                            val isSelected = selectedPeriod == key
-                            DropdownMenuItem(
-                                text = {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text(
-                                            text = label,
-                                            color = if (isSelected) AccentTeal else TextPrimary,
-                                            fontSize = 13.sp,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                        )
-                                        if (isSelected) {
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = "Selected",
-                                                tint = AccentTeal,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                    }
-                                },
-                                onClick = {
-                                    selectedPeriod = key
-                                    filterMenuExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
+        // ── Scrollable Content ─────────────────────────────────────────
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Top Bar Spacer (height 64.dp + status bars)
+            item {
+                Spacer(modifier = Modifier.statusBarsPadding().height(64.dp))
             }
 
-            // ── Scrollable Content ─────────────────────────────────────────
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // SECTION 1: Summary Stack Container (Outer dark ash card containing 4 full-width inner black cards)
-                item {
+            // SECTION 1: Summary Stack Container (Outer dark ash card containing 4 full-width inner black cards)
+            item {
                     Card(
                         shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(containerColor = CardDark),
@@ -774,6 +729,92 @@ fun StatisticsScreen(
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+
+        // ── Top Bar Overlay (Translucent and Animated) ───────────────
+        AnimatedVisibility(
+            visible = isTopBarVisible,
+            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                com.shejan.financebuddy.ui.common.AppBackButton(
+                    onClick = onBack
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Statistics", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("Visual analytics & spending insights", color = TextMuted, fontSize = 12.sp)
+                }
+
+                // Top-Right Filter Icon Button with Dropdown Menu
+                val periodOptions = listOf(
+                    "WEEK" to "This Week",
+                    "MONTH" to "This Month",
+                    "YEAR" to "This Year",
+                    "ALL" to "All Time"
+                )
+
+                Box {
+                    IconButton(
+                        onClick = { filterMenuExpanded = true }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = "Filter Timeframe",
+                            tint = if (selectedPeriod != "ALL") AccentTeal else TextPrimary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = filterMenuExpanded,
+                        onDismissRequest = { filterMenuExpanded = false },
+                        modifier = Modifier
+                            .background(CardDarker)
+                            .border(1.dp, DividerColor, RoundedCornerShape(12.dp))
+                    ) {
+                        periodOptions.forEach { (key, label) ->
+                            val isSelected = selectedPeriod == key
+                            DropdownMenuItem(
+                                text = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            color = if (isSelected) AccentTeal else TextPrimary,
+                                            fontSize = 13.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                        )
+                                        if (isSelected) {
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "Selected",
+                                                tint = AccentTeal,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                },
+                                onClick = {
+                                    selectedPeriod = key
+                                    filterMenuExpanded = false
+                                }
+                            )
                         }
                     }
                 }

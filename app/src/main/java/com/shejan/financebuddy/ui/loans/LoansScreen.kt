@@ -11,6 +11,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -294,6 +297,21 @@ fun LoansScreen(
         label = "LoansBlur"
     )
     
+    var isTopBarVisible by remember { mutableStateOf(true) }
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                if (delta < -12f) {
+                    isTopBarVisible = false
+                } else if (delta > 12f) {
+                    isTopBarVisible = true
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
     val typeChooserSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val bankLoanSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val personalLoanSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -413,6 +431,7 @@ fun LoansScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundDark)
+            .nestedScroll(nestedScrollConnection)
     ) {
         // Ambient background gradient glow
         Box(
@@ -431,211 +450,219 @@ fun LoansScreen(
             topBar = {},
             modifier = Modifier.blur(blurRadius)
         ) { innerPadding ->
-            Column(
+            LazyColumn(
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(bottom = innerPadding.calculateBottomPadding())
             ) {
-                // ─── Screen Header (Matching Bank Accounts Page Design) ──
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 12.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    com.shejan.financebuddy.ui.common.AppBackButton(
-                        onClick = { onBack() }
+                // Top Bar Spacer (height 64.dp + status bars)
+                item {
+                    Spacer(modifier = Modifier.statusBarsPadding().height(64.dp))
+                }
+
+                // ─── Dashboard Overview Card ────────────────────────
+                item {
+                    LoanSummaryOverview(
+                        totalPrincipal = totalRemainingPrincipal,
+                        totalRepayable = totalRemainingRepayable,
+                        totalInterest = totalRemainingInterest,
+                        totalRepaid = totalRepaid,
+                        totalLent = totalRemainingLent,
+                        currencyFormat = currencyFormat
                     )
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                }
+
+                // Section Title
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = "Loans & Debts",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
+                            text = "Active Loans",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
                             color = TextPrimary
                         )
                         Text(
-                            text = "Track money lent, borrowed & EMI details",
-                            fontSize = 12.sp,
-                            color = TextMuted
-                        )
-                    }
-
-                    // Add Loan / Lent '+' Button in a Compact Square Box
-                    Box(
-                        modifier = Modifier
-                            .padding(end = 6.dp)
-                            .size(28.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(CardDarker)
-                            .border(1.dp, AccentTeal.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
-                            .clickable {
-                                prefillBankName = null
-                                prefillLenderName = null
-                                showAddTypeChooser = true
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Loan or Lent",
-                            tint = AccentTeal,
-                            modifier = Modifier.size(22.dp)
+                            text = "${loans.size} total",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary
                         )
                     }
                 }
 
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    // ─── Dashboard Overview Card ────────────────────────
+                // Empty State
+                if (loans.isEmpty()) {
                     item {
-                        LoanSummaryOverview(
-                            totalPrincipal = totalRemainingPrincipal,
-                            totalRepayable = totalRemainingRepayable,
-                            totalInterest = totalRemainingInterest,
-                            totalRepaid = totalRepaid,
-                            totalLent = totalRemainingLent,
-                            currencyFormat = currencyFormat
+                        LoansEmptyState()
+                    }
+                }
+
+                // Bank Loans Section (Grouped by Bank Name)
+                if (groupedBankLoans.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Bank Loans",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = AccentTeal,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                         )
                     }
 
-                    // Section Title
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                    items(groupedBankLoans, key = { "bank_group_${it.bankName.lowercase(Locale.ROOT)}" }) { group ->
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = fadeIn(tween(300)) + slideInVertically(tween(300)) { it / 4 },
+                            exit = fadeOut(tween(250)) + slideOutVertically(tween(250)) { it / 4 }
                         ) {
-                            Text(
-                                text = "Active Loans",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary
-                            )
-                            Text(
-                                text = "${loans.size} total",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TextSecondary
+                            GroupedBankLoanCardItem(
+                                group = group,
+                                accounts = accounts,
+                                currencyFormat = currencyFormat,
+                                onDeleteClick = { deletingLoan = it },
+                                onEditClick = { editingLoan = it },
+                                onRepayClick = { repayingLoan = it },
+                                onAddAnotherClick = { bank ->
+                                    prefillBankName = bank
+                                    showAddBankLoanSheet = true
+                                }
                             )
                         }
                     }
+                }
 
-                    // Empty State
-                    if (loans.isEmpty()) {
-                        item {
-                            LoansEmptyState()
-                        }
+                // Borrowed from Friend/Family Section (Grouped by Person)
+                if (groupedPersonalBorrowedLoans.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Borrowed from Friend / Family",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = AccentBlue,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
+                        )
                     }
 
-                    // Bank Loans Section (Grouped by Bank Name)
-                    if (groupedBankLoans.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "Bank Loans",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = AccentTeal,
-                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                    items(groupedPersonalBorrowedLoans, key = { "pers_borrow_group_${it.lenderName.lowercase(Locale.ROOT)}" }) { group ->
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = fadeIn(tween(300)) + slideInVertically(tween(300)) { it / 4 },
+                            exit = fadeOut(tween(250)) + slideOutVertically(tween(250)) { it / 4 }
+                        ) {
+                            GroupedPersonalLoanCardItem(
+                                group = group,
+                                accounts = accounts,
+                                currencyFormat = currencyFormat,
+                                onDeleteClick = { deletingLoan = it },
+                                onEditClick = { editingLoan = it },
+                                onRepayClick = { repayingLoan = it },
+                                onAddAnotherClick = { lender, lent ->
+                                    prefillLenderName = lender
+                                    isAddingPersonalLoanLent = lent
+                                    showAddPersonalLoanSheet = true
+                                },
+                                isLent = false
                             )
                         }
+                    }
+                }
 
-                        items(groupedBankLoans, key = { "bank_group_${it.bankName.lowercase(Locale.ROOT)}" }) { group ->
-                            AnimatedVisibility(
-                                visible = true,
-                                enter = fadeIn(tween(300)) + slideInVertically(tween(300)) { it / 4 },
-                                exit = fadeOut(tween(250)) + slideOutVertically(tween(250)) { it / 4 }
-                            ) {
-                                GroupedBankLoanCardItem(
-                                    group = group,
-                                    accounts = accounts,
-                                    currencyFormat = currencyFormat,
-                                    onDeleteClick = { deletingLoan = it },
-                                    onEditClick = { editingLoan = it },
-                                    onRepayClick = { repayingLoan = it },
-                                    onAddAnotherClick = { bank ->
-                                        prefillBankName = bank
-                                        showAddBankLoanSheet = true
-                                    }
-                                )
-                            }
-                        }
+                // Lent to Friend/Family Section (Grouped by Person)
+                if (groupedPersonalLentLoans.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Lent to Friend / Family",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = AccentPurple,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
+                        )
                     }
 
-                    // Borrowed from Friend/Family Section (Grouped by Person)
-                    if (groupedPersonalBorrowedLoans.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "Borrowed from Friend / Family",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = AccentBlue,
-                                modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
+                    items(groupedPersonalLentLoans, key = { "pers_lent_group_${it.lenderName.lowercase(Locale.ROOT)}" }) { group ->
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = fadeIn(tween(300)) + slideInVertically(tween(300)) { it / 4 },
+                            exit = fadeOut(tween(250)) + slideOutVertically(tween(250)) { it / 4 }
+                        ) {
+                            GroupedPersonalLoanCardItem(
+                                group = group,
+                                accounts = accounts,
+                                currencyFormat = currencyFormat,
+                                onDeleteClick = { deletingLoan = it },
+                                onEditClick = { editingLoan = it },
+                                onRepayClick = { repayingLoan = it },
+                                onAddAnotherClick = { lender, lent ->
+                                    prefillLenderName = lender
+                                    isAddingPersonalLoanLent = lent
+                                    showAddPersonalLoanSheet = true
+                                },
+                                isLent = true
                             )
                         }
-
-                        items(groupedPersonalBorrowedLoans, key = { "pers_borrow_group_${it.lenderName.lowercase(Locale.ROOT)}" }) { group ->
-                            AnimatedVisibility(
-                                visible = true,
-                                enter = fadeIn(tween(300)) + slideInVertically(tween(300)) { it / 4 },
-                                exit = fadeOut(tween(250)) + slideOutVertically(tween(250)) { it / 4 }
-                            ) {
-                                GroupedPersonalLoanCardItem(
-                                    group = group,
-                                    accounts = accounts,
-                                    currencyFormat = currencyFormat,
-                                    onDeleteClick = { deletingLoan = it },
-                                    onEditClick = { editingLoan = it },
-                                    onRepayClick = { repayingLoan = it },
-                                    onAddAnotherClick = { lender, lent ->
-                                        prefillLenderName = lender
-                                        isAddingPersonalLoanLent = lent
-                                        showAddPersonalLoanSheet = true
-                                    },
-                                    isLent = false
-                                )
-                            }
-                        }
                     }
+                }
+            }
+        }
 
-                    // Lent to Friend/Family Section (Grouped by Person)
-                    if (groupedPersonalLentLoans.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "Lent to Friend / Family",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = AccentPurple,
-                                modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
-                            )
-                        }
+        // ── Top Bar Overlay (Translucent and Animated) ───────────────
+        AnimatedVisibility(
+            visible = isTopBarVisible,
+            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                com.shejan.financebuddy.ui.common.AppBackButton(
+                    onClick = { onBack() }
+                )
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Loans & Debts",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "Track money lent, borrowed & EMI details",
+                        fontSize = 12.sp,
+                        color = TextMuted
+                    )
+                }
 
-                        items(groupedPersonalLentLoans, key = { "pers_lent_group_${it.lenderName.lowercase(Locale.ROOT)}" }) { group ->
-                            AnimatedVisibility(
-                                visible = true,
-                                enter = fadeIn(tween(300)) + slideInVertically(tween(300)) { it / 4 },
-                                exit = fadeOut(tween(250)) + slideOutVertically(tween(250)) { it / 4 }
-                            ) {
-                                GroupedPersonalLoanCardItem(
-                                    group = group,
-                                    accounts = accounts,
-                                    currencyFormat = currencyFormat,
-                                    onDeleteClick = { deletingLoan = it },
-                                    onEditClick = { editingLoan = it },
-                                    onRepayClick = { repayingLoan = it },
-                                    onAddAnotherClick = { lender, lent ->
-                                        prefillLenderName = lender
-                                        isAddingPersonalLoanLent = lent
-                                        showAddPersonalLoanSheet = true
-                                    },
-                                    isLent = true
-                                )
-                            }
-                        }
-                    }
+                // Add Loan / Lent '+' Button in a Compact Square Box
+                Box(
+                    modifier = Modifier
+                        .padding(end = 6.dp)
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(CardDarker)
+                        .border(1.dp, AccentTeal.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                        .clickable {
+                            prefillBankName = null
+                            prefillLenderName = null
+                            showAddTypeChooser = true
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Loan or Lent",
+                        tint = AccentTeal,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
             }
         }

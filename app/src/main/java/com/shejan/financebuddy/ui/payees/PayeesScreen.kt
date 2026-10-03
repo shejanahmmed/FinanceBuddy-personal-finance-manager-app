@@ -1,5 +1,14 @@
 package com.shejan.financebuddy.ui.payees
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -80,7 +89,27 @@ fun PayeesScreen(
         payeeAccounts.groupBy { it.payeeId }.mapValues { it.value.size }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(BackgroundDark)) {
+    var isTopBarVisible by remember { mutableStateOf(true) }
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                if (delta < -12f) {
+                    isTopBarVisible = false
+                } else if (delta > 12f) {
+                    isTopBarVisible = true
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundDark)
+            .nestedScroll(nestedScrollConnection)
+    ) {
         // Ambient glow
         Box(
             modifier = Modifier
@@ -89,8 +118,67 @@ fun PayeesScreen(
                 .background(Brush.verticalGradient(colors = listOf(AccentBlue.copy(alpha = 0.06f), Color.Transparent)))
         )
 
-        Column(modifier = Modifier.fillMaxSize()) {
-            // -- Top Bar ------------------------------------------
+        // -- Payees List --------------------------------------
+        if (filteredPayees.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 80.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(CardDarker)
+                            .border(1.dp, DividerColor, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.People, null, tint = AccentBlue.copy(alpha = 0.7f), modifier = Modifier.size(34.dp))
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        if (searchQuery.isEmpty()) "No recipients yet" else "No matching profiles",
+                        color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        if (searchQuery.isEmpty()) "Create profiles to quickly transfer funds" else "Try searching for another name",
+                        color = TextMuted, fontSize = 13.sp
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Top Bar Spacer (height 64.dp + status bars)
+                item {
+                    Spacer(modifier = Modifier.statusBarsPadding().height(64.dp))
+                }
+
+                items(filteredPayees, key = { it.id }) { payee ->
+                    val count = accountsCountMap[payee.id] ?: 0
+                    PayeeCard(
+                        payee = payee,
+                        accountCount = count,
+                        onClick = { onPayeeClick(payee) }
+                    )
+                }
+                item { Spacer(Modifier.height(80.dp)) }
+            }
+        }
+
+        // -- Top Bar Floating Overlay ------------------------------------------
+        AnimatedVisibility(
+            visible = isTopBarVisible,
+            enter   = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+            exit    = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter)
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -124,50 +212,6 @@ fun PayeesScreen(
                         tint = AccentTeal,
                         modifier = Modifier.size(22.dp)
                     )
-                }
-            }
-
-            // -- Payees List --------------------------------------
-            if (filteredPayees.isEmpty()) {
-                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            modifier = Modifier
-                                .size(72.dp)
-                                .clip(CircleShape)
-                                .background(CardDarker)
-                                .border(1.dp, DividerColor, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.People, null, tint = AccentBlue.copy(alpha = 0.7f), modifier = Modifier.size(34.dp))
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            if (searchQuery.isEmpty()) "No recipients yet" else "No matching profiles",
-                            color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            if (searchQuery.isEmpty()) "Create profiles to quickly transfer funds" else "Try searching for another name",
-                            color = TextMuted, fontSize = 13.sp
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    items(filteredPayees, key = { it.id }) { payee ->
-                        val count = accountsCountMap[payee.id] ?: 0
-                        PayeeCard(
-                            payee = payee,
-                            accountCount = count,
-                            onClick = { onPayeeClick(payee) }
-                        )
-                    }
-                    item { Spacer(Modifier.height(80.dp)) }
                 }
             }
         }
