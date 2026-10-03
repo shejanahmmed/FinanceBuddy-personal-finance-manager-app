@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -212,17 +213,18 @@ fun HomeScreen(
     ) {
         Scaffold(
             containerColor = Color.Transparent,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             // Empty topBar so we can overlay the floating top bar smoothly
             topBar = {}
         ) { paddingValues ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .padding(bottom = paddingValues.calculateBottomPadding())
                     .verticalScroll(rememberScrollState())
             ) {
-                // Spacer matching top bar height + status bar padding
-                Spacer(modifier = Modifier.statusBarsPadding().height(54.dp))
+                // Spacer matching top bar height (50dp) + status bar padding + comfortable 12dp gap
+                Spacer(modifier = Modifier.statusBarsPadding().height(62.dp))
 
                 val context = LocalContext.current
                 val preferencesManager = remember { com.shejan.financebuddy.data.PreferencesManager(context.applicationContext) }
